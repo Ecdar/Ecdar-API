@@ -1,20 +1,20 @@
-use sea_orm::{ConnectionTrait, Database, DatabaseBackend, DbBackend, DbErr, Statement};
+use sea_orm::{ConnectionTrait, Database, DatabaseBackend, DbBackend, DbErr, Statement, DatabaseConnection};
 
 use std::env;
 use sea_orm::prelude::async_trait::async_trait;
 
 pub struct DatabaseContext {
-
+    db: DatabaseConnection,
 }
 
 #[async_trait]
 pub trait EcdarDatabase {
-    async fn create_and_connect(&self) -> Result<(), DbErr>;
+    async fn new() -> Result<DatabaseContext, DbErr>;
 }
 
 #[async_trait]
 impl EcdarDatabase for DatabaseContext {
-     async fn create_and_connect(&self) -> Result<(), DbErr> {
+    async fn new() -> Result<DatabaseContext, DbErr> {
         let database_url = env::var("DATABASE_URL").expect("Expected DATABASE_URL to be set.");
         let db_name = env::var("DB_NAME").expect("Expected DB_NAME to be set.");
 
@@ -39,7 +39,7 @@ impl EcdarDatabase for DatabaseContext {
             _ => {panic!("Database not implemented")}
         };
 
-        Ok(())
+        Ok(DatabaseContext {db: db})
     }
 }
 
