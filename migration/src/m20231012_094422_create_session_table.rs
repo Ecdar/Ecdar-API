@@ -20,8 +20,18 @@ impl MigrationTrait for Migration {
                             .auto_increment()
                             .primary_key(),
                     )
-                    .col(ColumnDef::new(Session::Token).uuid().not_null().unique_key())
-                    .col(ColumnDef::new(Session::CreatedAt).timestamp().default(Expr::current_timestamp()).not_null())
+                    .col(
+                        ColumnDef::new(Session::Token)
+                            .uuid()
+                            .not_null()
+                            .unique_key(),
+                    )
+                    .col(
+                        ColumnDef::new(Session::CreatedAt)
+                            .timestamp()
+                            .default(Expr::current_timestamp())
+                            .not_null(),
+                    )
                     .col(ColumnDef::new(Session::UserId).integer().not_null())
                     .foreign_key(
                         ForeignKey::create()
@@ -46,5 +56,5 @@ pub enum Session {
     Id,
     Token,
     CreatedAt,
-    UserId
+    UserId,
 }

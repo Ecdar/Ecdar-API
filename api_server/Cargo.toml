@@ -9,4 +9,5 @@ edition = "2021"
 futures = "0.3.28"
 dotenv = "0.15.0"
 database = { path = "../database"}
+entities = { path = "../entities"}
 tokio = { version = "1.33.0", features = ["full"] }

@@ -17,7 +17,7 @@ impl MigrationTrait for Migration {
                         ColumnDef::new(Query::Id)
                             .integer()
                             .not_null()
-                            .auto_increment()
+                            .auto_increment(),
                     )
                     .col(ColumnDef::new(Query::String).string().not_null())
                     .col(ColumnDef::new(Query::Result).json())
@@ -26,7 +26,7 @@ impl MigrationTrait for Migration {
                     .foreign_key(
                         ForeignKey::create()
                             .from(Query::Table, Query::ModelId)
-                            .to(Model::Table, Model::Id)
+                            .to(Model::Table, Model::Id),
                     )
                     .to_owned(),
             )
@@ -46,5 +46,5 @@ enum Query {
     Id,
     String,
     Result,
-    ModelId
+    ModelId,
 }

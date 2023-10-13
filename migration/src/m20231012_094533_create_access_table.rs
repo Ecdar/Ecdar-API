@@ -15,7 +15,11 @@ impl MigrationTrait for Migration {
                 Table::create()
                     .table(Access::Table)
                     .if_not_exists()
-                    .col(ColumnDef::new(Access::Role).enumeration(Role::Table, [Role::Reader, Role::Commenter, Role::Editor]).not_null())
+                    .col(
+                        ColumnDef::new(Access::Role)
+                            .enumeration(Role::Table, [Role::Reader, Role::Commenter, Role::Editor])
+                            .not_null(),
+                    )
                     .col(ColumnDef::new(Access::ModelId).integer().not_null())
                     .col(ColumnDef::new(Access::UserId).integer().not_null())
                     .primary_key(Index::create().col(Access::ModelId).col(Access::UserId))

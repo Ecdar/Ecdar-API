@@ -1,7 +1,9 @@
-use sea_orm::{ConnectionTrait, Database, DatabaseBackend, DbBackend, DbErr, Statement, DatabaseConnection};
+use sea_orm::{
+    ConnectionTrait, Database, DatabaseBackend, DatabaseConnection, DbBackend, DbErr, Statement,
+};
 
-use std::env;
 use sea_orm::prelude::async_trait::async_trait;
+use std::env;
 
 pub mod contexts;
 
@@ -24,24 +26,14 @@ impl EcdarDatabase for DatabaseContext {
 
         match db.get_database_backend() {
             DbBackend::Postgres => {
-                db.execute(Statement::from_string(
-                    db.get_database_backend(),
-                    format!("DROP DATABASE IF EXISTS \"{}\";", db_name.clone()),
-                ))
-                    .await?;
-                db.execute(Statement::from_string(
-                    db.get_database_backend(),
-                    format!("CREATE DATABASE \"{}\";", db_name.clone()),
-                ))
-                    .await?;
-
                 let url = format!("{}/{}", database_url.clone(), db_name.clone());
                 Database::connect(&url).await?
             }
-            _ => {panic!("Database not implemented")}
+            _ => {
+                panic!("Database not implemented")
+            }
         };
 
-        Ok(DatabaseContext {db: db})
+        Ok(DatabaseContext { db: db })
     }
 }
-

@@ -1,7 +1,7 @@
 use sea_orm_migration::prelude::*;
 
-use super::m20231012_094422_create_session_table::Session;
 use super::m20231012_094228_create_model_table::Model;
+use super::m20231012_094422_create_session_table::Session;
 
 #[derive(DeriveMigrationName)]
 pub struct Migration;
@@ -25,17 +25,17 @@ impl MigrationTrait for Migration {
                         ColumnDef::new(InUse::LatestActivity)
                             .timestamp()
                             .default(Expr::current_timestamp())
-                            .not_null()
+                            .not_null(),
                     )
                     .foreign_key(
                         ForeignKey::create()
                             .from(InUse::Table, InUse::ModelId)
-                            .to(Model::Table, Model::Id)
+                            .to(Model::Table, Model::Id),
                     )
                     .foreign_key(
                         ForeignKey::create()
                             .from(InUse::Table, InUse::SessionId)
-                            .to(Session::Table, Session::Id)
+                            .to(Session::Table, Session::Id),
                     )
                     .to_owned(),
             )
