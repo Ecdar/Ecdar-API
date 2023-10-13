@@ -3,6 +3,8 @@ use sea_orm::{ConnectionTrait, Database, DatabaseBackend, DbBackend, DbErr, Stat
 use std::env;
 use sea_orm::prelude::async_trait::async_trait;
 
+pub mod contexts;
+
 pub struct DatabaseContext {
     db: DatabaseConnection,
 }
