@@ -1,17 +1,18 @@
-use crate::contexts::EntityContext::EntityContextTrait;
-use crate::DatabaseContext;
-use entities::entities::user::{Model, ActiveModel};
 use sea_orm::prelude::async_trait::async_trait;
+use sea_orm::ActiveValue::Set;
 use sea_orm::{ActiveModelTrait, DbErr};
-use sea_orm::ActiveValue::{Set, NotSet, Unchanged};
 use std::fmt::Error;
 
-#[async_trait]
-pub trait UserContextTrait {}
+use crate::database::database_context::DatabaseContext;
+use crate::database::entity_context::EntityContextTrait;
+use crate::entities::user::{ActiveModel, Model};
 
 pub struct UserContext {
     db_context: DatabaseContext,
 }
+
+#[async_trait]
+pub trait UserContextTrait {}
 
 impl UserContextTrait for UserContext {}
 
@@ -33,7 +34,7 @@ impl EntityContextTrait<Model> for UserContext {
         Ok(user)
     }
 
-    async fn get_by_id(&self, id: i32) -> Result<Option<Model>, Error> {
+    async fn get_by_id(&self, _id: i32) -> Result<Option<Model>, Error> {
         todo!()
     }
 
@@ -41,11 +42,11 @@ impl EntityContextTrait<Model> for UserContext {
         todo!()
     }
 
-    async fn update(&self, entity: Model) -> Result<Model, Error> {
+    async fn update(&self, _entity: Model) -> Result<Model, Error> {
         todo!()
     }
 
-    async fn delete(&self, entity: Model) -> Result<Model, Error> {
+    async fn delete(&self, _entity: Model) -> Result<Model, Error> {
         todo!()
     }
 }

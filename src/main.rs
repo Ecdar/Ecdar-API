@@ -1,12 +1,12 @@
-use core::panic;
+mod api_server;
+mod database;
+mod entities;
 
-use database::{DatabaseContext, EcdarDatabase};
-use futures::executor::block_on;
-
-use entities::entities::user::Model as User;
-use database::contexts::EntityContext::EntityContextTrait;
-use database::contexts::UserContext::UserContext;
+use database::database_context::{DatabaseContext, DatabaseContextTrait};
+use database::entity_context::EntityContextTrait;
+use database::user_context::UserContext;
 use dotenv::dotenv;
+use entities::user::Model as User;
 
 #[tokio::main]
 async fn main() {
@@ -26,5 +26,5 @@ async fn main() {
         password: "rask".to_owned(),
     };
 
-    user_context.create(anders).await;
+    let _res = user_context.create(anders).await;
 }

@@ -1,4 +1,4 @@
-use crate::DatabaseContext;
+use crate::database::database_context::DatabaseContext;
 use sea_orm::prelude::async_trait::async_trait;
 use sea_orm::DbErr;
 use std::fmt::Error;
