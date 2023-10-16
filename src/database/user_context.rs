@@ -41,7 +41,7 @@ impl EntityContextTrait<Model> for UserContext {
     }
 
     async fn get_all(&self) -> Result<Vec<Model>, DbErr> {
-        todo!()
+        User::find().all(&self.db_context.db).await
     }
 
     async fn update(&self, entity: Model) -> Result<Model, DbErr> {
