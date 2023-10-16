@@ -1,7 +1,8 @@
 use sea_orm::prelude::async_trait::async_trait;
-use sea_orm::ActiveValue::Set;
+use sea_orm::ActiveValue::{Set, Unchanged};
 use sea_orm::{ActiveModelTrait, DbErr, EntityTrait};
-use std::fmt::Error;
+use std::fmt::{Error, format};
+use std::future::Future;
 use std::process::id;
 
 use crate::database::database_context::DatabaseContext;
@@ -36,16 +37,29 @@ impl EntityContextTrait<Model> for UserContext {
         Ok(user)
     }
 
-    async fn get_by_id(&self, _id: i32) -> Result<Option<Model>, DbErr> {
+    async fn get_by_id(&self, id: i32) -> Result<Option<Model>, DbErr> {
 
-         User::find_by_id(_id).one(&self.db_context.db).await
+         User::find_by_id(id).one(&self.db_context.db).await
     }
 
     async fn get_all(&self) -> Result<Vec<Model>, DbErr> {
         todo!()
     }
 
-    async fn update(&self, _entity: Model) -> Result<Model, DbErr> {
+    async fn update(&self, entity: Model) -> Result<Model, DbErr> {
+        let res = &self.get_by_id(entity.id).await?;
+        let updatedUser : Result<Model,DbErr> = match res {
+            None => {Err(DbErr::RecordNotFound(String::from(format!("Could not find entity {:?}", entity))))}
+            Some(user) => {
+                ActiveModel {
+                    id: Unchanged(user.id), //TODO ved ikke om unchanged betyder det jeg tror det betyder
+                    email: Set(entity.email),
+                    username: Set(entity.username),
+                    password: Set(entity.password),
+                }.update(&self.db_context.db).await
+            }
+        };
+        return updatedUser;
         todo!()
     }
 
