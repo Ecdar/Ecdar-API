@@ -6,7 +6,7 @@ edition = "2021"
 [dependencies]
 tokio = { version = "1.33.0", features = ["full"] }
 dotenv = "0.15.0"
-sea-orm = { version = "^0.12.0", features = [ "sqlx-postgres", "runtime-async-std-native-tls", "macros" ] }
+sea-orm = { version = "^0.12.0", features = [ "sqlx-postgres", "runtime-async-std-native-tls", "macros", "mock","tests-cfg" ] }
 async-trait = { version = "0.1.73", features = [] }
 futures = "0.3.28"
 
