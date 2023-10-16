@@ -1,9 +1,7 @@
 use sea_orm::prelude::async_trait::async_trait;
 use sea_orm::ActiveValue::{Set, Unchanged};
 use sea_orm::{ActiveModelTrait, DbErr, EntityTrait};
-use std::fmt::{Error, format};
 use std::future::Future;
-use std::process::id;
 
 use crate::database::database_context::DatabaseContext;
 use crate::database::entity_context::EntityContextTrait;
@@ -48,7 +46,7 @@ impl EntityContextTrait<Model> for UserContext {
 
     async fn update(&self, entity: Model) -> Result<Model, DbErr> {
         let res = &self.get_by_id(entity.id).await?;
-        let updatedUser : Result<Model,DbErr> = match res {
+        let updated_user: Result<Model,DbErr> = match res {
             None => {Err(DbErr::RecordNotFound(String::from(format!("Could not find entity {:?}", entity))))}
             Some(user) => {
                 ActiveModel {
@@ -59,8 +57,7 @@ impl EntityContextTrait<Model> for UserContext {
                 }.update(&self.db_context.db).await
             }
         };
-        return updatedUser;
-        todo!()
+        return updated_user;
     }
 
     async fn delete(&self, _entity: Model) -> Result<Model, DbErr> {
