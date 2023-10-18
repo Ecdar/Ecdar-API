@@ -2,6 +2,7 @@ use sea_orm::prelude::async_trait::async_trait;
 use sea_orm::ActiveValue::{Set, Unchanged};
 use sea_orm::{ActiveModelTrait, DbErr, EntityTrait};
 use std::future::Future;
+use std::io::SeekFrom;
 
 use crate::database::database_context::DatabaseContext;
 use crate::database::entity_context::EntityContextTrait;
@@ -60,8 +61,14 @@ impl EntityContextTrait<Model> for UserContext {
         return updated_user;
     }
 
-    async fn delete(&self, _entity: Model) -> Result<Model, DbErr> {
-        todo!()
+    async fn delete(&self, entity: Model) -> Result<Model, DbErr> {
+        let delete_result = User::delete_by_id(entity.id).exec(&self.db_context.db).await?;
+        if delete_result.rows_affected == 0 {
+            // Handle the case where no rows where deleted, if necessary
+            //TODO ved ikke om vi skal sende noget med tilbage der indikere at intet skete?
+        }
+
+        Ok(entity)
     }
 }
 #[cfg(test)]
