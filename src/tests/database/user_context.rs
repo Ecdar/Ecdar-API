@@ -73,6 +73,34 @@ mod database_tests {
         Ok(())
     }
 
+    #[tokio::test]
+    async fn get_by_id_test() -> Result<(), DbErr> {
+        // Setting up a sqlite database in memory to test on
+        let db_connection = Database::connect("sqlite::memory:").await.unwrap();
+        setup_schema(&db_connection).await;
+        let db_context = DatabaseContext { db: db_connection };
+        let user_context = UserContext::new(db_context);
+
+        // Creates a model of the user which will be created
+        let new_user = Model {
+            id: 1,
+            email: "anders21@student.aau.dk".to_owned(),
+            username: "andemad".to_owned(),
+            password: "rask".to_owned(),
+        };
+
+        // Creates the user in the database using the 'create' function
+        let created_user = user_context.create(new_user).await?;
+        
+        // Fecthes the user created using the 'get_by_id' function
+        let fetched_user = user_context.get_by_id(created_user.id).await;
+
+        // Assert if the fetched user is the same as the created user
+        assert_eq!(fetched_user.unwrap().unwrap().username, created_user.username);
+
+        Ok(())
+
+    }
 
 
 }
