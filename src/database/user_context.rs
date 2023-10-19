@@ -24,6 +24,18 @@ impl EntityContextTrait<Model> for UserContext {
         UserContext { db_context }
     }
 
+    /// Used for creating a User entity
+    /// # Example
+    /// ```
+    /// let model : Model = {
+    ///     id: 1,
+    ///     email: "anders@aau.dk".into(),
+    ///     username: "Anders".into(),
+    ///     password: "qwerty".into()
+    /// }
+    /// let context : UserContext = UserContext::new(...);
+    /// context.create(model);
+    /// ```
     async fn create(&self, entity: Model) -> Result<Model, DbErr> {
         let user = ActiveModel {
             id: Default::default(),
@@ -36,19 +48,56 @@ impl EntityContextTrait<Model> for UserContext {
         Ok(user)
     }
 
+    /// Returns a single user entity (uses primary key)
+    /// # Example
+    /// ```
+    /// let context : UserContext = UserContext::new(...);
+    /// let model : Model = context.get_by_id(1).unwrap();
+    /// assert_eq!(model.username,"Anders".into());
+    /// ```
     async fn get_by_id(&self, id: i32) -> Result<Option<Model>, DbErr> {
 
          User::find_by_id(id).one(&self.db_context.db).await
     }
 
+    /// Returns all the user entities
+    /// # Example
+    /// ```
+    /// let context : UserContext = UserContext::new(...);
+    /// let model : vec<Model> = context.get_all().unwrap();
+    /// assert_eq!(model.len(),1);
+    /// ```
     async fn get_all(&self) -> Result<Vec<Model>, DbErr> {
         User::find().all(&self.db_context.db).await
     }
 
+
+    /// Updates and returns the given user entity
+    /// # Example
+    /// ```
+    /// let context : UserContext = UserContext::new(...);
+    /// let user = context.get_by_id(1).unwrap();
+    /// let updated_user = Model {
+    ///     id: user.id,
+    ///     email: "anders@student.aau.dk".into(),
+    ///     username: "andersAnden",
+    ///     password: user.password
+    /// }
+    /// assert_eq!(context.update(updated_user).unwrap(),Model {
+    ///     id: 1,
+    ///     email: "anders@student.aau.dk".into(),
+    ///     username: "andersAnden".into(),
+    ///     password:"qwerty".into();
+    /// }
+    /// ```
+    /// # Note
+    /// The user entity's id will never be changed. If this behavior is wanted, delete the old user and create a one.
     async fn update(&self, entity: Model) -> Result<Model, DbErr> {
         let res = &self.get_by_id(entity.id).await?;
         let updated_user: Result<Model,DbErr> = match res {
-            None => {Err(DbErr::RecordNotFound(String::from(format!("Could not find entity {:?}", entity))))}
+            None => {
+                Err(DbErr::RecordNotFound(String::from(format!("Could not find entity {:?}", entity))))
+            }
             Some(user) => {
                 ActiveModel {
                     id: Unchanged(user.id), //TODO ved ikke om unchanged betyder det jeg tror det betyder
@@ -61,6 +110,7 @@ impl EntityContextTrait<Model> for UserContext {
         return updated_user;
     }
 
+    /// Deletes a user entity by id
     async fn delete(&self, entity: Model) -> Result<Model, DbErr> {
         let delete_result = User::delete_by_id(entity.id).exec(&self.db_context.db).await?;
         if delete_result.rows_affected == 0 {
