@@ -98,7 +98,6 @@ mod database_tests {
 
         // Creates the user in the database using the 'create' function
         let created_user = user_context.create(new_user).await?;
-
         // Fecthes the user created using the 'get_by_id' function
         let fetched_user = user_context.get_by_id(created_user.id).await;
 
