@@ -1,6 +1,7 @@
-use crate::database::database_context::DatabaseContextTrait;
-use crate::entities::model::{ActiveModel, Model};
+use std::fmt::Display;
+use crate::entities::model::{Model, ActiveModel};
 use crate::entities::prelude::Model as ModelEntity;
+use crate::database::database_context::DatabaseContextTrait;
 use crate::EntityContextTrait;
 use async_trait::async_trait;
 use sea_orm::{ActiveModelTrait, DbErr, EntityTrait, RuntimeErr, Set, Unchanged};
