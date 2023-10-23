@@ -1,16 +1,23 @@
-use crate::database::user_context;
 use crate::database::database_context;
 use crate::database::entity_context;
+use crate::database::user_context;
 use crate::entities::prelude::User;
 use crate::entities::user::{ActiveModel, Model};
 
 #[cfg(test)]
 mod database_tests {
-    use sea_orm::{
-        entity::prelude::*, entity::*, tests_cfg::*,
-        DatabaseBackend, MockDatabase, Transaction, DatabaseConnection, Database, Schema, sea_query::TableCreateStatement
+    use crate::{
+        database::{
+            database_context::{DatabaseContext, DatabaseContextTrait},
+            entity_context::EntityContextTrait,
+            user_context::{self, UserContext},
+        },
+        entities::user::{self, Entity, Model},
     };
-    use crate::{entities::user::{self, Model, Entity}, database::{database_context::{DatabaseContext, DatabaseContextTrait}, user_context::{self, UserContext}, entity_context::EntityContextTrait}};
+    use sea_orm::{
+        entity::prelude::*, entity::*, sea_query::TableCreateStatement, tests_cfg::*, Database,
+        DatabaseBackend, DatabaseConnection, MockDatabase, Schema, Transaction,
+    };
 
     async fn setup_schema(db: &DatabaseConnection) {
         // Setup Schema helper
@@ -18,14 +25,12 @@ mod database_tests {
 
         // Derive from Entity
         let stmt: TableCreateStatement = schema.create_table_from_entity(Entity);
-        let _= db.execute(db.get_database_backend().build(&stmt)).await;
-
+        let _ = db.execute(db.get_database_backend().build(&stmt)).await;
     }
 
     // Test the functionality of the 'create' function, which creates a user in the database
     #[tokio::test]
-    async fn create_test() -> Result<(),DbErr> {
-
+    async fn create_test() -> Result<(), DbErr> {
         // Setting up a sqlite database in memory to test on
         let db_connection = Database::connect("sqlite::memory:").await.unwrap();
         setup_schema(&db_connection).await;
@@ -42,8 +47,10 @@ mod database_tests {
 
         // Creates the user in the database using the 'create' function
         let created_user = user_context.create(new_user).await?;
-        
-        let fetched_user = Entity::find_by_id(created_user.id).one(&user_context.db_context.db).await?;
+
+        let fetched_user = Entity::find_by_id(created_user.id)
+            .one(&user_context.db_context.db)
+            .await?;
 
         // Assert if the fetched user is the same as the created user
         assert_eq!(fetched_user.unwrap().username, created_user.username);
@@ -91,16 +98,16 @@ mod database_tests {
 
         // Creates the user in the database using the 'create' function
         let created_user = user_context.create(new_user).await?;
-        
+
         // Fecthes the user created using the 'get_by_id' function
         let fetched_user = user_context.get_by_id(created_user.id).await;
 
         // Assert if the fetched user is the same as the created user
-        assert_eq!(fetched_user.unwrap().unwrap().username, created_user.username);
+        assert_eq!(
+            fetched_user.unwrap().unwrap().username,
+            created_user.username
+        );
 
         Ok(())
-
     }
-
-
 }
