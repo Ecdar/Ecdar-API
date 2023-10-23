@@ -1,4 +1,4 @@
-mod api_server;
+mod api;
 mod database;
 mod entities;
 
