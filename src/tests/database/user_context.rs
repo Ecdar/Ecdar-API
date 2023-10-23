@@ -19,6 +19,7 @@ mod database_tests {
         entity::prelude::*, entity::*, sea_query::TableCreateStatement, tests_cfg::*, Database,
         DatabaseBackend, DatabaseConnection, MockDatabase, Schema, Transaction,
     };
+    use std::any::Any;
 
     async fn setup_schema(db: &DatabaseConnection) {
         // Setup Schema helper
@@ -35,6 +36,22 @@ mod database_tests {
         setup_schema(&connection).await;
         let db_context = DatabaseContext { db: connection };
         UserContext::new(db_context)
+    }
+    fn two_template_users() -> Vec<Model> {
+        vec![
+            Model {
+                id: 1,
+                email: "anders@mail.dk".to_string(),
+                username: "anders".to_string(),
+                password: "123".to_string(),
+            },
+            Model {
+                id: 2,
+                email: "mike@mail.dk".to_string(),
+                username: "mikemanden".to_string(),
+                password: "qwerty".to_string(),
+            },
+        ]
     }
     // Test the functionality of the 'create' function, which creates a user in the database
     #[tokio::test]
@@ -162,5 +179,30 @@ mod database_tests {
             updated_user,
             user_context.update(updated_user.to_owned()).await.unwrap()
         )
+    }
+
+    ///test that where the unique email constraint is violated
+    #[tokio::test]
+    async fn update_fail() -> () {
+        let user_context = test_setup().await;
+        let mut users = two_template_users();
+
+        for user in users.iter_mut() {
+            let _ = user_context.create(user.to_owned()).await;
+        }
+        let res = user_context
+            .update(Model {
+                email: "mike@mail.dk".to_string(),
+                ..users[0].to_owned()
+            })
+            .await;
+        match res {
+            Ok(_) => {
+                panic!("should not happen")
+            }
+            Err(err) => {
+                return;
+            }
+        }
     }
 }
