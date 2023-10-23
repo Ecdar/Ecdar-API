@@ -122,7 +122,7 @@ mod database_tests {
     async fn get_all_test() -> () {
         let user_context = test_setup().await;
 
-        let mut users_vec = vec![
+        let mut users_vec: Vec<Model> = vec![
             Model {
                 id: 1,
                 email: "anders21@student.aau.dk".to_string(),
@@ -141,5 +141,26 @@ mod database_tests {
             res_users.push(user_context.create(user.to_owned()).await.unwrap());
         }
         assert_eq!(users_vec, res_users);
+    }
+
+    #[tokio::test]
+    async fn update_test() -> () {
+        let user_context = test_setup().await;
+
+        let user = Model {
+            id: 1,
+            email: "anders21@student.aau.dk".to_string(),
+            username: "anders".to_string(),
+            password: "123".to_string(),
+        };
+        let user = user_context.create(user).await.unwrap();
+        let updated_user = Model {
+            password: "qwerty".to_string(),
+            ..user
+        };
+        assert_eq!(
+            updated_user,
+            user_context.update(updated_user.to_owned()).await.unwrap()
+        )
     }
 }
