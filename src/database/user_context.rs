@@ -109,7 +109,18 @@ impl EntityContextTrait<Model> for UserContext {
         return updated_user;
     }
 
-    /// Deletes a user entity by id
+    /// Returns and deletes a user entity by id
+    ///
+    ///     /// # Example
+    /// ```
+    /// let context : UserContext = UserContext::new(...);
+    /// let user = context.get_by_id(1).unwrap();
+    /// let deleted_user = Model {
+    ///     id: user.id,
+    ///     email: "anders@student.aau.dk".into(),
+    ///     username: "andersAnden",
+    ///     password: user.password
+    /// }
     async fn delete(&self, entity_id: i32) -> Result<Model, DbErr> {
         let user = self.get_by_id(entity_id).await?;
         match user {
