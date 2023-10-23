@@ -4,9 +4,10 @@ mod entities;
 
 use database::database_context::{DatabaseContext, DatabaseContextTrait};
 use database::entity_context::EntityContextTrait;
-use database::user_context::UserContext;
 use dotenv::dotenv;
-use entities::user::Model as User;
+use entities::access::Model as Access;
+use crate::database::access_context::AccessContext;
+use crate::entities::sea_orm_active_enums::Role;
 
 #[tokio::main]
 async fn main() {
@@ -17,14 +18,14 @@ async fn main() {
         Err(e) => panic!("{:?}", e),
     };
 
-    let user_context = UserContext::new(db_context);
+    let access_context = AccessContext::new(db_context);
 
-    let anders = User {
+    let access = Access {
         id: Default::default(),
-        email: "abemand@hotmail.dk".to_owned(),
-        username: "anders_anden".to_owned(),
-        password: "rask".to_owned(),
+        role: Role::Editor,
+        user_id: 1,
+        model_id: 1
     };
 
-    let _res = user_context.create(anders).await;
+    let _res = access_context.create(access).await;
 }

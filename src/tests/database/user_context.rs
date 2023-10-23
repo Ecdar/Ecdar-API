@@ -12,7 +12,7 @@ mod database_tests {
             entity_context::EntityContextTrait,
             user_context::{self, UserContext},
         },
-        entities::user::{self, Entity, Model},
+        entities::user::{self, Entity, Model as User},
     };
     use sea_orm::{
         entity::prelude::*, entity::*, sea_query::TableCreateStatement, tests_cfg::*, Database,
@@ -35,10 +35,10 @@ mod database_tests {
         let db_connection = Database::connect("sqlite::memory:").await.unwrap();
         setup_schema(&db_connection).await;
         let db_context = DatabaseContext { db: db_connection };
-        let user_context = UserContext::new(db_context);
+        let user_context = UserContext::new(&db_context);
 
         // Creates a model of the user which will be created
-        let new_user = Model {
+        let new_user = User {
             id: 1,
             email: "anders21@student.aau.dk".to_owned(),
             username: "andemad".to_owned(),
@@ -89,7 +89,7 @@ mod database_tests {
         let user_context = UserContext::new(db_context);
 
         // Creates a model of the user which will be created
-        let new_user = Model {
+        let new_user = User {
             id: 1,
             email: "anders21@student.aau.dk".to_owned(),
             username: "andemad".to_owned(),
@@ -99,12 +99,12 @@ mod database_tests {
         // Creates the user in the database using the 'create' function
         let created_user = user_context.create(new_user).await?;
 
-        // Fecthes the user created using the 'get_by_id' function
-        let fetched_user = user_context.get_by_id(created_user.id).await;
+        // Fetches the user created using the 'get_by_id' function
+        let fetched_user = user_context.get_by_id(created_user.id).await?;
 
         // Assert if the fetched user is the same as the created user
         assert_eq!(
-            fetched_user.unwrap().unwrap().username,
+            fetched_user.unwrap().username,
             created_user.username
         );
 

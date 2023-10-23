@@ -7,8 +7,8 @@ use sea_orm::ActiveValue::{Set, Unchanged};
 use sea_orm::{ActiveModelTrait, DbErr, EntityTrait, RuntimeErr};
 use std::future::Future;
 
-pub struct UserContext {
-    db_context: DatabaseContext,
+pub struct UserContext<'a> {
+    db_context: &'a DatabaseContext,
 }
 
 #[async_trait]
@@ -18,7 +18,7 @@ impl UserContextTrait for UserContext {}
 
 #[async_trait]
 impl EntityContextTrait<Model> for UserContext {
-    fn new(db_context: DatabaseContext) -> Self {
+    fn new(db_context: &DatabaseContext) -> Self {
         UserContext { db_context }
     }
 
@@ -26,7 +26,7 @@ impl EntityContextTrait<Model> for UserContext {
     /// # Example
     /// ```
     /// let model : Model = {
-    ///     id: 1,
+    ///     id: Default::default(),
     ///     email: "anders@aau.dk".into(),
     ///     username: "Anders".into(),
     ///     password: "qwerty".into()
@@ -87,7 +87,7 @@ impl EntityContextTrait<Model> for UserContext {
     /// }
     /// ```
     /// # Note
-    /// The user entity's id will never be changed. If this behavior is wanted, delete the old user and create a one.
+    /// The user entity's id will never be changed. If this behavior is wanted, delete the old user and create a new one.
     async fn update(&self, entity: Model) -> Result<Model, DbErr> {
         let res = &self.get_by_id(entity.id).await?;
         let updated_user: Result<Model, DbErr> = match res {
