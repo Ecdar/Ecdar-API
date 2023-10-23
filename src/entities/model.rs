@@ -50,10 +50,7 @@ impl Related<super::query::Entity> for Entity {
 
 impl Related<super::user::Entity> for Entity {
     fn to() -> RelationDef {
-        super::access::Relation::User.def()
-    }
-    fn via() -> Option<RelationDef> {
-        Some(super::access::Relation::Model.def().rev())
+        Relation::User.def()
     }
 }
 
