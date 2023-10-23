@@ -2,8 +2,6 @@ use sea_orm::prelude::async_trait::async_trait;
 use sea_orm::ActiveValue::{Set, Unchanged};
 use sea_orm::{ActiveModelTrait, DbErr, EntityTrait};
 use std::future::Future;
-use std::io::SeekFrom;
-
 use crate::database::database_context::DatabaseContext;
 use crate::database::entity_context::EntityContextTrait;
 use crate::entities::prelude::User;
