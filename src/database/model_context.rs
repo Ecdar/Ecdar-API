@@ -1,6 +1,6 @@
 
 use async_trait::async_trait;
-use sea_orm::{DbErr, Set, ActiveModelTrait, EntityTrait, Unchanged};
+use sea_orm::{DbErr, Set, ActiveModelTrait, EntityTrait, Unchanged, RuntimeErr};
 use std::fmt::Display;
 use crate::entities::model::{Model, ActiveModel};
 use crate::entities::prelude::Model as ModelEntity;
@@ -65,7 +65,18 @@ impl EntityContextTrait<Model> for ModelContext {
     }
 
     async fn delete(&self, entity_id: i32) -> Result<Model, DbErr> {
-        todo!()
+        let model = self.get_by_id(entity_id).await?;
+        match model {
+            None => Err(DbErr::Exec(RuntimeErr::Internal(
+                "No record was deleted".into(),
+            ))),
+            Some(model) => {
+                ModelEntity::delete_by_id(entity_id)
+                    .exec(&self.db_context.db)
+                    .await?;
+                Ok(model)
+            }
+        }
     }
 }
 
