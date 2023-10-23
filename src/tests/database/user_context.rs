@@ -86,7 +86,7 @@ mod database_tests {
         let db_connection = Database::connect("sqlite::memory:").await.unwrap();
         setup_schema(&db_connection).await;
         let db_context = DatabaseContext { db: db_connection };
-        let user_context = UserContext::new(db_context);
+        let user_context = UserContext::new(&db_context);
 
         // Creates a model of the user which will be created
         let new_user = User {

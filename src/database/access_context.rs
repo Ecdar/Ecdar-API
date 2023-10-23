@@ -1,4 +1,4 @@
-use crate::database::database_context::DatabaseContext;
+use crate::database::database_context::{DatabaseContext, DatabaseContextTrait};
 use crate::database::entity_context::EntityContextTrait;
 use crate::entities::prelude::Access;
 use crate::entities::access::{ActiveModel, Model};
@@ -12,13 +12,8 @@ pub struct AccessContext<'a> {
 }
 
 #[async_trait]
-pub trait AccessContextTrait {}
-
-impl AccessContextTrait for AccessContext {}
-
-#[async_trait]
-impl EntityContextTrait<Model> for AccessContext {
-    fn new(db_context: &DatabaseContext) -> Self {
+impl<'a> EntityContextTrait<'a, Model> for AccessContext<'a> {
+    fn new(db_context: &dyn DatabaseContextTrait) -> AccessContext {
         AccessContext { db_context }
     }
 

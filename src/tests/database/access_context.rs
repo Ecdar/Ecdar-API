@@ -8,9 +8,9 @@ mod database_tests {
             user_context::UserContext,
             model_context::ModelContext
         },
-        entities::access::{Entity, Model as Access},
-        entities::user::{Entity, Model as User},
-        entities::model::{Entity, Model as Model},
+        entities::access::{Entity as AccessEntity, Model as Access},
+        entities::user::{Entity as UserEntity, Model as User},
+        entities::model::{Entity as ModelEntity, Model as Model},
         entities::sea_orm_active_enums::Role
     };
     use sea_orm::{
@@ -23,7 +23,11 @@ mod database_tests {
         let schema = Schema::new(DatabaseBackend::Sqlite);
 
         // Derive from Entity
-        let stmt: TableCreateStatement = schema.create_table_from_entity(Entity);
+        let stmt: TableCreateStatement = schema.create_table_from_entity(UserEntity);
+        let _ = db.execute(db.get_database_backend().build(&stmt)).await;
+        let stmt: TableCreateStatement = schema.create_table_from_entity(ModelEntity);
+        let _ = db.execute(db.get_database_backend().build(&stmt)).await;
+        let stmt: TableCreateStatement = schema.create_table_from_entity(AccessEntity);
         let _ = db.execute(db.get_database_backend().build(&stmt)).await;
     }
 
@@ -66,7 +70,7 @@ mod database_tests {
         model_context.create(new_model).await?;
         let created_access = access_context.create(new_access).await?;
 
-        let fetched_access = Entity::find_by_id(created_access.id)
+        let fetched_access = AccessEntity::find_by_id(created_access.id)
             .one(&access_context.db_context.db)
             .await?.clone().unwrap();
 

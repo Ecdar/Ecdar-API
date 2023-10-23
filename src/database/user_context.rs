@@ -1,4 +1,4 @@
-use crate::database::database_context::DatabaseContext;
+use crate::database::database_context::{DatabaseContext, DatabaseContextTrait};
 use crate::database::entity_context::EntityContextTrait;
 use crate::entities::prelude::User;
 use crate::entities::user::{ActiveModel, Model};
@@ -12,13 +12,8 @@ pub struct UserContext<'a> {
 }
 
 #[async_trait]
-pub trait UserContextTrait {}
-
-impl UserContextTrait for UserContext {}
-
-#[async_trait]
-impl EntityContextTrait<Model> for UserContext {
-    fn new(db_context: &DatabaseContext) -> Self {
+impl<'a> EntityContextTrait<'a, Model> for UserContext<'a> {
+    fn new(db_context: &dyn DatabaseContextTrait) -> UserContext {
         UserContext { db_context }
     }
 
