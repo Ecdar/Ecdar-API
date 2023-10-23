@@ -15,10 +15,21 @@ impl MigrationTrait for Migration {
                 Table::create()
                     .table(Access::Table)
                     .if_not_exists()
-                    .col(ColumnDef::new(Access::Role).enumeration(Role::Table, [Role::Reader, Role::Commenter, Role::Editor]).not_null())
+                    .col(
+                        ColumnDef::new(Access::Id)
+                            .integer()
+                            .not_null()
+                            .auto_increment()
+                            .primary_key(),
+                    )
+                    .col(
+                        ColumnDef::new(Access::Role)
+                            .enumeration(Role::Table, [Role::Reader, Role::Commenter, Role::Editor])
+                            .not_null(),
+                    )
                     .col(ColumnDef::new(Access::ModelId).integer().not_null())
                     .col(ColumnDef::new(Access::UserId).integer().not_null())
-                    .primary_key(Index::create().col(Access::ModelId).col(Access::UserId))
+                    .index(Index::create().col(Access::ModelId).col(Access::UserId).unique())
                     .foreign_key(
                         ForeignKey::create()
                             .from(Access::Table, Access::ModelId)
@@ -43,6 +54,7 @@ impl MigrationTrait for Migration {
 
 #[derive(DeriveIden)]
 enum Access {
+    Id,
     Table,
     Role,
     ModelId,

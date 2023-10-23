@@ -28,13 +28,15 @@ impl MigrationTrait for Migration {
                             .from(Model::Table, Model::OwnerId)
                             .to(User::Table, User::Id),
                     )
-                    .to_owned()
+                    .to_owned(),
             )
             .await
     }
 
     async fn down(&self, manager: &SchemaManager) -> Result<(), DbErr> {
-        manager.drop_table(Table::drop().table(Model::Table).to_owned()).await
+        manager
+            .drop_table(Table::drop().table(Model::Table).to_owned())
+            .await
     }
 }
 

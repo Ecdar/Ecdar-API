@@ -19,15 +19,22 @@ impl MigrationTrait for Migration {
                             .primary_key(),
                     )
                     .col(ColumnDef::new(User::Email).string().not_null().unique_key())
-                    .col(ColumnDef::new(User::Username).string().not_null().unique_key())
+                    .col(
+                        ColumnDef::new(User::Username)
+                            .string()
+                            .not_null()
+                            .unique_key(),
+                    )
                     .col(ColumnDef::new(User::Password).string().not_null())
-                    .to_owned()
+                    .to_owned(),
             )
             .await
     }
 
     async fn down(&self, manager: &SchemaManager) -> Result<(), DbErr> {
-        manager.drop_table(Table::drop().table(User::Table).to_owned()).await
+        manager
+            .drop_table(Table::drop().table(User::Table).to_owned())
+            .await
     }
 }
 
