@@ -6,6 +6,7 @@ use crate::entities::user::{ActiveModel, Model};
 
 #[cfg(test)]
 mod database_tests {
+    use crate::entities::prelude::User;
     use crate::{
         database::{
             database_context::{DatabaseContext, DatabaseContextTrait},
@@ -28,6 +29,13 @@ mod database_tests {
         let _ = db.execute(db.get_database_backend().build(&stmt)).await;
     }
 
+    /// Sets up a UserContext connected to an in-memory sqlite db
+    async fn test_setup() -> UserContext {
+        let connection = Database::connect("sqlite::memory:").await.unwrap();
+        setup_schema(&connection).await;
+        let db_context = DatabaseContext { db: connection };
+        UserContext::new(db_context)
+    }
     // Test the functionality of the 'create' function, which creates a user in the database
     #[tokio::test]
     async fn create_test() -> Result<(), DbErr> {
@@ -109,5 +117,29 @@ mod database_tests {
         );
 
         Ok(())
+    }
+    #[tokio::test]
+    async fn get_all_test() -> () {
+        let user_context = test_setup().await;
+
+        let mut users_vec = vec![
+            Model {
+                id: 1,
+                email: "anders21@student.aau.dk".to_string(),
+                username: "anders".to_string(),
+                password: "123".to_string(),
+            },
+            Model {
+                id: 2,
+                email: "mike@mail.dk".to_string(),
+                username: "mikeManden".to_string(),
+                password: "qwerty".to_string(),
+            },
+        ];
+        let mut res_users: Vec<Model> = vec![];
+        for user in users_vec.iter_mut() {
+            res_users.push(user_context.create(user.to_owned()).await.unwrap());
+        }
+        assert_eq!(users_vec, res_users);
     }
 }
