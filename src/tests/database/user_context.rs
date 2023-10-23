@@ -101,7 +101,6 @@ mod database_tests {
             ]
         ]);
         */
-
         Ok(())
     }
 
