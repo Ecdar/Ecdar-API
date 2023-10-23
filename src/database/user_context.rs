@@ -91,10 +91,10 @@ impl EntityContextTrait<Model> for UserContext {
     async fn update(&self, entity: Model) -> Result<Model, DbErr> {
         let res = &self.get_by_id(entity.id).await?;
         let updated_user: Result<Model, DbErr> = match res {
-            None => Err(DbErr::RecordNotFound(String::from(format!(
+            None => Err(DbErr::RecordNotFound(format!(
                 "Could not find entity {:?}",
                 entity
-            )))),
+            ))),
             Some(user) => {
                 ActiveModel {
                     id: Unchanged(user.id), //TODO ved ikke om unchanged betyder det jeg tror det betyder
