@@ -205,4 +205,32 @@ mod database_tests {
             }
         }
     }
+    #[tokio::test]
+    async fn delete_test() -> () {
+        let user_context = test_setup().await;
+        let mut users = two_template_users();
+
+        for user in users.iter_mut() {
+            let _ = user_context.create(user.to_owned()).await;
+        }
+        assert_eq!(users[0], user_context.delete(users[0].id).await.unwrap())
+    }
+    #[tokio::test]
+    async fn delete_test_fail() -> () {
+        let user_context = test_setup().await;
+        let mut users = two_template_users();
+
+        for user in users.iter_mut() {
+            let _ = user_context.create(user.to_owned()).await;
+        }
+        let res = user_context.delete(3).await;
+        match res {
+            Ok(_) => {
+                panic!("should not happen")
+            }
+            Err(err) => {
+                return;
+            }
+        }
+    }
 }
