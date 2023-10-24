@@ -38,7 +38,7 @@ impl EntityContextTrait<Model> for SessionContext {
         todo!()
     }
 
-    async fn delete(&self, entity: Model) -> Result<Model, DbErr> {
+    async fn delete(&self, id: i32) -> Result<Model, DbErr> {
         todo!()
     }
 }
