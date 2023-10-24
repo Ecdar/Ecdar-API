@@ -19,11 +19,21 @@ impl SessionContextTrait for SessionContext {}
 #[async_trait]
 impl EntityContextTrait<Model> for SessionContext {
     fn new(db_context: DatabaseContext) -> Self {
-        todo!()
+        SessionContext {
+            db_context: db_context,
+        }
     }
 
     async fn create(&self, entity: Model) -> Result<Model, DbErr> {
-        todo!()
+        let session = ActiveModel {
+            id: Default::default(),
+            token: Set(entity.token),
+            created_at: Set(entity.created_at),
+            user_id: Set(entity.user_id),
+        };
+
+        let session = session.insert(&self.db_context.db).await;
+        session
     }
 
     async fn get_by_id(&self, id: i32) -> Result<Option<Model>, DbErr> {
