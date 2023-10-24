@@ -1,14 +1,9 @@
-use crate::database::database_context;
-use crate::database::entity_context;
-use crate::database::session_context;
-use crate::entities::prelude::Session;
-use crate::entities::user::{ActiveModel, Model};
-
 #[cfg(test)]
 mod database_tests {
     use sea_orm::{
-        entity::prelude::*, entity::*, sea_query::TableCreateStatement, tests_cfg::*, Database,
-        DatabaseBackend, DatabaseConnection, MockDatabase, Schema, Transaction,
+        entity::prelude::*, entity::*, sea_query::TableCreateStatement, tests_cfg::*,
+        ActiveValue::Set, Database, DatabaseBackend, DatabaseConnection, MockDatabase, Schema,
+        Transaction,
     };
 
     use crate::{
@@ -25,20 +20,40 @@ mod database_tests {
     async fn setup_schema(db: &DatabaseConnection) {
         let schema = Schema::new(DatabaseBackend::Sqlite);
 
-        let stmt: TableCreateStatement = schema.create_table_from_entity(Entity);
-        let _ = db.execute(db.get_database_backend().build(&stmt)).await;
+        let session_stmt: TableCreateStatement = schema.create_table_from_entity(Entity);
+        let user_stmt: TableCreateStatement =
+            schema.create_table_from_entity(crate::entities::user::Entity);
+        db.execute(db.get_database_backend().build(&session_stmt))
+            .await
+            .unwrap();
+
+        db.execute(db.get_database_backend().build(&user_stmt))
+            .await
+            .unwrap();
     }
 
-    async fn setup_session_context() -> SessionContext {
+    async fn setup_session_context() -> (SessionContext, i32) {
         let db_connection = Database::connect("sqlite::memory:").await.unwrap();
         setup_schema(&db_connection).await;
+
+        // Create standard user and return the id.
+        let user = crate::entities::user::ActiveModel {
+            id: Default::default(),
+            email: Set("DUNK".into()),
+            username: Set("DUNK".into()),
+            password: Set("DUNK".into()),
+        };
+
+        let user = user.insert(&db_connection).await.unwrap();
+
         let db_context = DatabaseContext { db: db_connection };
-        SessionContext::new(db_context)
+
+        (SessionContext::new(db_context), user.id)
     }
 
     #[tokio::test]
     async fn create_context() {
-        let session_context = setup_session_context().await;
+        let (session_context, _user_id) = setup_session_context().await;
 
         let test = match session_context.db_context.db.ping().await {
             Ok(()) => true,
@@ -50,13 +65,13 @@ mod database_tests {
     #[tokio::test]
     async fn create_test() {
         // Setting up a sqlite database in memory.
-        let session_context = setup_session_context().await;
+        let (session_context, user_id) = setup_session_context().await;
 
         let new_session = Model {
             id: 1,
             token: Uuid::parse_str("4473240f-2acb-422f-bd1a-5214554ed0e0").unwrap(),
             created_at: Local::now().naive_utc(),
-            user_id: 1,
+            user_id,
         };
 
         let created_session = session_context.create(new_session).await.unwrap();
@@ -71,13 +86,13 @@ mod database_tests {
 
     #[tokio::test]
     async fn get_by_id_test() {
-        let session_context = setup_session_context().await;
+        let (session_context, user_id) = setup_session_context().await;
 
         let new_session = Model {
             id: 1,
             token: Uuid::parse_str("4473240f-2acb-422f-bd1a-5214554ed0e0").unwrap(),
             created_at: Local::now().naive_utc(),
-            user_id: 1,
+            user_id,
         };
 
         let created_session = session_context.create(new_session).await.unwrap();
@@ -89,7 +104,7 @@ mod database_tests {
 
     #[tokio::test]
     async fn get_by_id_not_found_test() {
-        let session_context = setup_session_context().await;
+        let (session_context, _user_id) = setup_session_context().await;
 
         let test = match session_context.get_by_id(1).await.unwrap() {
             None => true,
@@ -101,21 +116,21 @@ mod database_tests {
 
     #[tokio::test]
     async fn get_all_test() {
-        let session_context = setup_session_context().await;
+        let (session_context, user_id) = setup_session_context().await;
 
         // Create the sessions structs
         let session1 = Model {
             id: 1,
             token: Uuid::parse_str("4473240f-2acb-422f-bd1a-5214554ed0e0").unwrap(),
             created_at: Local::now().naive_utc(),
-            user_id: 1,
+            user_id,
         };
 
         let session2 = Model {
             id: 2,
             token: Uuid::parse_str("75ecdf25-538c-4fe0-872d-525570c96b91").unwrap(),
             created_at: Local::now().naive_utc(),
-            user_id: 1,
+            user_id,
         };
 
         // Create the records in the database.
@@ -129,7 +144,7 @@ mod database_tests {
 
     #[tokio::test]
     async fn get_all_not_found_test() {
-        let session_context = setup_session_context().await;
+        let (session_context, _user_id) = setup_session_context().await;
 
         let test = session_context.get_all().await.unwrap().is_empty();
 
@@ -138,13 +153,13 @@ mod database_tests {
 
     #[tokio::test]
     async fn update_test() {
-        let session_context = setup_session_context().await;
+        let (session_context, user_id) = setup_session_context().await;
 
         let original_session = Model {
             id: 1,
             token: Uuid::parse_str("5c5e9172-9dff-4f35-afde-029a6f99652c").unwrap(),
             created_at: Local::now().naive_utc(),
-            user_id: 1,
+            user_id,
         };
 
         let original_session = session_context.create(original_session).await.unwrap();
@@ -167,13 +182,13 @@ mod database_tests {
 
     #[tokio::test]
     async fn update_test_failed_test() {
-        let session_context = setup_session_context().await;
+        let (session_context, user_id) = setup_session_context().await;
 
         let original_session = Model {
             id: 1,
             token: Uuid::parse_str("5c5e9172-9dff-4f35-afde-029a6f99652c").unwrap(),
             created_at: Local::now().naive_utc(),
-            user_id: 1,
+            user_id,
         };
 
         let updated_context = session_context.update(original_session).await;
@@ -183,13 +198,13 @@ mod database_tests {
 
     #[tokio::test]
     async fn update_id_test() {
-        let session_context = setup_session_context().await;
+        let (session_context, user_id) = setup_session_context().await;
 
         let original_session = Model {
             id: 1,
             token: Uuid::parse_str("5c5e9172-9dff-4f35-afde-029a6f99652c").unwrap(),
             created_at: Local::now().naive_utc(),
-            user_id: 1,
+            user_id,
         };
 
         let original_session = session_context.create(original_session).await.unwrap();
@@ -208,13 +223,13 @@ mod database_tests {
 
     #[tokio::test]
     async fn delete_test() {
-        let session_context = setup_session_context().await;
+        let (session_context, user_id) = setup_session_context().await;
 
         let original_session = Model {
             id: 1,
             token: Uuid::parse_str("5c5e9172-9dff-4f35-afde-029a6f99652c").unwrap(),
             created_at: Local::now().naive_utc(),
-            user_id: 1,
+            user_id,
         };
 
         let session = session_context.create(original_session).await.unwrap();
@@ -226,7 +241,7 @@ mod database_tests {
 
     #[tokio::test]
     async fn delete_not_found_test() {
-        let session_context = setup_session_context().await;
+        let (session_context, _user_id) = setup_session_context().await;
 
         let result = session_context.delete(3).await;
 
