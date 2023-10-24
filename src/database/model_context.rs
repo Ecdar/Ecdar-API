@@ -1,31 +1,21 @@
-
-use async_trait::async_trait;
-use sea_orm::{DbErr, Set, ActiveModelTrait, EntityTrait, Unchanged};
-use std::fmt::Display;
 use crate::database::database_context::DatabaseContextTrait;
-use crate::entities::model::{Model, ActiveModel};
+use crate::entities::model::{ActiveModel, Model};
 use crate::entities::prelude::Model as ModelEntity;
 use crate::EntityContextTrait;
+use async_trait::async_trait;
+use sea_orm::{ActiveModelTrait, DbErr, EntityTrait, RuntimeErr, Set, Unchanged};
 
-pub struct ModelContext<'a> {
-    db_context: &'a dyn DatabaseContextTrait,
+pub struct ModelContext {
+    db_context: Box<dyn DatabaseContextTrait>,
 }
 
-#[async_trait]
-pub trait ModelContextTrait<'a>: EntityContextTrait<'a, Model>{
-    fn hello(&self) -> u32;
-}
+pub trait ModelContextTrait: EntityContextTrait<Model> {}
+
+impl ModelContextTrait for ModelContext {}
 
 #[async_trait]
-impl<'a> ModelContextTrait<'a> for ModelContext<'a> {
-    fn hello(&self) -> u32 {
-        32
-    }
-}
-
-#[async_trait]
-impl<'a> EntityContextTrait<'a, Model> for ModelContext<'a> {
-    fn new(db_context: &dyn DatabaseContextTrait) -> ModelContext {
+impl EntityContextTrait<Model> for ModelContext {
+    fn new(db_context: Box<dyn DatabaseContextTrait>) -> ModelContext {
         ModelContext { db_context }
     }
 
@@ -37,16 +27,20 @@ impl<'a> EntityContextTrait<'a, Model> for ModelContext<'a> {
             components_info: Set(entity.components_info),
             owner_id: Set(entity.owner_id),
         };
-        let model: Model = model.insert(self.db_context.get_connection()).await?;
+        let model: Model = model.insert(&self.db_context.get_connection()).await?;
         Ok(model)
     }
 
     async fn get_by_id(&self, entity_id: i32) -> Result<Option<Model>, DbErr> {
-        ModelEntity::find_by_id(entity_id).one(&self.db_context.get_connection()).await
+        ModelEntity::find_by_id(entity_id)
+            .one(&self.db_context.get_connection())
+            .await
     }
 
     async fn get_all(&self) -> Result<Vec<Model>, DbErr> {
-        ModelEntity::find().all(&self.db_context.get_connection()).await
+        ModelEntity::find()
+            .all(&self.db_context.get_connection())
+            .await
     }
 
     async fn update(&self, entity: Model) -> Result<Model, DbErr> {
@@ -71,7 +65,18 @@ impl<'a> EntityContextTrait<'a, Model> for ModelContext<'a> {
     }
 
     async fn delete(&self, entity_id: i32) -> Result<Model, DbErr> {
-        todo!()
+        let model = self.get_by_id(entity_id).await?;
+        match model {
+            None => Err(DbErr::Exec(RuntimeErr::Internal(
+                "No record was deleted".into(),
+            ))),
+            Some(model) => {
+                ModelEntity::delete_by_id(entity_id)
+                    .exec(&self.db_context.get_connection())
+                    .await?;
+                Ok(model)
+            }
+        }
     }
 }
 

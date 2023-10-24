@@ -2,20 +2,18 @@
 mod database_tests {
     use crate::{
         database::{
-            database_context::{DatabaseContext, DatabaseContextTrait},
-            entity_context::EntityContextTrait,
-            access_context::{AccessContext},
+            access_context::AccessContext, database_context::DatabaseContext,
+            entity_context::EntityContextTrait, model_context::ModelContext,
             user_context::UserContext,
-            model_context::ModelContext
         },
         entities::access::{Entity as AccessEntity, Model as Access},
+        entities::model::{Entity as ModelEntity, Model},
+        entities::sea_orm_active_enums::Role,
         entities::user::{Entity as UserEntity, Model as User},
-        entities::model::{Entity as ModelEntity, Model as Model},
-        entities::sea_orm_active_enums::Role
     };
     use sea_orm::{
-        entity::prelude::*, entity::*, sea_query::TableCreateStatement, Database,
-        DatabaseBackend, DatabaseConnection, Schema,
+        entity::prelude::*, sea_query::TableCreateStatement, Database, DatabaseBackend,
+        DatabaseConnection, Schema,
     };
 
     async fn setup_schema(db: &DatabaseConnection) {
@@ -37,11 +35,11 @@ mod database_tests {
         // Setting up a sqlite database in memory to test on
         let db_connection = Database::connect("sqlite::memory:").await.unwrap();
         setup_schema(&db_connection).await;
-        let db_context = DatabaseContext { db: db_connection };
+        let db_context = Box::new(DatabaseContext { db_connection });
 
-        let user_context = UserContext::new(&db_context);
-        let model_context = ModelContext::new(&db_context);
-        let access_context = AccessContext::new(&db_context);
+        let user_context = UserContext::new(db_context.clone());
+        let model_context = ModelContext::new(db_context.clone());
+        let access_context = AccessContext::new(db_context.clone());
 
         let new_user = User {
             id: 1,
@@ -62,7 +60,7 @@ mod database_tests {
             id: 1,
             role: Role::Editor,
             user_id: 1,
-            model_id: 1
+            model_id: 1,
         };
 
         // Creates the access in the database using the 'create' function
@@ -71,8 +69,10 @@ mod database_tests {
         let created_access = access_context.create(new_access).await?;
 
         let fetched_access = AccessEntity::find_by_id(created_access.id)
-            .one(&access_context.db_context.db)
-            .await?.clone().unwrap();
+            .one(&access_context.db_context.get_connection())
+            .await?
+            .clone()
+            .unwrap();
 
         // Assert if the fetched access is the same as the created access
         assert_eq!(fetched_access.id, created_access.id);
@@ -87,10 +87,12 @@ mod database_tests {
         // Setting up a sqlite database in memory to test on
         let db_connection = Database::connect("sqlite::memory:").await.unwrap();
         setup_schema(&db_connection).await;
-        let db_context = DatabaseContext { db: db_connection };
-        let user_context = UserContext::new(&db_context);
-        let model_context = ModelContext::new(&db_context);
-        let access_context = AccessContext::new(&db_context);
+        let db_context = Box::new(DatabaseContext {
+            db_connection: db_connection,
+        });
+        let user_context = UserContext::new(db_context.clone());
+        let model_context = ModelContext::new(db_context.clone());
+        let access_context = AccessContext::new(db_context.clone());
 
         let new_user = User {
             id: 1,
@@ -111,7 +113,7 @@ mod database_tests {
             id: 1,
             role: Role::Editor,
             user_id: 1,
-            model_id: 1
+            model_id: 1,
         };
 
         // Creates the access in the database using the 'create' function
@@ -120,7 +122,11 @@ mod database_tests {
         let created_access = access_context.create(new_access).await?;
 
         // Fetches the access created using the 'get_by_id' function
-        let fetched_access = access_context.get_by_id(created_access.id).await?.clone().unwrap();
+        let fetched_access = access_context
+            .get_by_id(created_access.id)
+            .await?
+            .clone()
+            .unwrap();
 
         // Assert if the fetched access is the same as the created access
         assert_eq!(fetched_access.id, created_access.id);
