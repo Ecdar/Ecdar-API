@@ -1,21 +1,19 @@
 #[cfg(test)]
 mod database_tests {
     use sea_orm::{
-        entity::prelude::*, entity::*, sea_query::TableCreateStatement, tests_cfg::*,
-        ActiveValue::Set, Database, DatabaseBackend, DatabaseConnection, MockDatabase, Schema,
-        Transaction,
+        entity::prelude::*, sea_query::TableCreateStatement, ActiveValue::Set, Database,
+        DatabaseBackend, DatabaseConnection, Schema,
     };
 
     use crate::{
         database::{
-            database_context::{DatabaseContext, DatabaseContextTrait},
-            entity_context::EntityContextTrait,
-            session_context::{self, SessionContext},
+            database_context::DatabaseContext, entity_context::EntityContextTrait,
+            session_context::SessionContext,
         },
-        entities::session::{self, Entity, Model},
+        entities::session::{Entity, Model},
     };
 
-    use chrono::{offset::Local, DateTime};
+    use chrono::offset::Local;
 
     async fn setup_schema(db: &DatabaseConnection) {
         let schema = Schema::new(DatabaseBackend::Sqlite);
