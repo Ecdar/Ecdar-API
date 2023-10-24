@@ -37,19 +37,45 @@ impl EntityContextTrait<Model> for SessionContext {
     }
 
     async fn get_by_id(&self, id: i32) -> Result<Option<Model>, DbErr> {
-        todo!()
+        Session::find_by_id(id).one(&self.db_context.db).await
     }
 
     async fn get_all(&self) -> Result<Vec<Model>, DbErr> {
-        todo!()
+        Session::find().all(&self.db_context.db).await
     }
 
     async fn update(&self, entity: Model) -> Result<Model, DbErr> {
-        todo!()
+        let res = &self.get_by_id(entity.id).await?;
+        let updated_session: Result<Model, DbErr> = match res {
+            None => Err(DbErr::RecordNotFound(String::from(format!(
+                "Could not find entity {:?}",
+                entity
+            )))),
+            Some(session) => {
+                ActiveModel {
+                    id: Unchanged(session.id),
+                    token: Set(entity.token),
+                    created_at: Set(entity.created_at),
+                    user_id: Unchanged(session.user_id), //TODO Should it be allowed to change the user_id of a session?
+                }
+                .update(&self.db_context.db)
+                .await
+            }
+        };
+        return updated_session;
     }
 
     async fn delete(&self, id: i32) -> Result<Model, DbErr> {
-        todo!()
+        let session = self.get_by_id(id).await?;
+        match session {
+            None => Err(DbErr::Exec(sea_orm::RuntimeErr::Internal(
+                "No record was deleted".into(),
+            ))),
+            Some(session) => {
+                Session::delete_by_id(id).exec(&self.db_context.db).await?;
+                Ok(session)
+            }
+        }
     }
 }
 
