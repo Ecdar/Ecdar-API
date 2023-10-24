@@ -214,11 +214,9 @@ mod database_tests {
             ..original_session
         };
 
-        let altered_session = session_context.update(altered_session).await.unwrap();
+        let altered_session = session_context.update(altered_session).await;
 
-        let fetched_session = session_context.get_by_id(altered_session.id).await;
-
-        assert!(fetched_session.is_err());
+        assert!(altered_session.is_err());
     }
 
     #[tokio::test]
