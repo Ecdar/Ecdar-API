@@ -2,13 +2,13 @@ use sea_orm::prelude::async_trait::async_trait;
 use sea_orm::ActiveValue::{Set, Unchanged};
 use sea_orm::{ActiveModelTrait, DbErr, EntityTrait};
 
-use crate::database::database_context::DatabaseContext;
+use crate::database::database_context::DatabaseContextTrait;
 use crate::database::entity_context::EntityContextTrait;
 use crate::entities::prelude::Session;
 use crate::entities::session::{ActiveModel, Model};
 
 pub struct SessionContext {
-    db_context: DatabaseContext,
+    db_context: Box<dyn DatabaseContextTrait>,
 }
 
 #[async_trait]
@@ -19,10 +19,8 @@ impl SessionContextTrait for SessionContext {}
 #[async_trait]
 impl EntityContextTrait<Model> for SessionContext {
     /// Creates a new `SessionContext` for interacting with the database.
-    fn new(db_context: DatabaseContext) -> Self {
-        SessionContext {
-            db_context: db_context,
-        }
+    fn new(db_context: Box<dyn DatabaseContextTrait>) -> Self {
+        SessionContext { db_context }
     }
     /// Creates a new session in the database based on the provided model.
     /// # Example
@@ -45,7 +43,7 @@ impl EntityContextTrait<Model> for SessionContext {
             user_id: Set(entity.user_id),
         };
 
-        let session = session.insert(&self.db_context.db).await;
+        let session = session.insert(&self.db_context.get_connection()).await;
         session
     }
 
@@ -55,7 +53,9 @@ impl EntityContextTrait<Model> for SessionContext {
     /// let session: Result<Option<Model>, DbErr> = session_context.get_by_id(id).await;
     /// ```
     async fn get_by_id(&self, id: i32) -> Result<Option<Model>, DbErr> {
-        Session::find_by_id(id).one(&self.db_context.db).await
+        Session::find_by_id(id)
+            .one(&self.db_context.get_connection())
+            .await
     }
 
     /// Returns all models in a vector.
@@ -64,7 +64,7 @@ impl EntityContextTrait<Model> for SessionContext {
     /// let session: Result<Vec<Model>, DbErr> = session_context.get_all().await;
     /// ```
     async fn get_all(&self) -> Result<Vec<Model>, DbErr> {
-        Session::find().all(&self.db_context.db).await
+        Session::find().all(&self.db_context.get_connection()).await
     }
 
     /// Updates a model in the database based on the provided model.
@@ -105,7 +105,7 @@ impl EntityContextTrait<Model> for SessionContext {
                     created_at: Set(entity.created_at),
                     user_id: Unchanged(session.user_id), //TODO Should it be allowed to change the user_id of a session?
                 }
-                .update(&self.db_context.db)
+                .update(&self.db_context.get_connection())
                 .await
             }
         };
@@ -135,7 +135,9 @@ impl EntityContextTrait<Model> for SessionContext {
                 "No record was deleted".into(),
             ))),
             Some(session) => {
-                Session::delete_by_id(id).exec(&self.db_context.db).await?;
+                Session::delete_by_id(id)
+                    .exec(&self.db_context.get_connection())
+                    .await?;
                 Ok(session)
             }
         }
@@ -145,4 +147,3 @@ impl EntityContextTrait<Model> for SessionContext {
 #[cfg(test)]
 #[path = "../tests/database/session_context.rs"]
 mod tests;
-

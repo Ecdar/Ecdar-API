@@ -44,16 +44,16 @@ mod database_tests {
 
         let user = user.insert(&db_connection).await.unwrap();
 
-        let db_context = DatabaseContext { db: db_connection };
+        let db_context = DatabaseContext { db_connection };
 
-        (SessionContext::new(db_context), user.id)
+        (SessionContext::new(Box::new(db_context)), user.id)
     }
 
     #[tokio::test]
     async fn create_context() {
         let (session_context, _user_id) = setup_session_context().await;
 
-        let test = match session_context.db_context.db.ping().await {
+        let test = match session_context.db_context.get_connection().ping().await {
             Ok(()) => true,
             Err(_) => false,
         };
@@ -75,7 +75,7 @@ mod database_tests {
         let created_session = session_context.create(new_session).await.unwrap();
 
         let fetched_session = Entity::find_by_id(created_session.id)
-            .one(&session_context.db_context.db)
+            .one(&session_context.db_context.get_connection())
             .await
             .unwrap();
 
@@ -244,4 +244,3 @@ mod database_tests {
         assert!(result.is_err());
     }
 }
-
