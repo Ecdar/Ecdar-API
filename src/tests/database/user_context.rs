@@ -1,23 +1,16 @@
-use crate::database::database_context;
-use crate::database::entity_context;
-use crate::database::user_context;
-use crate::entities::prelude::User;
-use crate::entities::user::{ActiveModel, Model};
-
 #[cfg(test)]
 mod database_tests {
     use crate::entities::prelude::User;
     use crate::{
         database::{
-            database_context::{DatabaseContext, DatabaseContextTrait},
-            entity_context::EntityContextTrait,
-            user_context::{self, UserContext},
+            database_context::DatabaseContext, entity_context::EntityContextTrait,
+            user_context::UserContext,
         },
         entities::user::{self, Entity as UserEntity, Model},
     };
     use sea_orm::{
-        entity::prelude::*, entity::*, sea_query::TableCreateStatement, tests_cfg::*, Database,
-        DatabaseBackend, DatabaseConnection, MockDatabase, Schema, Transaction,
+        entity::prelude::*, sea_query::TableCreateStatement, Database, DatabaseBackend,
+        DatabaseConnection, Schema,
     };
     use std::any::Any;
 
@@ -74,11 +67,11 @@ mod database_tests {
         // Setting up a sqlite database in memory to test on
         let db_connection = Database::connect("sqlite::memory:").await.unwrap();
         setup_schema(&db_connection).await;
-        let db_context = DatabaseContext { db: db_connection };
+        let db_context = Box::new(DatabaseContext { db_connection });
         let user_context = UserContext::new(db_context);
 
         // Creates a model of the user which will be created
-        let new_user = Model {
+        let new_user = User {
             id: 1,
             email: "anders21@student.aau.dk".to_owned(),
             username: "andemad".to_owned(),
@@ -94,28 +87,7 @@ mod database_tests {
 
         // Assert if the fetched user is the same as the created user
         assert_eq!(fetched_user.unwrap().username, created_user.username);
-        /*
-        let db = MockDatabase::new(DatabaseBackend::Postgres).append_query_results([
-            vec![user::Model{
-                id: 1,
-                email: "anders21@student.aau.dk".to_owned(),
-                username: "andemad".to_owned(),
-                password: "rask".to_owned(),
-            }],
-            vec![user::Model{
-                id: 1,
-                email: "anders21@student.aau.dk".to_owned(),
-                username: "andemad".to_owned(),
-                password: "rask".to_owned(),},
-                user::Model{
-                    id: 2,
-                    email: "andeand@and.and".to_owned(),
-                    username: "OgsåAndersRask".to_owned(),
-                    password: "rask".to_owned(),
-                }
-            ]
-        ]);
-        */
+
         Ok(())
     }
 
@@ -124,11 +96,13 @@ mod database_tests {
         // Setting up a sqlite database in memory to test on
         let db_connection = Database::connect("sqlite::memory:").await.unwrap();
         setup_schema(&db_connection).await;
-        let db_context = DatabaseContext { db: db_connection };
+        let db_context = Box::new(DatabaseContext {
+            db_connection: db_connection,
+        });
         let user_context = UserContext::new(db_context);
 
         // Creates a model of the user which will be created
-        let new_user = Model {
+        let new_user = User {
             id: 1,
             email: "anders21@student.aau.dk".to_owned(),
             username: "andemad".to_owned(),
@@ -138,14 +112,11 @@ mod database_tests {
         // Creates the user in the database using the 'create' function
         let created_user = user_context.create(new_user).await?;
 
-        // Fecthes the user created using the 'get_by_id' function
-        let fetched_user = user_context.get_by_id(created_user.id).await;
+        // Fetches the user created using the 'get_by_id' function
+        let fetched_user = user_context.get_by_id(created_user.id).await?;
 
         // Assert if the fetched user is the same as the created user
-        assert_eq!(
-            fetched_user.unwrap().unwrap().username,
-            created_user.username
-        );
+        assert_eq!(fetched_user.unwrap().username, created_user.username);
 
         Ok(())
     }

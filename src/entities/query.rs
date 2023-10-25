@@ -9,7 +9,7 @@ pub struct Model {
     pub id: i32,
     pub string: String,
     pub result: Option<Json>,
-    #[sea_orm(primary_key, auto_increment = false)]
+    pub out_dated: bool,
     pub model_id: i32,
 }
 

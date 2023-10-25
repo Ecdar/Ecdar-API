@@ -30,18 +30,15 @@ impl Related<super::access::Entity> for Entity {
     }
 }
 
-impl Related<super::session::Entity> for Entity {
+impl Related<super::model::Entity> for Entity {
     fn to() -> RelationDef {
-        Relation::Session.def()
+        Relation::Model.def()
     }
 }
 
-impl Related<super::model::Entity> for Entity {
+impl Related<super::session::Entity> for Entity {
     fn to() -> RelationDef {
-        super::access::Relation::Model.def()
-    }
-    fn via() -> Option<RelationDef> {
-        Some(super::access::Relation::User.def().rev())
+        Relation::Session.def()
     }
 }
 
