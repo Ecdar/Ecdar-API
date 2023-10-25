@@ -1,12 +1,18 @@
 use std::env;
 
-use tonic::{Request, Response, Status};
+use tonic::{Code, Request, Response, Status};
 
+use crate::api_server::server::server::ecdar_api_auth_server::EcdarApiAuth;
+use crate::api_server::server::server::ecdar_api_server::EcdarApi;
 use crate::api_server::server::server::ecdar_backend_client::EcdarBackendClient;
 
-use super::server::server::{
-    ecdar_backend_server::EcdarBackend, QueryRequest, QueryResponse, SimulationStartRequest,
-    SimulationStepRequest, SimulationStepResponse, UserTokenResponse,
+use super::{
+    auth,
+    server::server::{
+        ecdar_backend_server::EcdarBackend, GetAuthTokenRequest, GetAuthTokenResponse,
+        QueryRequest, QueryResponse, SimulationStartRequest, SimulationStepRequest,
+        SimulationStepResponse, UserTokenResponse,
+    },
 };
 
 #[derive(Debug)]
@@ -23,6 +29,26 @@ impl ConcreteEcdarApi {
     }
 }
 
+#[tonic::async_trait]
+impl EcdarApi for ConcreteEcdarApi {}
+
+#[tonic::async_trait]
+impl EcdarApiAuth for ConcreteEcdarApi {
+    async fn get_auth_token(
+        &self,
+        request: Request<GetAuthTokenRequest>,
+    ) -> Result<Response<GetAuthTokenResponse>, Status> {
+        let uid = "1234";
+        let token = auth::create_jwt(&uid);
+
+        match token {
+            Ok(token) => Ok(Response::new(GetAuthTokenResponse { token })),
+            Err(e) => Err(Status::new(Code::Internal, e.to_string())),
+        }
+    }
+}
+
+/// Implementation of the EcdarBackend trait, which is used to ensure backwards compatability with the Reveaal engine.
 #[tonic::async_trait]
 impl EcdarBackend for ConcreteEcdarApi {
     async fn get_user_token(

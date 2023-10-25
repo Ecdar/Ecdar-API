@@ -1,6 +1,9 @@
-use std::env;
+use crate::api_server::auth;
 use crate::api_server::ecdar_api::ConcreteEcdarApi;
+use crate::api_server::server::server::ecdar_api_auth_server::EcdarApiAuthServer;
+use crate::api_server::server::server::ecdar_api_server::EcdarApiServer;
 use crate::api_server::server::server::ecdar_backend_server::EcdarBackendServer;
+use std::env;
 use tonic::transport::Server;
 
 pub mod server {
@@ -14,11 +17,15 @@ pub async fn start_grpc_server() -> Result<(), Box<dyn std::error::Error>> {
         .parse()
         .unwrap();
 
-    // creating a service
     println!("Starting grpc server on '{}'", addr);
 
-    // adding our service to our server.
+    // adding services to our server.
     Server::builder()
+        .add_service(EcdarApiAuthServer::new(ConcreteEcdarApi::new()))
+        .add_service(EcdarApiServer::with_interceptor(
+            ConcreteEcdarApi::new(),
+            auth::token_validation,
+        ))
         .add_service(EcdarBackendServer::new(ConcreteEcdarApi::new()))
         .serve(addr)
         .await?;
