@@ -4,20 +4,20 @@ use sea_orm::{ActiveModelTrait, DbErr, EntityTrait};
 
 use crate::database::database_context::DatabaseContextTrait;
 use crate::database::entity_context::EntityContextTrait;
-use crate::entities::prelude::Session;
-use crate::entities::session::{ActiveModel, Model};
+use crate::entities::prelude::Session as SessionEntity;
+use crate::entities::session::{ActiveModel, Model as Session};
 
 pub struct SessionContext {
     db_context: Box<dyn DatabaseContextTrait>,
 }
 
-#[async_trait]
-pub trait SessionContextTrait {}
+
+pub trait SessionContextTrait: EntityContextTrait<Session> {}
 
 impl SessionContextTrait for SessionContext {}
 
 #[async_trait]
-impl EntityContextTrait<Model> for SessionContext {
+impl EntityContextTrait<Session> for SessionContext {
     /// Creates a new `SessionContext` for interacting with the database.
     fn new(db_context: Box<dyn DatabaseContextTrait>) -> Self {
         SessionContext { db_context }
@@ -35,7 +35,7 @@ impl EntityContextTrait<Model> for SessionContext {
     ///     };
     /// let created_session = session_context.create(model).await.unwrap();
     /// ```
-    async fn create(&self, entity: Model) -> Result<Model, DbErr> {
+    async fn create(&self, entity: Session) -> Result<Session, DbErr> {
         let session = ActiveModel {
             id: Default::default(),
             token: Set(entity.token),
@@ -52,8 +52,8 @@ impl EntityContextTrait<Model> for SessionContext {
     /// ```rust
     /// let session: Result<Option<Model>, DbErr> = session_context.get_by_id(id).await;
     /// ```
-    async fn get_by_id(&self, id: i32) -> Result<Option<Model>, DbErr> {
-        Session::find_by_id(id)
+    async fn get_by_id(&self, id: i32) -> Result<Option<Session>, DbErr> {
+        SessionEntity::find_by_id(id)
             .one(&self.db_context.get_connection())
             .await
     }
@@ -63,8 +63,8 @@ impl EntityContextTrait<Model> for SessionContext {
     /// ```rust
     /// let session: Result<Vec<Model>, DbErr> = session_context.get_all().await;
     /// ```
-    async fn get_all(&self) -> Result<Vec<Model>, DbErr> {
-        Session::find().all(&self.db_context.get_connection()).await
+    async fn get_all(&self) -> Result<Vec<Session>, DbErr> {
+        SessionEntity::find().all(&self.db_context.get_connection()).await
     }
 
     /// Updates a model in the database based on the provided model.
@@ -91,9 +91,9 @@ impl EntityContextTrait<Model> for SessionContext {
     /// | id | token                                | created_at                | user_id |
     /// |----|--------------------------------------|---------------------------|---------|
     /// | 1  | 4473240f-2acb-422f-bd1a-5214554ed0e0 | 2023-10-24T13:49:16+02:00 | 2       |
-    async fn update(&self, entity: Model) -> Result<Model, DbErr> {
+    async fn update(&self, entity: Session) -> Result<Session, DbErr> {
         let res = &self.get_by_id(entity.id).await?;
-        let updated_session: Result<Model, DbErr> = match res {
+        let updated_session: Result<Session, DbErr> = match res {
             None => Err(DbErr::RecordNotFound(String::from(format!(
                 "Could not find entity {:?}",
                 entity
@@ -128,14 +128,14 @@ impl EntityContextTrait<Model> for SessionContext {
     /// | id | token | created_at | user_id |
     /// |----|-------|------------|---------|
     /// |    |       |            |         |
-    async fn delete(&self, id: i32) -> Result<Model, DbErr> {
+    async fn delete(&self, id: i32) -> Result<Session, DbErr> {
         let session = self.get_by_id(id).await?;
         match session {
             None => Err(DbErr::Exec(sea_orm::RuntimeErr::Internal(
                 "No record was deleted".into(),
             ))),
             Some(session) => {
-                Session::delete_by_id(id)
+                SessionEntity::delete_by_id(id)
                     .exec(&self.db_context.get_connection())
                     .await?;
                 Ok(session)

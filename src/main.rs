@@ -12,6 +12,7 @@ use database::entity_context::EntityContextTrait;
 use dotenv::dotenv;
 use std::error::Error;
 use std::fmt::Debug;
+use crate::database::in_use_context::InUseContext;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
@@ -23,12 +24,14 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let access_context = Box::new(AccessContext::new(db_context.clone()));
     let query_context = Box::new(QueryContext::new(db_context.clone()));
     let session_context = Box::new(SessionContext::new(db_context.clone()));
+    let in_use_context = Box::new(InUseContext::new(db_context.clone()));
 
     print_all_entities(model_context).await;
     print_all_entities(user_context).await;
     print_all_entities(access_context).await;
     print_all_entities(query_context).await;
     print_all_entities(session_context).await;
+    print_all_entities(in_use_context).await;
 
     Ok(())
 }
