@@ -13,7 +13,7 @@ mod database_tests {
             entity_context::EntityContextTrait,
             user_context::{self, UserContext},
         },
-        entities::user::{self, Entity, Model},
+        entities::user::{self, Entity as UserEntity, Model},
     };
     use sea_orm::{
         entity::prelude::*, entity::*, sea_query::TableCreateStatement, tests_cfg::*, Database,
@@ -21,12 +21,26 @@ mod database_tests {
     };
     use std::any::Any;
 
+    async fn setup_db_with_entities<E>(entities: Vec<E>) -> DatabaseContext
+    where
+        E: EntityTrait,
+    {
+        let connection = Database::connect("sqlite::memory:").await.unwrap();
+        let schema = Schema::new(DatabaseBackend::Sqlite);
+        for entity in entities.iter() {
+            let stmt = schema.create_table_from_entity(entity.to_owned());
+            let _ = connection
+                .execute(connection.get_database_backend().build(&stmt))
+                .await;
+        }
+        DatabaseContext { db: connection }
+    }
     async fn setup_schema(db: &DatabaseConnection) {
         // Setup Schema helper
         let schema = Schema::new(DatabaseBackend::Sqlite);
 
         // Derive from Entity
-        let stmt: TableCreateStatement = schema.create_table_from_entity(Entity);
+        let stmt: TableCreateStatement = schema.create_table_from_entity(UserEntity);
         let _ = db.execute(db.get_database_backend().build(&stmt)).await;
     }
 
@@ -73,7 +87,7 @@ mod database_tests {
         // Creates the user in the database using the 'create' function
         let created_user = user_context.create(new_user).await?;
 
-        let fetched_user = Entity::find_by_id(created_user.id)
+        let fetched_user = UserEntity::find_by_id(created_user.id)
             .one(&user_context.db_context.db)
             .await?;
 
@@ -231,5 +245,14 @@ mod database_tests {
                 return;
             }
         }
+    }
+    // TODO den skal slettes senere
+    #[tokio::test]
+    async fn create_test_test() -> () {
+        let context = setup_db_with_entities(vec![UserEntity]).await;
+        let user_context = UserContext::new(context);
+        let users = two_template_users();
+        let res = user_context.create(users[1].to_owned()).await.unwrap();
+        assert_eq!(res, user_context.get_by_id(1).await.unwrap().unwrap())
     }
 }
