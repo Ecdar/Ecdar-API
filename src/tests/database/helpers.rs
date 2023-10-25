@@ -1,3 +1,4 @@
+#[path = "helpers.rs"]
 pub mod helpers {
     use crate::{
         database::{database_context::DatabaseContext, entity_context::EntityContextTrait},

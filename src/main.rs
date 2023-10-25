@@ -1,8 +1,9 @@
 mod api;
 mod database;
 mod entities;
-
+mod tests;
 use crate::database::access_context::AccessContext;
+use crate::database::in_use_context::InUseContext;
 use crate::database::model_context::ModelContext;
 use crate::database::query_context::QueryContext;
 use crate::database::session_context::SessionContext;
@@ -12,7 +13,6 @@ use database::entity_context::EntityContextTrait;
 use dotenv::dotenv;
 use std::error::Error;
 use std::fmt::Debug;
-use crate::database::in_use_context::InUseContext;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
