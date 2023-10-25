@@ -81,6 +81,6 @@ impl EntityContextTrait<Model> for ModelContext {
     }
 }
 
-//#[cfg(test)]
-//#[path = "../tests/database/model_context.rs"]
-//mod tests;
+#[cfg(test)]
+#[path = "../tests/database/model_context.rs"]
+mod tests;
