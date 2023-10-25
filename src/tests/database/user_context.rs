@@ -1,5 +1,9 @@
+#[path = "helpers.rs"]
+pub mod helpers;
+
 #[cfg(test)]
 mod database_tests {
+    use crate::database::user_context::tests::helpers::helpers::*;
     use crate::{
         database::{
             database_context::DatabaseContext, entity_context::EntityContextTrait,
@@ -12,23 +16,6 @@ mod database_tests {
         DatabaseConnection, Schema,
     };
 
-    // TODO skal også flyttes så andre test filer kan gøre brug af den
-    async fn setup_db_with_entities<E>(entities: Vec<E>) -> DatabaseContext
-    where
-        E: EntityTrait,
-    {
-        let connection = Database::connect("sqlite::memory:").await.unwrap();
-        let schema = Schema::new(DatabaseBackend::Sqlite);
-        for entity in entities.iter() {
-            let stmt = schema.create_table_from_entity(entity.to_owned());
-            let _ = connection
-                .execute(connection.get_database_backend().build(&stmt))
-                .await;
-        }
-        DatabaseContext {
-            db_connection: connection,
-        }
-    }
     async fn setup_schema(db: &DatabaseConnection) {
         // Setup Schema helper
         let schema = Schema::new(DatabaseBackend::Sqlite);
@@ -221,7 +208,7 @@ mod database_tests {
     // TODO den skal slettes senere
     #[tokio::test]
     async fn create_test_test() -> () {
-        let context = setup_db_with_entities(vec![UserEntity]).await;
+        let context = setup_db_with_entities(vec![AnyEntity::User, AnyEntity::Model]).await;
         let user_context = UserContext::new(Box::new(context));
         let users = two_template_users();
         let res = user_context.create(users[1].to_owned()).await.unwrap();
