@@ -91,11 +91,11 @@ impl EntityContextTrait<User> for UserContext {
     /// The user entity's id will never be changed. If this behavior is wanted, delete the old user and create a new one.
     async fn update(&self, entity: User) -> Result<User, DbErr> {
         let res = &self.get_by_id(entity.id).await?;
-        let updated_user: Result<User, DbErr> = match res {
-            None => Err(DbErr::RecordNotFound(String::from(format!(
+        let updated_user: Result<Model, DbErr> = match res {
+            None => Err(DbErr::RecordNotFound(format!(
                 "Could not find entity {:?}",
                 entity
-            )))),
+            ))),
             Some(user) => {
                 ActiveModel {
                     id: Unchanged(user.id), //TODO ved ikke om unchanged betyder det jeg tror det betyder
@@ -110,8 +110,19 @@ impl EntityContextTrait<User> for UserContext {
         return updated_user;
     }
 
-    /// Deletes a user entity by id
-    async fn delete(&self, entity_id: i32) -> Result<User, DbErr> {
+    /// Returns and deletes a user entity by id
+    ///
+    /// # Example
+    /// ```
+    /// let context : UserContext = UserContext::new(...);
+    /// let user = context.get_by_id(1).unwrap();
+    /// let deleted_user = Model {
+    ///     id: user.id,
+    ///     email: "anders@student.aau.dk".into(),
+    ///     username: "andersAnden",
+    ///     password: user.password
+    /// }
+    async fn delete(&self, entity_id: i32) -> Result<Model, DbErr> {
         let user = self.get_by_id(entity_id).await?;
         match user {
             None => Err(DbErr::Exec(RuntimeErr::Internal(
