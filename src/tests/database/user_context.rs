@@ -21,6 +21,7 @@ mod database_tests {
     };
     use std::any::Any;
 
+    // TODO skal også flyttes så andre test filer kan gøre brug af den
     async fn setup_db_with_entities<E>(entities: Vec<E>) -> DatabaseContext
     where
         E: EntityTrait,
