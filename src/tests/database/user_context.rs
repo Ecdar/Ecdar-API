@@ -1,18 +1,16 @@
 #[cfg(test)]
 mod database_tests {
-    use crate::entities::prelude::User;
     use crate::{
         database::{
             database_context::DatabaseContext, entity_context::EntityContextTrait,
             user_context::UserContext,
         },
-        entities::user::{self, Entity as UserEntity, Model},
+        entities::user::{Entity as UserEntity, Model as User},
     };
     use sea_orm::{
         entity::prelude::*, sea_query::TableCreateStatement, Database, DatabaseBackend,
         DatabaseConnection, Schema,
     };
-    use std::any::Any;
 
     // TODO skal også flyttes så andre test filer kan gøre brug af den
     async fn setup_db_with_entities<E>(entities: Vec<E>) -> DatabaseContext
@@ -27,7 +25,9 @@ mod database_tests {
                 .execute(connection.get_database_backend().build(&stmt))
                 .await;
         }
-        DatabaseContext { db: connection }
+        DatabaseContext {
+            db_connection: connection,
+        }
     }
     async fn setup_schema(db: &DatabaseConnection) {
         // Setup Schema helper
@@ -42,18 +42,20 @@ mod database_tests {
     async fn test_setup() -> UserContext {
         let connection = Database::connect("sqlite::memory:").await.unwrap();
         setup_schema(&connection).await;
-        let db_context = DatabaseContext { db: connection };
-        UserContext::new(db_context)
+        let db_context = DatabaseContext {
+            db_connection: connection,
+        };
+        UserContext::new(Box::new(db_context))
     }
-    fn two_template_users() -> Vec<Model> {
+    fn two_template_users() -> Vec<User> {
         vec![
-            Model {
+            User {
                 id: 1,
                 email: "anders@mail.dk".to_string(),
                 username: "anders".to_string(),
                 password: "123".to_string(),
             },
-            Model {
+            User {
                 id: 2,
                 email: "mike@mail.dk".to_string(),
                 username: "mikemanden".to_string(),
@@ -82,7 +84,7 @@ mod database_tests {
         let created_user = user_context.create(new_user).await?;
 
         let fetched_user = UserEntity::find_by_id(created_user.id)
-            .one(&user_context.db_context.db)
+            .one(&user_context.db_context.get_connection())
             .await?;
 
         // Assert if the fetched user is the same as the created user
@@ -96,9 +98,7 @@ mod database_tests {
         // Setting up a sqlite database in memory to test on
         let db_connection = Database::connect("sqlite::memory:").await.unwrap();
         setup_schema(&db_connection).await;
-        let db_context = Box::new(DatabaseContext {
-            db_connection: db_connection,
-        });
+        let db_context = Box::new(DatabaseContext { db_connection });
         let user_context = UserContext::new(db_context);
 
         // Creates a model of the user which will be created
@@ -124,21 +124,21 @@ mod database_tests {
     async fn get_all_test() -> () {
         let user_context = test_setup().await;
 
-        let mut users_vec: Vec<Model> = vec![
-            Model {
+        let mut users_vec: Vec<User> = vec![
+            User {
                 id: 1,
                 email: "anders21@student.aau.dk".to_string(),
                 username: "anders".to_string(),
                 password: "123".to_string(),
             },
-            Model {
+            User {
                 id: 2,
                 email: "mike@mail.dk".to_string(),
                 username: "mikeManden".to_string(),
                 password: "qwerty".to_string(),
             },
         ];
-        let mut res_users: Vec<Model> = vec![];
+        let mut res_users: Vec<User> = vec![];
         for user in users_vec.iter_mut() {
             res_users.push(user_context.create(user.to_owned()).await.unwrap());
         }
@@ -149,14 +149,14 @@ mod database_tests {
     async fn update_test() -> () {
         let user_context = test_setup().await;
 
-        let user = Model {
+        let user = User {
             id: 1,
             email: "anders21@student.aau.dk".to_string(),
             username: "anders".to_string(),
             password: "123".to_string(),
         };
         let user = user_context.create(user).await.unwrap();
-        let updated_user = Model {
+        let updated_user = User {
             password: "qwerty".to_string(),
             ..user
         };
@@ -176,7 +176,7 @@ mod database_tests {
             let _ = user_context.create(user.to_owned()).await;
         }
         let res = user_context
-            .update(Model {
+            .update(User {
                 email: "mike@mail.dk".to_string(),
                 ..users[0].to_owned()
             })
@@ -185,7 +185,7 @@ mod database_tests {
             Ok(_) => {
                 panic!("should not happen")
             }
-            Err(err) => {
+            Err(_err) => {
                 return;
             }
         }
@@ -213,7 +213,7 @@ mod database_tests {
             Ok(_) => {
                 panic!("should not happen")
             }
-            Err(err) => {
+            Err(_err) => {
                 return;
             }
         }
@@ -222,7 +222,7 @@ mod database_tests {
     #[tokio::test]
     async fn create_test_test() -> () {
         let context = setup_db_with_entities(vec![UserEntity]).await;
-        let user_context = UserContext::new(context);
+        let user_context = UserContext::new(Box::new(context));
         let users = two_template_users();
         let res = user_context.create(users[1].to_owned()).await.unwrap();
         assert_eq!(res, user_context.get_by_id(1).await.unwrap().unwrap())
