@@ -91,7 +91,7 @@ impl EntityContextTrait<User> for UserContext {
     /// The user entity's id will never be changed. If this behavior is wanted, delete the old user and create a new one.
     async fn update(&self, entity: User) -> Result<User, DbErr> {
         let res = &self.get_by_id(entity.id).await?;
-        let updated_user: Result<Model, DbErr> = match res {
+        let updated_user: Result<User, DbErr> = match res {
             None => Err(DbErr::RecordNotFound(format!(
                 "Could not find entity {:?}",
                 entity
@@ -122,7 +122,7 @@ impl EntityContextTrait<User> for UserContext {
     ///     username: "andersAnden",
     ///     password: user.password
     /// }
-    async fn delete(&self, entity_id: i32) -> Result<Model, DbErr> {
+    async fn delete(&self, entity_id: i32) -> Result<User, DbErr> {
         let user = self.get_by_id(entity_id).await?;
         match user {
             None => Err(DbErr::Exec(RuntimeErr::Internal(
