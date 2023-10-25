@@ -1,8 +1,8 @@
-use crate::api_server::auth;
-use crate::api_server::ecdar_api::ConcreteEcdarApi;
-use crate::api_server::server::server::ecdar_api_auth_server::EcdarApiAuthServer;
-use crate::api_server::server::server::ecdar_api_server::EcdarApiServer;
-use crate::api_server::server::server::ecdar_backend_server::EcdarBackendServer;
+use crate::api::auth;
+use crate::api::ecdar_api::ConcreteEcdarApi;
+use crate::api::server::server::ecdar_api_auth_server::EcdarApiAuthServer;
+use crate::api::server::server::ecdar_api_server::EcdarApiServer;
+use crate::api::server::server::ecdar_backend_server::EcdarBackendServer;
 use std::env;
 use tonic::transport::Server;
 

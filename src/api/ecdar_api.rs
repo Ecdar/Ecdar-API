@@ -2,9 +2,9 @@ use std::env;
 
 use tonic::{Code, Request, Response, Status};
 
-use crate::api_server::server::server::ecdar_api_auth_server::EcdarApiAuth;
-use crate::api_server::server::server::ecdar_api_server::EcdarApi;
-use crate::api_server::server::server::ecdar_backend_client::EcdarBackendClient;
+use crate::api::server::server::ecdar_api_auth_server::EcdarApiAuth;
+use crate::api::server::server::ecdar_api_server::EcdarApi;
+use crate::api::server::server::ecdar_backend_client::EcdarBackendClient;
 
 use super::{
     auth,
