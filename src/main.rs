@@ -5,6 +5,7 @@ mod entities;
 use crate::database::access_context::AccessContext;
 use crate::database::model_context::ModelContext;
 use crate::database::query_context::QueryContext;
+use crate::database::session_context::SessionContext;
 use crate::database::user_context::UserContext;
 use database::database_context::{DatabaseContext, DatabaseContextTrait};
 use database::entity_context::EntityContextTrait;
@@ -21,11 +22,13 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let user_context = Box::new(UserContext::new(db_context.clone()));
     let access_context = Box::new(AccessContext::new(db_context.clone()));
     let query_context = Box::new(QueryContext::new(db_context.clone()));
+    let session_context = Box::new(SessionContext::new(db_context.clone()));
 
     print_all_entities(model_context).await;
     print_all_entities(user_context).await;
     print_all_entities(access_context).await;
     print_all_entities(query_context).await;
+    print_all_entities(session_context).await;
 
     Ok(())
 }
