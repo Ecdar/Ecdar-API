@@ -92,10 +92,10 @@ impl EntityContextTrait<User> for UserContext {
     async fn update(&self, entity: User) -> Result<User, DbErr> {
         let res = &self.get_by_id(entity.id).await?;
         let updated_user: Result<User, DbErr> = match res {
-            None => Err(DbErr::RecordNotFound(String::from(format!(
+            None => Err(DbErr::RecordNotFound(format!(
                 "Could not find entity {:?}",
                 entity
-            )))),
+            ))),
             Some(user) => {
                 ActiveModel {
                     id: Unchanged(user.id), //TODO ved ikke om unchanged betyder det jeg tror det betyder
@@ -110,7 +110,18 @@ impl EntityContextTrait<User> for UserContext {
         return updated_user;
     }
 
-    /// Deletes a user entity by id
+    /// Returns and deletes a user entity by id
+    ///
+    /// # Example
+    /// ```
+    /// let context : UserContext = UserContext::new(...);
+    /// let user = context.get_by_id(1).unwrap();
+    /// let deleted_user = Model {
+    ///     id: user.id,
+    ///     email: "anders@student.aau.dk".into(),
+    ///     username: "andersAnden",
+    ///     password: user.password
+    /// }
     async fn delete(&self, entity_id: i32) -> Result<User, DbErr> {
         let user = self.get_by_id(entity_id).await?;
         match user {
