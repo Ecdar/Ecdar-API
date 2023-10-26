@@ -3,15 +3,11 @@ use crate::entities::{
     user::Model as UserModel,
 };
 use crate::{
-    database::{database_context::DatabaseContext, entity_context::EntityContextTrait},
-    entities::access::Entity as AccessEntity,
-    entities::in_use::Entity as InUseEntity,
-    entities::model::Entity as ModelEntity,
-    entities::query::Entity as QueryEntity,
-    entities::session::Entity as SessionEntity,
+    database::database_context::DatabaseContext, entities::access::Entity as AccessEntity,
+    entities::in_use::Entity as InUseEntity, entities::model::Entity as ModelEntity,
+    entities::query::Entity as QueryEntity, entities::session::Entity as SessionEntity,
     entities::user::Entity as UserEntity,
 };
-use sea_orm::sea_query::TableCreateStatement;
 use sea_orm::{ConnectionTrait, Database, DatabaseBackend, DatabaseConnection, Schema};
 
 pub async fn setup_db_with_entities(entities: Vec<AnyEntity>) -> Box<DatabaseContext> {

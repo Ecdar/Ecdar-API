@@ -1,19 +1,11 @@
-use crate::entities::prelude::User;
-use crate::entities::user::Entity;
-use crate::tests::database::helpers::{create_entities, create_users};
-
 #[cfg(test)]
 mod database_tests {
     use crate::tests::database::helpers::*;
-    use futures::FutureExt;
-    use sea_orm::{entity::prelude::*, Database, IntoActiveModel};
+    use sea_orm::{entity::prelude::*, IntoActiveModel};
 
     use crate::database::database_context::DatabaseContextTrait;
     use crate::{
-        database::{
-            database_context::DatabaseContext, entity_context::EntityContextTrait,
-            user_context::UserContext,
-        },
+        database::{entity_context::EntityContextTrait, user_context::UserContext},
         entities::user::{
             ActiveModel as UserActiveModel, Entity as UserEntity, Model as UserModel,
         },
@@ -96,7 +88,7 @@ mod database_tests {
         let db_context = setup_db_with_entities(vec![AnyEntity::User]).await;
         let user_context = UserContext::new(db_context.clone());
 
-        let mut users_vec: Vec<UserModel> = vec![
+        let users_vec: Vec<UserModel> = vec![
             UserModel {
                 id: 1,
                 email: "anders21@student.aau.dk".to_string(),
