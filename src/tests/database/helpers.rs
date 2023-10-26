@@ -80,13 +80,13 @@ pub fn create_users(amount: i32) -> Vec<UserModel> {
 /// );
 /// ```
 #[allow(dead_code)]
-pub fn create_entities<M, F>(amount: i32, model: F) -> Vec<M>
+pub fn create_entities<M, F>(amount: i32, model_creator: F) -> Vec<M>
 where
     F: Fn(i32) -> M,
 {
     let mut vector: Vec<M> = vec![];
     for i in 0..amount {
-        vector.push(model(i));
+        vector.push(model_creator(i));
     }
     vector
 }
