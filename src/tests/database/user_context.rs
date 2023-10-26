@@ -1,18 +1,14 @@
 #[cfg(test)]
 mod database_tests {
-    use futures::FutureExt;
     use crate::tests::database::helpers::*;
-    use sea_orm::{entity::prelude::*, Database, IntoActiveModel};
+    use futures::FutureExt;
     use sea_orm::DbErr::Exec;
     use sea_orm::RuntimeErr::SqlxError;
+    use sea_orm::{entity::prelude::*, Database, IntoActiveModel};
     use std::matches;
 
     use crate::database::database_context::DatabaseContextTrait;
     use crate::{
-        database::{
-            database_context::DatabaseContext, entity_context::EntityContextTrait,
-            user_context::{UserContext, DbErr},
-        },
         database::{entity_context::EntityContextTrait, user_context::UserContext},
         entities::user::{
             ActiveModel as UserActiveModel, Entity as UserEntity, Model as UserModel,
@@ -90,7 +86,10 @@ mod database_tests {
         let created_user2 = user_context.create(new_user2.clone()).await;
 
         // Assert if the new_user, created_user, and fetched_user are the same
-        assert!(matches!(created_user2.unwrap_err().sql_err(), Some(SqlErr::UniqueConstraintViolation(_))));
+        assert!(matches!(
+            created_user2.unwrap_err().sql_err(),
+            Some(SqlErr::UniqueConstraintViolation(_))
+        ));
     }
 
     #[tokio::test]
@@ -119,7 +118,10 @@ mod database_tests {
         let created_user2 = user_context.create(new_user2.clone()).await;
 
         // Assert if the new_user, created_user, and fetched_user are the same
-        assert!(matches!(created_user2.unwrap_err().sql_err(), Some(SqlErr::UniqueConstraintViolation(_))));
+        assert!(matches!(
+            created_user2.unwrap_err().sql_err(),
+            Some(SqlErr::UniqueConstraintViolation(_))
+        ));
     }
 
     #[tokio::test]
@@ -284,8 +286,14 @@ mod database_tests {
             password: "rask".to_owned(),
         };
 
-        UserEntity::insert(new_user1.clone().into_active_model()).exec(&db_context.get_connection()).await.unwrap();
-        UserEntity::insert(new_user2.clone().into_active_model()).exec(&db_context.get_connection()).await.unwrap();
+        UserEntity::insert(new_user1.clone().into_active_model())
+            .exec(&db_context.get_connection())
+            .await
+            .unwrap();
+        UserEntity::insert(new_user2.clone().into_active_model())
+            .exec(&db_context.get_connection())
+            .await
+            .unwrap();
 
         let new_user = UserModel {
             username: "andemad2".to_string(),
@@ -295,7 +303,10 @@ mod database_tests {
         let updated_user = user_context.update(new_user.clone()).await;
 
         // Assert if the new_user, created_user, and fetched_user are the same
-        assert!(matches!(updated_user.unwrap_err().sql_err(), Some(SqlErr::UniqueConstraintViolation(_))));
+        assert!(matches!(
+            updated_user.unwrap_err().sql_err(),
+            Some(SqlErr::UniqueConstraintViolation(_))
+        ));
     }
 
     #[tokio::test]
@@ -319,8 +330,14 @@ mod database_tests {
             password: "rask".to_owned(),
         };
 
-        UserEntity::insert(new_user1.clone().into_active_model()).exec(&db_context.get_connection()).await.unwrap();
-        UserEntity::insert(new_user2.clone().into_active_model()).exec(&db_context.get_connection()).await.unwrap();
+        UserEntity::insert(new_user1.clone().into_active_model())
+            .exec(&db_context.get_connection())
+            .await
+            .unwrap();
+        UserEntity::insert(new_user2.clone().into_active_model())
+            .exec(&db_context.get_connection())
+            .await
+            .unwrap();
 
         let new_user = UserModel {
             email: "anders22@student.aau.dk".to_string(),
@@ -330,7 +347,10 @@ mod database_tests {
         let updated_user = user_context.update(new_user.clone()).await;
 
         // Assert if the new_user, created_user, and fetched_user are the same
-        assert!(matches!(updated_user.unwrap_err().sql_err(), Some(SqlErr::UniqueConstraintViolation(_))));
+        assert!(matches!(
+            updated_user.unwrap_err().sql_err(),
+            Some(SqlErr::UniqueConstraintViolation(_))
+        ));
     }
 
     ///test that where the unique email constraint is violated
