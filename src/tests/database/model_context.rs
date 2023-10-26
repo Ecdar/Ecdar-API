@@ -1,5 +1,7 @@
 #[cfg(test)]
 mod database_tests {
+    use crate::database::user_context;
+    use crate::tests::database::helpers::{helpers::*, self};
     use crate::{
         database:: {
             database_context::DatabaseContext,
@@ -26,12 +28,10 @@ mod database_tests {
     #[tokio::test]
     async fn create_model_test() -> Result<(), DbErr> {
         // DB setup
-        let db_connection = Database::connect("sqlite::memory:").await.unwrap();
-        setup_schema(&db_connection).await;
-        let db_context = Box::new(DatabaseContext { db_connection });
+        let db_contexts = Box::new(helpers::helpers::setup_db_with_entities(vec![AnyEntity::User, AnyEntity::Model]).await);
 
-        let model_context = ModelContext::new(db_context.clone());
-        let user_context = UserContext::new(db_context.clone());
+        let user_context = UserContext::new(db_contexts.to_owned());
+        let model_context = ModelContext::new(db_contexts.to_owned());
 
         let new_user = UserModel {
             id: 1,
@@ -96,12 +96,11 @@ mod database_tests {
 
     #[tokio::test]
     async fn get_all_models_test() -> Result<(), DbErr> {
-        let db_connection = Database::connect("sqlite::memory:").await.unwrap();
-        setup_schema(&db_connection).await;
-        let db_context = Box::new(DatabaseContext { db_connection });
+        // DB setup
+        let db_contexts = Box::new(helpers::helpers::setup_db_with_entities(vec![AnyEntity::User, AnyEntity::Model]).await);
 
-        let model_context = ModelContext::new(db_context.clone());
-        let user_context = UserContext::new(db_context.clone());
+        let user_context = UserContext::new(db_contexts.to_owned());
+        let model_context = ModelContext::new(db_contexts.to_owned());
 
         let new_user = UserModel {
             id: 1,
@@ -138,12 +137,11 @@ mod database_tests {
 
     #[tokio::test]
     async fn update_model_test() -> Result<(), DbErr> {
-        let db_connection = Database::connect("sqlite::memory:").await.unwrap();
-        setup_schema(&db_connection).await;
-        let db_context = Box::new(DatabaseContext { db_connection });
+        // DB setup
+        let db_contexts = Box::new(helpers::helpers::setup_db_with_entities(vec![AnyEntity::User, AnyEntity::Model]).await);
 
-        let model_context = ModelContext::new(db_context.clone());
-        let user_context = UserContext::new(db_context.clone());
+        let user_context = UserContext::new(db_contexts.to_owned());
+        let model_context = ModelContext::new(db_contexts.to_owned());
 
         let new_user = UserModel {
             id: 1,
@@ -179,12 +177,11 @@ mod database_tests {
 
     #[tokio::test]
     async fn delete_model_test() -> Result<(), DbErr> {
-        let db_connection = Database::connect("sqlite::memory:").await.unwrap();
-        setup_schema(&db_connection).await;
-        let db_context = Box::new(DatabaseContext { db_connection });
+        // DB setup
+        let db_contexts = Box::new(helpers::helpers::setup_db_with_entities(vec![AnyEntity::User, AnyEntity::Model]).await);
 
-        let model_context = ModelContext::new(db_context.clone());
-        let user_context = UserContext::new(db_context.clone());
+        let user_context = UserContext::new(db_contexts.to_owned());
+        let model_context = ModelContext::new(db_contexts.to_owned());
 
         let new_user = UserModel {
             id: 1,
