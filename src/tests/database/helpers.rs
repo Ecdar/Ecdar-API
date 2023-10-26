@@ -50,7 +50,7 @@ impl AnyEntity {
             .unwrap();
     }
 }
-
+#[deprecated] // tihi :)))
 pub fn create_users(amount: i32) -> Vec<UserModel> {
     let mut vector: Vec<UserModel> = vec![];
     for i in 0..amount {
@@ -60,6 +60,37 @@ pub fn create_users(amount: i32) -> Vec<UserModel> {
             username: format!("username{}", &i),
             password: format!("qwerty{}", &i),
         })
+    }
+    vector
+}
+
+///
+///
+/// # Arguments
+///
+/// * `amount`:
+/// * `model`:
+///
+/// returns: Vec<M, Global>
+///
+/// # Examples
+///
+/// ```
+/// let vector: Vec<UserModel> = create_entities(3,|x| UserModel {
+///     id: &x+i,
+///     email: format!("mail{}@mail.dk",&x),
+///     username: format!("username{}", &x),
+///     password: format!("qwerty{}", &x),
+/// );
+/// ```
+#[allow(dead_code)]
+pub fn create_entities<M, F>(amount: i32, model: F) -> Vec<M>
+where
+    F: Fn(i32) -> M,
+{
+    let mut vector: Vec<M> = vec![];
+    for i in 0..amount {
+        vector.push(model(i));
     }
     vector
 }

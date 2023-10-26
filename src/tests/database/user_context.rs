@@ -1,7 +1,11 @@
+use crate::entities::prelude::User;
+use crate::entities::user::Entity;
+use crate::tests::database::helpers::{create_entities, create_users};
+
 #[cfg(test)]
 mod database_tests {
-    use futures::FutureExt;
     use crate::tests::database::helpers::*;
+    use futures::FutureExt;
     use sea_orm::{entity::prelude::*, Database, IntoActiveModel};
 
     use crate::database::database_context::DatabaseContextTrait;
@@ -92,7 +96,7 @@ mod database_tests {
         let db_context = setup_db_with_entities(vec![AnyEntity::User]).await;
         let user_context = UserContext::new(db_context.clone());
 
-        let users_vec: Vec<UserModel> = vec![
+        let mut users_vec: Vec<UserModel> = vec![
             UserModel {
                 id: 1,
                 email: "anders21@student.aau.dk".to_string(),
@@ -107,9 +111,16 @@ mod database_tests {
             },
         ];
 
-        let active_users_vec = users_vec.clone().into_iter().map(|x| x.into_active_model()).collect::<Vec<UserActiveModel>>();
+        let active_users_vec = users_vec
+            .clone()
+            .into_iter()
+            .map(|x| x.into_active_model())
+            .collect::<Vec<UserActiveModel>>();
 
-        UserEntity::insert_many(active_users_vec).exec(&db_context.get_connection()).await.unwrap();
+        UserEntity::insert_many(active_users_vec)
+            .exec(&db_context.get_connection())
+            .await
+            .unwrap();
 
         let result = user_context.get_all().await.unwrap();
 
@@ -128,8 +139,10 @@ mod database_tests {
             username: "anders".to_string(),
             password: "123".to_string(),
         };
-
-        UserEntity::insert(user.clone().into_active_model()).exec(&db_context.get_connection()).await.unwrap();
+        UserEntity::insert(user.clone().into_active_model())
+            .exec(&db_context.get_connection())
+            .await
+            .unwrap();
 
         let new_user = UserModel {
             password: "qwerty".to_string(),
@@ -138,7 +151,11 @@ mod database_tests {
 
         let updated_user = user_context.update(new_user.clone()).await.unwrap();
 
-        let fetched_user = UserEntity::find_by_id(updated_user.id).one(&db_context.get_connection()).await.unwrap().unwrap();
+        let fetched_user = UserEntity::find_by_id(updated_user.id)
+            .one(&db_context.get_connection())
+            .await
+            .unwrap()
+            .unwrap();
 
         assert_eq!(new_user, updated_user);
         assert_eq!(updated_user, fetched_user);
@@ -152,16 +169,21 @@ mod database_tests {
         let user_context = UserContext::new(db_context.clone());
         let user = create_users(1)[0].clone();
 
-        UserEntity::insert(user.clone().into_active_model()).exec(&db_context.get_connection()).await.unwrap();
+        UserEntity::insert(user.clone().into_active_model())
+            .exec(&db_context.get_connection())
+            .await
+            .unwrap();
 
         let deleted_user = user_context.delete(user.id).await.unwrap();
 
-        let all_users = UserEntity::find().all(&db_context.get_connection()).await.unwrap();
+        let all_users = UserEntity::find()
+            .all(&db_context.get_connection())
+            .await
+            .unwrap();
 
         assert_eq!(user, deleted_user);
         assert_eq!(all_users.len(), 0);
     }
-
 
     // Back up
     #[tokio::test]
@@ -208,5 +230,26 @@ mod database_tests {
                 return;
             }
         }
+    }
+    // TODO den skal slettes senere
+    #[tokio::test]
+    async fn create_test_test() -> () {
+        let context = setup_db_with_entities(vec![AnyEntity::User, AnyEntity::Model]).await;
+        let user_context = UserContext::new(context);
+        let users = two_template_users();
+        let res = user_context.create(users[1].to_owned()).await.unwrap();
+        assert_eq!(res, user_context.get_by_id(1).await.unwrap().unwrap())
+    }
+
+    #[tokio::test]
+    async fn test_help() -> () {
+        //let res = create_users(3);
+        let vector: Vec<UserModel> = create_entities(3, |x| UserModel {
+            id: &x + 1,
+            email: format!("mail{}@mail.dk", &x),
+            username: format!("username{}", &x),
+            password: format!("qwerty{}", &x),
+        });
+        assert!(&vector[0].email == "mail0@mail.dk" && &vector[2].email == "mail2@mail.dk")
     }
 }
