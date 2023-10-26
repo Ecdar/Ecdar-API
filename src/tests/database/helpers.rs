@@ -10,6 +10,22 @@ use crate::{
 use sea_orm::sea_query::TableCreateStatement;
 use sea_orm::{ConnectionTrait, Database, DatabaseBackend, DatabaseConnection, Schema};
 
+///
+///
+/// # Arguments
+///
+/// * `entities`:
+///
+/// returns: DatabaseContext
+///
+/// # Examples
+///
+/// ```
+/// use crate::{entities::user::{Entity as UserEntity}};
+/// // Creates an in-memory sqlite database with the table user
+/// let context : DatabaseContext = setup_db_with_entities(vec!(UserEntity);
+/// ```
+#[allow(dead_code)]
 pub async fn setup_db_with_entities(entities: Vec<AnyEntity>) -> DatabaseContext {
     let connection = Database::connect("sqlite::memory:").await.unwrap();
     let schema = Schema::new(DatabaseBackend::Sqlite);
