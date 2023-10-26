@@ -18,7 +18,7 @@ pub enum Relation {
         from = "Column::ModelId",
         to = "super::model::Column::Id",
         on_update = "NoAction",
-        on_delete = "NoAction"
+        on_delete = "Cascade"
     )]
     Model,
     #[sea_orm(
@@ -26,7 +26,7 @@ pub enum Relation {
         from = "Column::SessionId",
         to = "super::session::Column::Id",
         on_update = "NoAction",
-        on_delete = "NoAction"
+        on_delete = "Cascade"
     )]
     Session,
 }
