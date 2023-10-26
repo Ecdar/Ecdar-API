@@ -16,7 +16,17 @@ mod database_tests {
         entities::user::{
             ActiveModel as UserActiveModel, Entity as UserEntity, Model as UserModel,
         },
+        entities::model::{
+            Entity as ModelEntity, Model as ModelModel,
+        },
+        entities::access::{
+            Entity as AccessEntity, Model as AccessModel,
+        },
+        entities::session::{
+            Entity as SessionEntity, Model as SessionModel,
+        },
     };
+    use crate::entities::sea_orm_active_enums::Role;
 
     fn two_template_users() -> Vec<UserModel> {
         vec![
@@ -378,13 +388,20 @@ mod database_tests {
         ));
     }
 
-    ///test that where the unique email constraint is violated
     #[tokio::test]
     async fn delete_test() -> () {
         // Setting up database and user context
         let db_context = setup_db_with_entities(vec![AnyEntity::User]).await;
         let user_context = UserContext::new(db_context.clone());
-        let user = create_users(1)[0].clone();
+
+        let users: Vec<UserModel> = create_entities(1,|x| UserModel {
+            id: &x+1,
+            email: format!("mail{}@mail.dk",&x),
+            username: format!("username{}", &x),
+            password: format!("qwerty{}", &x),
+        });
+
+        let user = users[0].clone();
 
         UserEntity::insert(user.clone().into_active_model())
             .exec(&db_context.get_connection())
@@ -402,50 +419,161 @@ mod database_tests {
         assert_eq!(all_users.len(), 0);
     }
 
-    // Back up
     #[tokio::test]
-    async fn update_fail() -> () {
+    async fn delete_cascade_model_test() -> () {
         // Setting up database and user context
-        let db_context = setup_db_with_entities(vec![AnyEntity::User]).await;
+        let db_context = setup_db_with_entities(vec![AnyEntity::User, AnyEntity::Model]).await;
         let user_context = UserContext::new(db_context.clone());
-        let mut users = two_template_users();
 
-        for user in users.iter_mut() {
-            let _ = user_context.create(user.to_owned()).await;
-        }
-        let res = user_context
-            .update(UserModel {
-                email: "mike@mail.dk".to_string(),
-                ..users[0].to_owned()
-            })
-            .await;
-        match res {
-            Ok(_) => {
-                panic!("should not happen")
-            }
-            Err(_err) => {
-                return;
-            }
-        }
+        let users: Vec<UserModel> = create_entities(1,|x| UserModel {
+            id: &x+1,
+            email: format!("mail{}@mail.dk",&x),
+            username: format!("username{}", &x),
+            password: format!("qwerty{}", &x),
+        });
+
+        let models: Vec<ModelModel> = create_entities(1,|x| ModelModel {
+            id: &x+1,
+            name: "test".to_string(),
+            components_info: "{}".to_owned().parse().unwrap(),
+            owner_id: 1,
+        });
+
+        let user = users[0].clone();
+        let model = models[0].clone();
+
+        UserEntity::insert(user.clone().into_active_model())
+            .exec(&db_context.get_connection())
+            .await
+            .unwrap();
+        ModelEntity::insert(model.clone().into_active_model())
+            .exec(&db_context.get_connection())
+            .await
+            .unwrap();
+
+        user_context.delete(user.id).await.unwrap();
+
+        let all_users = UserEntity::find()
+            .all(&db_context.get_connection())
+            .await
+            .unwrap();
+        let all_models = ModelEntity::find()
+            .all(&db_context.get_connection())
+            .await
+            .unwrap();
+
+        assert_eq!(all_users.len(), 0);
+        assert_eq!(all_models.len(), 0);
     }
-    #[tokio::test]
-    async fn delete_test_fail() -> () {
-        // Setting up database and user context
-        let db_context = setup_db_with_entities(vec![AnyEntity::User]).await;
-        let user_context = UserContext::new(db_context.clone());
-        let mut users = two_template_users();
 
-        for user in users.iter_mut() {
-            let _ = user_context.create(user.to_owned()).await;
-        }
-        let res = user_context.delete(3).await;
-        match res {
-            Ok(_) => {
-                panic!("should not happen")
-            }
-            Err(_err) => {
-                return;
-            }
-        }
+    #[tokio::test]
+    async fn delete_access_model_test() -> () {
+        // Setting up database and user context
+        let db_context = setup_db_with_entities(vec![AnyEntity::User, AnyEntity::Model, AnyEntity::Access]).await;
+        let user_context = UserContext::new(db_context.clone());
+
+        let users: Vec<UserModel> = create_entities(1,|x| UserModel {
+            id: &x+1,
+            email: format!("mail{}@mail.dk",&x),
+            username: format!("username{}", &x),
+            password: format!("qwerty{}", &x),
+        });
+
+        let models: Vec<ModelModel> = create_entities(1,|x| ModelModel {
+            id: &x+1,
+            name: "test".to_string(),
+            components_info: "{}".to_owned().parse().unwrap(),
+            owner_id: 1,
+        });
+
+        let accesses: Vec<AccessModel> = create_entities(1,|x| AccessModel {
+            id: &x+1,
+            role: Role::Commenter,
+            model_id: 1,
+            user_id: 1,
+        });
+
+        let user = users[0].clone();
+        let model = models[0].clone();
+        let access = accesses[0].clone();
+
+        UserEntity::insert(user.clone().into_active_model())
+            .exec(&db_context.get_connection())
+            .await
+            .unwrap();
+        ModelEntity::insert(model.clone().into_active_model())
+            .exec(&db_context.get_connection())
+            .await
+            .unwrap();
+        AccessEntity::insert(access.clone().into_active_model())
+            .exec(&db_context.get_connection())
+            .await
+            .unwrap();
+
+        user_context.delete(user.id).await.unwrap();
+
+        let all_users = UserEntity::find()
+            .all(&db_context.get_connection())
+            .await
+            .unwrap();
+        let all_models = ModelEntity::find()
+            .all(&db_context.get_connection())
+            .await
+            .unwrap();
+        let all_accesses = AccessEntity::find()
+            .all(&db_context.get_connection())
+            .await
+            .unwrap();
+
+        assert_eq!(all_users.len(), 0);
+        assert_eq!(all_models.len(), 0);
+        assert_eq!(all_accesses.len(), 0);
+    }
+
+    #[tokio::test]
+    async fn delete_cascade_session_test() -> () {
+        // Setting up database and user context
+        let db_context = setup_db_with_entities(vec![AnyEntity::User, AnyEntity::Session]).await;
+        let user_context = UserContext::new(db_context.clone());
+
+        let users: Vec<UserModel> = create_entities(1,|x| UserModel {
+            id: &x+1,
+            email: format!("mail{}@mail.dk",&x),
+            username: format!("username{}", &x),
+            password: format!("qwerty{}", &x),
+        });
+
+        let sessions: Vec<SessionModel> = create_entities(1,|x| SessionModel {
+            id: &x+1,
+            token: Default::default(),
+            created_at: Default::default(),
+            user_id: 1,
+        });
+
+        let user = users[0].clone();
+        let session = sessions[0].clone();
+
+        UserEntity::insert(user.clone().into_active_model())
+            .exec(&db_context.get_connection())
+            .await
+            .unwrap();
+        SessionEntity::insert(session.clone().into_active_model())
+            .exec(&db_context.get_connection())
+            .await
+            .unwrap();
+
+        user_context.delete(user.id).await.unwrap();
+
+        let all_users = UserEntity::find()
+            .all(&db_context.get_connection())
+            .await
+            .unwrap();
+        let all_sessions = SessionEntity::find()
+            .all(&db_context.get_connection())
+            .await
+            .unwrap();
+
+        assert_eq!(all_users.len(), 0);
+        assert_eq!(all_sessions.len(), 0);
     }
 }
