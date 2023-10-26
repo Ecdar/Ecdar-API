@@ -1,8 +1,9 @@
 mod api;
 mod database;
 mod entities;
-
+mod tests;
 use crate::database::access_context::AccessContext;
+use crate::database::in_use_context::InUseContext;
 use crate::database::model_context::ModelContext;
 use crate::database::query_context::QueryContext;
 use crate::database::session_context::SessionContext;
@@ -12,7 +13,6 @@ use database::entity_context::EntityContextTrait;
 use dotenv::dotenv;
 use std::error::Error;
 use std::fmt::Debug;
-use crate::database::in_use_context::InUseContext;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
@@ -26,17 +26,23 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let session_context = Box::new(SessionContext::new(db_context.clone()));
     let in_use_context = Box::new(InUseContext::new(db_context.clone()));
 
-    print_all_entities(model_context).await;
-    print_all_entities(user_context).await;
-    print_all_entities(access_context).await;
-    print_all_entities(query_context).await;
-    print_all_entities(session_context).await;
-    print_all_entities(in_use_context).await;
+    // Sharing entity contexts works
+    print_all_entities(&*model_context).await;
+    print_all_entities(&*model_context).await;
+    print_all_entities(&*model_context).await;
+
+    print_all_entities(&*user_context).await;
+    print_all_entities(&*access_context).await;
+    print_all_entities(&*query_context).await;
+    print_all_entities(&*session_context).await;
+    print_all_entities(&*in_use_context).await;
 
     Ok(())
 }
 
-async fn print_all_entities<T: Debug>(entity_context: Box<dyn EntityContextTrait<T>>) {
+
+
+async fn print_all_entities<T: Debug>(entity_context: &dyn EntityContextTrait<T>) {
     let res = entity_context.get_all().await;
     println!("{:?}", res.unwrap())
 }

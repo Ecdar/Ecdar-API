@@ -1,9 +1,11 @@
-#[path = "helpers.rs"]
-pub mod helpers;
-
 #[cfg(test)]
 mod database_tests {
-    use crate::database::user_context::tests::helpers::helpers::*;
+    use crate::tests::database::helpers::helpers::*;
+    use sea_orm::{
+        entity::prelude::*, sea_query::TableCreateStatement, ActiveValue::Set, Database,
+        DatabaseBackend, DatabaseConnection, Schema,
+    };
+
     use crate::{
         database::{
             database_context::DatabaseContext, entity_context::EntityContextTrait,
@@ -11,10 +13,8 @@ mod database_tests {
         },
         entities::user::{Entity as UserEntity, Model as User},
     };
-    use sea_orm::{
-        entity::prelude::*, sea_query::TableCreateStatement, Database, DatabaseBackend,
-        DatabaseConnection, Schema,
-    };
+
+    use chrono::offset::Local;
 
     async fn setup_schema(db: &DatabaseConnection) {
         // Setup Schema helper
