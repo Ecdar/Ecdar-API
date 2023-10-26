@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod database_tests {
-    use crate::tests::database::helpers::helpers::*;
+    use crate::tests::database::helpers::*;
     use sea_orm::{
         entity::prelude::*, sea_query::TableCreateStatement, ActiveValue::Set, Database,
         DatabaseBackend, DatabaseConnection, Schema,
