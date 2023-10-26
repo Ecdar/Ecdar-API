@@ -9,7 +9,10 @@ mod database_tests {
 
     use crate::database::database_context::DatabaseContextTrait;
     use crate::{
-        database::{entity_context::EntityContextTrait, user_context::UserContext},
+        database::{
+            entity_context::EntityContextTrait,
+            user_context::{UserContext, DbErr},
+        },
         entities::user::{
             ActiveModel as UserActiveModel, Entity as UserEntity, Model as UserModel,
         },
@@ -351,6 +354,25 @@ mod database_tests {
             updated_user.unwrap_err().sql_err(),
             Some(SqlErr::UniqueConstraintViolation(_))
         ));
+    }
+
+    #[tokio::test]
+    async fn update_non_existing_id_test() {
+        // Setting up database and user context
+        let db_context = setup_db_with_entities(vec![AnyEntity::User]).await;
+        let user_context = UserContext::new(db_context.clone());
+
+        let new_user = UserModel {
+            id: 1,
+            email: "anders21@student.aau.dk".to_string(),
+            username: "andemad".to_owned(),
+            password: "rask".to_owned(),
+        };
+
+        let updated_user = user_context.update(new_user.clone()).await;
+
+        // Assert if the new_user, created_user, and fetched_user are the same
+        assert!(matches!(updated_user.unwrap_err(), DbErr::RecordNotFound(_)));
     }
 
     ///test that where the unique email constraint is violated
