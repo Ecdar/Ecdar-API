@@ -11,7 +11,7 @@ mod database_tests {
     use crate::{
         database::{
             entity_context::EntityContextTrait,
-            user_context::{UserContext, DbErr},
+            user_context::{DbErr, UserContext},
         },
         entities::user::{
             ActiveModel as UserActiveModel, Entity as UserEntity, Model as UserModel,
@@ -372,7 +372,10 @@ mod database_tests {
         let updated_user = user_context.update(new_user.clone()).await;
 
         // Assert if the new_user, created_user, and fetched_user are the same
-        assert!(matches!(updated_user.unwrap_err(), DbErr::RecordNotFound(_)));
+        assert!(matches!(
+            updated_user.unwrap_err(),
+            DbErr::RecordNotFound(_)
+        ));
     }
 
     ///test that where the unique email constraint is violated
