@@ -1,3 +1,4 @@
+use crate::database::database_context::DatabaseContextTrait;
 use crate::entities::{
     model::Model as ModelModel, query::Model as QueryModel, session::Model as SessionModel,
     user::Model as UserModel,
@@ -8,7 +9,10 @@ use crate::{
     entities::query::Entity as QueryEntity, entities::session::Entity as SessionEntity,
     entities::user::Entity as UserEntity,
 };
-use sea_orm::{ConnectionTrait, Database, DatabaseBackend, DatabaseConnection, Schema};
+use sea_orm::{
+    ConnectionTrait, Database, DatabaseBackend, DatabaseConnection, EntityTrait, IntoActiveModel,
+    Schema,
+};
 
 pub async fn setup_db_with_entities(entities: Vec<AnyEntity>) -> Box<DatabaseContext> {
     let connection = Database::connect("sqlite::memory:").await.unwrap();
@@ -89,4 +93,40 @@ where
         vector.push(model_creator(i));
     }
     vector
+}
+#[allow(dead_code)]
+pub async fn setup_and_populate_db() -> Box<DatabaseContext> {
+    let context = setup_db_with_entities(vec![
+        AnyEntity::Access,
+        AnyEntity::Model,
+        AnyEntity::Query,
+        AnyEntity::Session,
+        AnyEntity::InUse,
+        AnyEntity::User,
+    ])
+    .await;
+    let amount = 10;
+    for user in create_entities(amount, |x| UserModel {
+        id: x + 1,
+        email: format!("mail{}@mail.dk", x),
+        username: format!("username{}", x),
+        password: format!("qwerty{}", x),
+    }) {
+        let _ = UserEntity::insert(user.into_active_model())
+            .exec(&context.get_connection())
+            .await
+            .unwrap();
+    }
+    for model in create_entities(amount, |x| ModelModel {
+        id: x + 1,
+        name: format!("model{}", x),
+        components_info: format!("{{ json: {} }}", x).parse().unwrap(),
+        owner_id: x + 1,
+    }) {
+        let _ = ModelEntity::insert(model.into_active_model())
+            .exec(&context.get_connection())
+            .await
+            .unwrap();
+    }
+    context
 }
