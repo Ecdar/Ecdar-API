@@ -40,8 +40,6 @@ async fn main() -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
-
-
 async fn print_all_entities<T: Debug>(entity_context: &dyn EntityContextTrait<T>) {
     let res = entity_context.get_all().await;
     println!("{:?}", res.unwrap())

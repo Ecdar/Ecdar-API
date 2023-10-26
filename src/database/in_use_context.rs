@@ -55,8 +55,8 @@ impl EntityContextTrait<InUse> for InUseContext {
                     session_id: Unchanged(in_use.session_id),
                     latest_activity: Set(entity.latest_activity),
                 }
-                    .update(&self.db_context.get_connection())
-                    .await
+                .update(&self.db_context.get_connection())
+                .await
             }
         };
         updated_in_use
