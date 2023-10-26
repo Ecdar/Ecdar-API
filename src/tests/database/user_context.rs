@@ -576,4 +576,19 @@ mod database_tests {
         assert_eq!(all_users.len(), 0);
         assert_eq!(all_sessions.len(), 0);
     }
+
+    #[tokio::test]
+    async fn delete_non_existing_id_test() {
+        // Setting up database and user context
+        let db_context = setup_db_with_entities(vec![AnyEntity::User]).await;
+        let user_context = UserContext::new(db_context.clone());
+
+        let deleted_user = user_context.delete(1).await;
+
+        // Assert if the new_user, created_user, and fetched_user are the same
+        assert!(matches!(
+            deleted_user.unwrap_err(),
+            DbErr::RecordNotFound(_)
+        ));
+    }
 }
