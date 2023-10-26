@@ -50,6 +50,7 @@ impl AnyEntity {
             .unwrap();
     }
 }
+#[deprecated] // tihi :)))
 pub fn create_users(amount: i32) -> Vec<UserModel> {
     let mut vector: Vec<UserModel> = vec![];
     for i in 0..amount {
