@@ -1,3 +1,7 @@
+use crate::entities::prelude::User;
+use crate::entities::user::Entity;
+use crate::tests::database::helpers::{create_entities, create_users};
+
 #[cfg(test)]
 mod database_tests {
     use crate::tests::database::helpers::*;
@@ -11,7 +15,7 @@ mod database_tests {
             database_context::DatabaseContext, entity_context::EntityContextTrait,
             user_context::UserContext,
         },
-        entities::user::{Entity as UserEntity, Model as User},
+        entities::user::{Entity as UserEntity, Model as UserModel},
     };
 
     use chrono::offset::Local;
@@ -34,15 +38,15 @@ mod database_tests {
         };
         UserContext::new(Box::new(db_context))
     }
-    fn two_template_users() -> Vec<User> {
+    fn two_template_users() -> Vec<UserModel> {
         vec![
-            User {
+            UserModel {
                 id: 1,
                 email: "anders@mail.dk".to_string(),
                 username: "anders".to_string(),
                 password: "123".to_string(),
             },
-            User {
+            UserModel {
                 id: 2,
                 email: "mike@mail.dk".to_string(),
                 username: "mikemanden".to_string(),
@@ -60,7 +64,7 @@ mod database_tests {
         let user_context = UserContext::new(db_context);
 
         // Creates a model of the user which will be created
-        let new_user = User {
+        let new_user = UserModel {
             id: 1,
             email: "anders21@student.aau.dk".to_owned(),
             username: "andemad".to_owned(),
@@ -89,7 +93,7 @@ mod database_tests {
         let user_context = UserContext::new(db_context);
 
         // Creates a model of the user which will be created
-        let new_user = User {
+        let new_user = UserModel {
             id: 1,
             email: "anders21@student.aau.dk".to_owned(),
             username: "andemad".to_owned(),
@@ -111,21 +115,21 @@ mod database_tests {
     async fn get_all_test() -> () {
         let user_context = test_setup().await;
 
-        let mut users_vec: Vec<User> = vec![
-            User {
+        let mut users_vec: Vec<UserModel> = vec![
+            UserModel {
                 id: 1,
                 email: "anders21@student.aau.dk".to_string(),
                 username: "anders".to_string(),
                 password: "123".to_string(),
             },
-            User {
+            UserModel {
                 id: 2,
                 email: "mike@mail.dk".to_string(),
                 username: "mikeManden".to_string(),
                 password: "qwerty".to_string(),
             },
         ];
-        let mut res_users: Vec<User> = vec![];
+        let mut res_users: Vec<UserModel> = vec![];
         for user in users_vec.iter_mut() {
             res_users.push(user_context.create(user.to_owned()).await.unwrap());
         }
@@ -136,14 +140,14 @@ mod database_tests {
     async fn update_test() -> () {
         let user_context = test_setup().await;
 
-        let user = User {
+        let user = UserModel {
             id: 1,
             email: "anders21@student.aau.dk".to_string(),
             username: "anders".to_string(),
             password: "123".to_string(),
         };
         let user = user_context.create(user).await.unwrap();
-        let updated_user = User {
+        let updated_user = UserModel {
             password: "qwerty".to_string(),
             ..user
         };
@@ -163,7 +167,7 @@ mod database_tests {
             let _ = user_context.create(user.to_owned()).await;
         }
         let res = user_context
-            .update(User {
+            .update(UserModel {
                 email: "mike@mail.dk".to_string(),
                 ..users[0].to_owned()
             })
@@ -213,5 +217,17 @@ mod database_tests {
         let users = two_template_users();
         let res = user_context.create(users[1].to_owned()).await.unwrap();
         assert_eq!(res, user_context.get_by_id(1).await.unwrap().unwrap())
+    }
+
+    #[tokio::test]
+    async fn test_help() -> () {
+        //let res = create_users(3);
+        let vector: Vec<UserModel> = create_entities(3, |x| UserModel {
+            id: &x + 1,
+            email: format!("mail{}@mail.dk", &x),
+            username: format!("username{}", &x),
+            password: format!("qwerty{}", &x),
+        });
+        assert!(&vector[0].email == "mail0@mail.dk" && &vector[2].email == "mail2@mail.dk")
     }
 }
