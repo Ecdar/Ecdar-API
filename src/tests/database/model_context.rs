@@ -3,7 +3,7 @@ mod database_tests {
     use crate::database::database_context::DatabaseContextTrait;
     use crate::database::query_context::QueryContext;
     use crate::database::user_context;
-    use crate::tests::database::helpers::{self, setup_db_with_entities, AnyEntity};
+    use crate::tests::database::helpers::{self, setup_db_with_entities, AnyEntity, create_entities};
     use crate::{
         database:: {
             database_context::DatabaseContext,
@@ -47,14 +47,20 @@ mod database_tests {
     #[tokio::test]
     async fn create_model_test() -> Result<(), DbErr> {
         // DB setup
-        let db_contexts = Box::new(setup_db_with_entities(vec![AnyEntity::User, AnyEntity::Model]).await);
+        let db_contexts = setup_db_with_entities(vec![AnyEntity::User, AnyEntity::Model]).await;
         // Setup contexts
-        let user_context = UserContext::new(db_contexts.to_owned());
-        let model_context = ModelContext::new(db_contexts.to_owned());
+        let user_context = UserContext::new(db_contexts.clone());
+        let model_context = ModelContext::new(db_contexts.clone());
 
         // Define user and models
         let new_user = user_template();
-        let new_model = model_template();
+        //let new_model = model_template();
+        let new_model = create_entities(1, |x| ModelModel {
+            id: &x + 1,
+            name: format!("Coffee Machine No.{}", x),
+            components_info: "{}".to_owned().parse().unwrap(),
+            owner_id: 1
+        });
 
         // Create user and model
         let created_user = user_context.create(new_user).await?;
@@ -71,10 +77,10 @@ mod database_tests {
     #[tokio::test]
     async fn create_model_id_auto_increment_test() -> Result<(), DbErr> {
         // DB setup
-        let db_contexts = Box::new(setup_db_with_entities(vec![AnyEntity::User, AnyEntity::Model]).await);
+        let db_contexts = setup_db_with_entities(vec![AnyEntity::User, AnyEntity::Model]).await;
         // Setup contexts
-        let user_context = UserContext::new(db_contexts.to_owned());
-        let model_context = ModelContext::new(db_contexts.to_owned());
+        let user_context = UserContext::new(db_contexts.clone());
+        let model_context = ModelContext::new(db_contexts.clone());
 
         // Define user and models
         let new_user = user_template();
@@ -98,10 +104,11 @@ mod database_tests {
     #[tokio::test]
     async fn get_model_by_id_test() -> Result<(), DbErr> {
         // DB setup
-        let db_contexts = Box::new(setup_db_with_entities(vec![AnyEntity::User, AnyEntity::Model]).await);
+        let db_contexts = setup_db_with_entities(vec![AnyEntity::User, AnyEntity::Model]).await;
+
         // Setup contexts
-        let user_context = UserContext::new(db_contexts.to_owned());
-        let model_context = ModelContext::new(db_contexts.to_owned());
+        let user_context = UserContext::new(db_contexts.clone());
+        let model_context = ModelContext::new(db_contexts.clone());
 
         // Define user and models
         let new_user = user_template();
@@ -123,10 +130,10 @@ mod database_tests {
     #[tokio::test]
     async fn get_all_models_test() -> Result<(), DbErr> {
         // DB setup
-        let db_contexts = Box::new(setup_db_with_entities(vec![AnyEntity::User, AnyEntity::Model]).await);
+        let db_contexts = setup_db_with_entities(vec![AnyEntity::User, AnyEntity::Model]).await;
         // Setup contexts
-        let user_context = UserContext::new(db_contexts.to_owned());
-        let model_context = ModelContext::new(db_contexts.to_owned());
+        let user_context = UserContext::new(db_contexts.clone());
+        let model_context = ModelContext::new(db_contexts.clone());
 
         // Define user and models
         let new_user = user_template();
@@ -149,11 +156,11 @@ mod database_tests {
     #[tokio::test]
     async fn update_model_test() -> Result<(), DbErr> {
         // DB setup
-        let db_contexts = Box::new(setup_db_with_entities(vec![AnyEntity::User, AnyEntity::Model, AnyEntity::Query]).await);
+        let db_contexts = setup_db_with_entities(vec![AnyEntity::User, AnyEntity::Model, AnyEntity::Query]).await;
         // Setup contexts
-        let user_context = UserContext::new(db_contexts.to_owned());
-        let model_context = ModelContext::new(db_contexts.to_owned());
-        let query_context = QueryContext::new(db_contexts.to_owned());
+        let user_context = UserContext::new(db_contexts.clone());
+        let model_context = ModelContext::new(db_contexts.clone());
+        let query_context = QueryContext::new(db_contexts.clone());
 
         // Define user and models
         let new_user = user_template();
@@ -192,10 +199,10 @@ mod database_tests {
     #[tokio::test]
     async fn delete_model_test() -> Result<(), DbErr> {
         // DB setup
-        let db_contexts = Box::new(setup_db_with_entities(vec![AnyEntity::User, AnyEntity::Model]).await);
+        let db_contexts = setup_db_with_entities(vec![AnyEntity::User, AnyEntity::Model]).await;
         // Setup contexts
-        let user_context = UserContext::new(db_contexts.to_owned());
-        let model_context = ModelContext::new(db_contexts.to_owned());
+        let user_context = UserContext::new(db_contexts.clone());
+        let model_context = ModelContext::new(db_contexts.clone());
 
         // Define user and models
         let new_user = user_template();
