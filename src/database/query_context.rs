@@ -39,7 +39,7 @@ impl EntityContextTrait<Query> for QueryContext {
             string: Set(entity.string),
             model_id: Set(entity.model_id),
             result: Set(entity.result),
-            out_dated: Set(entity.out_dated),
+            outdated: Set(entity.outdated),
         };
         let query = query.insert(&self.db_context.get_connection()).await?;
         Ok(query)
@@ -94,25 +94,15 @@ impl EntityContextTrait<Query> for QueryContext {
     /// ## Note
     /// The user entity's id will never be changed. If this behavior is wanted, delete the old user and create a one.
     async fn update(&self, entity: Query) -> Result<Query, DbErr> {
-        let res = &self.get_by_id(entity.id).await?;
-        let updated_query = match res {
-            None => Err(DbErr::RecordNotFound(String::from(format!(
-                "Could not find entity {:?}",
-                entity
-            )))),
-            Some(query) => {
-                ActiveModel {
-                    id: Unchanged(query.id),
-                    string: Set(entity.string),
-                    result: Set(entity.result),
-                    out_dated: Set(entity.out_dated),
-                    model_id: Set(entity.model_id),
-                }
-                .update(&self.db_context.get_connection())
-                .await
-            }
-        };
-        return updated_query;
+        ActiveModel {
+            id: Unchanged(entity.id),
+            string: Set(entity.string),
+            result: Set(entity.result),
+            outdated: Set(entity.outdated),
+            model_id: Set(entity.model_id),
+        }
+        .update(&self.db_context.get_connection())
+        .await
     }
 
     /// Delete a query entity by id

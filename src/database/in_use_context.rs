@@ -43,23 +43,13 @@ impl EntityContextTrait<InUse> for InUseContext {
     }
 
     async fn update(&self, entity: InUse) -> Result<InUse, DbErr> {
-        let res = &self.get_by_id(entity.model_id).await?;
-        let updated_in_use: Result<InUse, DbErr> = match res {
-            None => Err(DbErr::RecordNotFound(String::from(format!(
-                "Could not find entity {:?}",
-                entity
-            )))),
-            Some(in_use) => {
-                ActiveModel {
-                    model_id: Unchanged(in_use.model_id),
-                    session_id: Unchanged(in_use.session_id),
-                    latest_activity: Set(entity.latest_activity),
-                }
-                .update(&self.db_context.get_connection())
-                .await
-            }
-        };
-        updated_in_use
+        ActiveModel {
+            model_id: Unchanged(entity.model_id),
+            session_id: Unchanged(entity.session_id),
+            latest_activity: Set(entity.latest_activity),
+        }
+        .update(&self.db_context.get_connection())
+        .await
     }
 
     async fn delete(&self, entity_id: i32) -> Result<InUse, DbErr> {

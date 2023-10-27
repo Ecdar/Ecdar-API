@@ -9,7 +9,7 @@ pub struct Model {
     pub id: i32,
     pub string: String,
     pub result: Option<Json>,
-    pub out_dated: bool,
+    pub outdated: bool,
     pub model_id: i32,
 }
 
