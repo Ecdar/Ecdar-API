@@ -90,3 +90,16 @@ where
     }
     vector
 }
+
+#[macro_export]
+macro_rules! activate {
+    ($x:expr, $type:ty) => {
+        $x.clone()
+            .into_iter()
+            .map(|x| x.into_active_model())
+            .collect::<Vec<$type>>()
+    };
+}
+
+pub use activate;
+
