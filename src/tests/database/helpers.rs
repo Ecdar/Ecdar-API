@@ -155,4 +155,3 @@ macro_rules! to_active_models {
         models
     }};
 }
-
