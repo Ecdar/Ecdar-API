@@ -59,7 +59,7 @@ mod database_tests {
             string: "query_string".to_owned(),
             result: Some("{}".to_owned().parse().unwrap()),
             model_id: 1,
-            out_dated: false,
+            outdated: false,
         };
         let created_query = query_context.create(new_query).await?;
 
@@ -108,7 +108,7 @@ mod database_tests {
             string: "query_string".to_owned(),
             result: Some("{}".to_owned().parse().unwrap()),
             model_id: 1,
-            out_dated: false,
+            outdated: false,
         };
         let created_query = query_context.create(new_query).await?;
 
@@ -123,14 +123,14 @@ mod database_tests {
             string: "updated query string".to_owned(),
             result: fetched_query.result,
             model_id: fetched_query.model_id,
-            out_dated: true,
+            outdated: true,
         };
 
         let result = query_context.update(updated_query).await?;
 
         assert_eq!(result.id, created_query.id);
         assert_ne!(result.string, created_query.string);
-        assert_ne!(result.out_dated, created_query.out_dated);
+        assert_ne!(result.outdated, created_query.outdated);
 
         Ok(())
     }

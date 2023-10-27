@@ -1,40 +1,24 @@
-use crate::entities::prelude::User;
-use crate::entities::user::Entity;
-use crate::tests::database::helpers::{create_entities, create_users};
-
 #[cfg(test)]
 mod database_tests {
     use crate::tests::database::helpers::*;
-    use futures::FutureExt;
-    use sea_orm::{entity::prelude::*, Database, IntoActiveModel};
+    use sea_orm::{entity::prelude::*, IntoActiveModel};
+    use std::matches;
 
     use crate::database::database_context::DatabaseContextTrait;
     use crate::{
         database::{
-            database_context::DatabaseContext, entity_context::EntityContextTrait,
-            user_context::UserContext,
+            entity_context::EntityContextTrait,
+            user_context::{DbErr, UserContext},
         },
+        entities::access::{Entity as AccessEntity, Model as AccessModel},
+        entities::model::{Entity as ModelEntity, Model as ModelModel},
+        entities::session::{Entity as SessionEntity, Model as SessionModel},
         entities::user::{
             ActiveModel as UserActiveModel, Entity as UserEntity, Model as UserModel,
         },
+        to_active_models,
     };
 
-    fn two_template_users() -> Vec<UserModel> {
-        vec![
-            UserModel {
-                id: 1,
-                email: "anders@mail.dk".to_string(),
-                username: "anders".to_string(),
-                password: "123".to_string(),
-            },
-            UserModel {
-                id: 2,
-                email: "mike@mail.dk".to_string(),
-                username: "mikemanden".to_string(),
-                password: "qwerty".to_string(),
-            },
-        ]
-    }
     // Test the functionality of the 'create' function, which creates a user in the database
     #[tokio::test]
     async fn create_test() {
@@ -43,12 +27,8 @@ mod database_tests {
         let user_context = UserContext::new(db_context);
 
         // Creates a model of the user which will be created
-        let new_user = UserModel {
-            id: 1,
-            email: "anders21@student.aau.dk".to_owned(),
-            username: "andemad".to_owned(),
-            password: "rask".to_owned(),
-        };
+        let users: Vec<UserModel> = create_users(1);
+        let new_user = users[0].clone();
 
         // Creates the user in the database using the 'create' function
         let created_user = user_context.create(new_user.clone()).await.unwrap();
@@ -65,18 +45,86 @@ mod database_tests {
     }
 
     #[tokio::test]
+    async fn create_non_unique_username_test() {
+        // Setting up database and user context
+        let db_context = setup_db_with_entities(vec![AnyEntity::User]).await;
+        let user_context = UserContext::new(db_context);
+
+        // Creates a model of the user which will be created
+        let users: Vec<UserModel> = create_users(2);
+        users[0].clone().username = users[1].clone().username;
+
+        // Creates the user in the database using the 'create' function
+        let created_user1 = user_context.create(users[0].clone()).await.unwrap();
+        let created_user2 = user_context.create(users[0].clone()).await;
+
+        // Assert if the new_user, created_user, and fetched_user are the same
+        assert!(matches!(
+            created_user2.unwrap_err().sql_err(),
+            Some(SqlErr::UniqueConstraintViolation(_))
+        ));
+    }
+
+    #[tokio::test]
+    async fn create_non_unique_email_test() {
+        // Setting up database and user context
+        let db_context = setup_db_with_entities(vec![AnyEntity::User]).await;
+        let user_context = UserContext::new(db_context);
+
+        // Creates a model of the user which will be created
+        let users: Vec<UserModel> = create_users(2);
+        users[0].clone().email = users[1].clone().email;
+
+        // Creates the user in the database using the 'create' function
+        let created_user1 = user_context.create(users[0].clone()).await.unwrap();
+        let created_user2 = user_context.create(users[0].clone()).await;
+
+        // Assert if the new_user, created_user, and fetched_user are the same
+        assert!(matches!(
+            created_user2.unwrap_err().sql_err(),
+            Some(SqlErr::UniqueConstraintViolation(_))
+        ));
+    }
+
+    #[tokio::test]
+    async fn create_auto_increment_test() {
+        // Setting up database and user context
+        let db_context = setup_db_with_entities(vec![AnyEntity::User]).await;
+        let user_context = UserContext::new(db_context);
+
+        let users: Vec<UserModel> = create_users(2);
+
+        // Creates the user in the database using the 'create' function
+        let created_user1 = user_context.create(users[0].clone()).await.unwrap();
+        let created_user2 = user_context.create(users[1].clone()).await.unwrap();
+
+        let fetched_user1 = UserEntity::find_by_id(created_user1.id)
+            .one(&user_context.db_context.get_connection())
+            .await
+            .unwrap()
+            .unwrap();
+
+        let fetched_user2 = UserEntity::find_by_id(created_user2.id)
+            .one(&user_context.db_context.get_connection())
+            .await
+            .unwrap()
+            .unwrap();
+
+        // Assert if the new_user, created_user, and fetched_user are the same
+        assert_ne!(fetched_user1.id, fetched_user2.id);
+        assert_ne!(created_user1.id, created_user2.id);
+        assert_eq!(created_user1.id, fetched_user1.id);
+        assert_eq!(created_user2.id, fetched_user2.id);
+    }
+
+    #[tokio::test]
     async fn get_by_id_test() {
         // Setting up database and user context
         let db_context = setup_db_with_entities(vec![AnyEntity::User]).await;
         let user_context = UserContext::new(db_context.clone());
 
-        // Creates a model of the user which will be created
-        let new_user = UserModel {
-            id: 1,
-            email: "anders21@student.aau.dk".to_owned(),
-            username: "andemad".to_owned(),
-            password: "rask".to_owned(),
-        };
+        let users: Vec<UserModel> = create_users(1);
+        let new_user = users[0].clone();
 
         // Creates the user in the database using the 'create' function
         UserEntity::insert(new_user.clone().into_active_model())
@@ -96,20 +144,7 @@ mod database_tests {
         let db_context = setup_db_with_entities(vec![AnyEntity::User]).await;
         let user_context = UserContext::new(db_context.clone());
 
-        let mut users_vec: Vec<UserModel> = vec![
-            UserModel {
-                id: 1,
-                email: "anders21@student.aau.dk".to_string(),
-                username: "anders".to_string(),
-                password: "123".to_string(),
-            },
-            UserModel {
-                id: 2,
-                email: "mike@mail.dk".to_string(),
-                username: "mikeManden".to_string(),
-                password: "qwerty".to_string(),
-            },
-        ];
+        let users_vec: Vec<UserModel> = create_users(1);
 
         let active_users_vec = users_vec
             .clone()
@@ -133,19 +168,16 @@ mod database_tests {
         let db_context = setup_db_with_entities(vec![AnyEntity::User]).await;
         let user_context = UserContext::new(db_context.clone());
 
-        let user = UserModel {
-            id: 1,
-            email: "anders21@student.aau.dk".to_string(),
-            username: "anders".to_string(),
-            password: "123".to_string(),
-        };
+        let users: Vec<UserModel> = create_users(2);
+        let user = users[0].clone();
+
         UserEntity::insert(user.clone().into_active_model())
             .exec(&db_context.get_connection())
             .await
             .unwrap();
 
         let new_user = UserModel {
-            password: "qwerty".to_string(),
+            password: users[0].clone().password + "123",
             ..user
         };
 
@@ -161,13 +193,84 @@ mod database_tests {
         assert_eq!(updated_user, fetched_user);
     }
 
-    ///test that where the unique email constraint is violated
+    #[tokio::test]
+    async fn update_non_unique_username_test() {
+        // Setting up database and user context
+        let db_context = setup_db_with_entities(vec![AnyEntity::User]).await;
+        let user_context = UserContext::new(db_context.clone());
+
+        let users: Vec<UserModel> = create_users(2);
+
+        UserEntity::insert_many(to_active_models!(users.clone()))
+            .exec(&db_context.get_connection())
+            .await
+            .unwrap();
+
+        let new_user = UserModel {
+            username: users[1].clone().username,
+            ..users[0].clone()
+        };
+
+        let updated_user = user_context.update(new_user.clone()).await;
+
+        // Assert if the new_user, created_user, and fetched_user are the same
+        assert!(matches!(
+            updated_user.unwrap_err().sql_err(),
+            Some(SqlErr::UniqueConstraintViolation(_))
+        ));
+    }
+
+    #[tokio::test]
+    async fn update_non_unique_email_test() {
+        // Setting up database and user context
+        let db_context = setup_db_with_entities(vec![AnyEntity::User]).await;
+        let user_context = UserContext::new(db_context.clone());
+
+        // Creates a model of the user which will be created
+        let users: Vec<UserModel> = create_users(2);
+
+        UserEntity::insert_many(to_active_models!(users.clone()))
+            .exec(&db_context.get_connection())
+            .await
+            .unwrap();
+
+        let new_user = UserModel {
+            email: users[1].clone().email,
+            ..users[0].clone()
+        };
+
+        let updated_user = user_context.update(new_user.clone()).await;
+
+        // Assert if the new_user, created_user, and fetched_user are the same
+        assert!(matches!(
+            updated_user.unwrap_err().sql_err(),
+            Some(SqlErr::UniqueConstraintViolation(_))
+        ));
+    }
+
+    #[tokio::test]
+    async fn update_non_existing_id_test() {
+        // Setting up database and user context
+        let db_context = setup_db_with_entities(vec![AnyEntity::User]).await;
+        let user_context = UserContext::new(db_context.clone());
+
+        let users: Vec<UserModel> = create_users(2);
+        let user = users[0].clone();
+
+        let updated_user = user_context.update(user.clone()).await;
+
+        // Assert if the new_user, created_user, and fetched_user are the same
+        assert!(matches!(updated_user.unwrap_err(), DbErr::RecordNotUpdated));
+    }
+
     #[tokio::test]
     async fn delete_test() -> () {
         // Setting up database and user context
         let db_context = setup_db_with_entities(vec![AnyEntity::User]).await;
         let user_context = UserContext::new(db_context.clone());
-        let user = create_users(1)[0].clone();
+
+        let users: Vec<UserModel> = create_users(1);
+        let user = users[0].clone();
 
         UserEntity::insert(user.clone().into_active_model())
             .exec(&db_context.get_connection())
@@ -185,71 +288,140 @@ mod database_tests {
         assert_eq!(all_users.len(), 0);
     }
 
-    // Back up
     #[tokio::test]
-    async fn update_fail() -> () {
+    async fn delete_cascade_model_test() -> () {
+        // Setting up database and user context
+        let db_context = setup_db_with_entities(vec![AnyEntity::User, AnyEntity::Model]).await;
+        let user_context = UserContext::new(db_context.clone());
+
+        let users: Vec<UserModel> = create_users(1);
+        let models: Vec<ModelModel> = create_models(1, users[0].clone().id);
+
+        let user = users[0].clone();
+        let model = models[0].clone();
+
+        UserEntity::insert(user.clone().into_active_model())
+            .exec(&db_context.get_connection())
+            .await
+            .unwrap();
+        ModelEntity::insert(model.clone().into_active_model())
+            .exec(&db_context.get_connection())
+            .await
+            .unwrap();
+
+        user_context.delete(user.id).await.unwrap();
+
+        let all_users = UserEntity::find()
+            .all(&db_context.get_connection())
+            .await
+            .unwrap();
+        let all_models = ModelEntity::find()
+            .all(&db_context.get_connection())
+            .await
+            .unwrap();
+
+        assert_eq!(all_users.len(), 0);
+        assert_eq!(all_models.len(), 0);
+    }
+
+    #[tokio::test]
+    async fn delete_access_model_test() -> () {
+        // Setting up database and user context
+        let db_context =
+            setup_db_with_entities(vec![AnyEntity::User, AnyEntity::Model, AnyEntity::Access])
+                .await;
+        let user_context = UserContext::new(db_context.clone());
+
+        let users: Vec<UserModel> = create_users(1);
+        let models: Vec<ModelModel> = create_models(1, users[0].clone().id);
+        let accesses: Vec<AccessModel> =
+            create_accesses(1, users[0].clone().id, models[0].clone().id);
+
+        let user = users[0].clone();
+        let model = models[0].clone();
+        let access = accesses[0].clone();
+
+        UserEntity::insert(user.clone().into_active_model())
+            .exec(&db_context.get_connection())
+            .await
+            .unwrap();
+        ModelEntity::insert(model.clone().into_active_model())
+            .exec(&db_context.get_connection())
+            .await
+            .unwrap();
+        AccessEntity::insert(access.clone().into_active_model())
+            .exec(&db_context.get_connection())
+            .await
+            .unwrap();
+
+        user_context.delete(user.id).await.unwrap();
+
+        let all_users = UserEntity::find()
+            .all(&db_context.get_connection())
+            .await
+            .unwrap();
+        let all_models = ModelEntity::find()
+            .all(&db_context.get_connection())
+            .await
+            .unwrap();
+        let all_accesses = AccessEntity::find()
+            .all(&db_context.get_connection())
+            .await
+            .unwrap();
+
+        assert_eq!(all_users.len(), 0);
+        assert_eq!(all_models.len(), 0);
+        assert_eq!(all_accesses.len(), 0);
+    }
+
+    #[tokio::test]
+    async fn delete_cascade_session_test() -> () {
+        // Setting up database and user context
+        let db_context = setup_db_with_entities(vec![AnyEntity::User, AnyEntity::Session]).await;
+        let user_context = UserContext::new(db_context.clone());
+
+        let users: Vec<UserModel> = create_users(1);
+        let sessions: Vec<SessionModel> = create_sessions(1, users[0].clone().id);
+
+        let user = users[0].clone();
+        let session = sessions[0].clone();
+
+        UserEntity::insert(user.clone().into_active_model())
+            .exec(&db_context.get_connection())
+            .await
+            .unwrap();
+        SessionEntity::insert(session.clone().into_active_model())
+            .exec(&db_context.get_connection())
+            .await
+            .unwrap();
+
+        user_context.delete(user.id).await.unwrap();
+
+        let all_users = UserEntity::find()
+            .all(&db_context.get_connection())
+            .await
+            .unwrap();
+        let all_sessions = SessionEntity::find()
+            .all(&db_context.get_connection())
+            .await
+            .unwrap();
+
+        assert_eq!(all_users.len(), 0);
+        assert_eq!(all_sessions.len(), 0);
+    }
+
+    #[tokio::test]
+    async fn delete_non_existing_id_test() {
         // Setting up database and user context
         let db_context = setup_db_with_entities(vec![AnyEntity::User]).await;
         let user_context = UserContext::new(db_context.clone());
-        let mut users = two_template_users();
 
-        for user in users.iter_mut() {
-            let _ = user_context.create(user.to_owned()).await;
-        }
-        let res = user_context
-            .update(UserModel {
-                email: "mike@mail.dk".to_string(),
-                ..users[0].to_owned()
-            })
-            .await;
-        match res {
-            Ok(_) => {
-                panic!("should not happen")
-            }
-            Err(_err) => {
-                return;
-            }
-        }
-    }
-    #[tokio::test]
-    async fn delete_test_fail() -> () {
-        // Setting up database and user context
-        let db_context = setup_db_with_entities(vec![AnyEntity::User]).await;
-        let user_context = UserContext::new(db_context.clone());
-        let mut users = two_template_users();
+        let deleted_user = user_context.delete(1).await;
 
-        for user in users.iter_mut() {
-            let _ = user_context.create(user.to_owned()).await;
-        }
-        let res = user_context.delete(3).await;
-        match res {
-            Ok(_) => {
-                panic!("should not happen")
-            }
-            Err(_err) => {
-                return;
-            }
-        }
-    }
-    // TODO den skal slettes senere
-    #[tokio::test]
-    async fn create_test_test() -> () {
-        let context = setup_db_with_entities(vec![AnyEntity::User, AnyEntity::Model]).await;
-        let user_context = UserContext::new(context);
-        let users = two_template_users();
-        let res = user_context.create(users[1].to_owned()).await.unwrap();
-        assert_eq!(res, user_context.get_by_id(1).await.unwrap().unwrap())
-    }
-
-    #[tokio::test]
-    async fn test_help() -> () {
-        //let res = create_users(3);
-        let vector: Vec<UserModel> = create_entities(3, |x| UserModel {
-            id: &x + 1,
-            email: format!("mail{}@mail.dk", &x),
-            username: format!("username{}", &x),
-            password: format!("qwerty{}", &x),
-        });
-        assert!(&vector[0].email == "mail0@mail.dk" && &vector[2].email == "mail2@mail.dk")
+        // Assert if the new_user, created_user, and fetched_user are the same
+        assert!(matches!(
+            deleted_user.unwrap_err(),
+            DbErr::RecordNotFound(_)
+        ));
     }
 }

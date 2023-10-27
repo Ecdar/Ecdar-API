@@ -9,7 +9,7 @@ pub struct Model {
     pub id: i32,
     pub string: String,
     pub result: Option<Json>,
-    pub out_dated: bool,
+    pub outdated: bool,
     pub model_id: i32,
 }
 
@@ -20,7 +20,7 @@ pub enum Relation {
         from = "Column::ModelId",
         to = "super::model::Column::Id",
         on_update = "NoAction",
-        on_delete = "NoAction"
+        on_delete = "Cascade"
     )]
     Model,
 }

@@ -79,24 +79,14 @@ impl EntityContextTrait<Model> for ModelContext {
     /// let model = model_context.update(update_model).unwrap();
     /// ```
     async fn update(&self, entity: Model) -> Result<Model, DbErr> {
-        let res = &self.get_by_id(entity.id).await?;
-        let updated_model: Result<Model, DbErr> = match res {
-            None => Err(DbErr::RecordNotFound(String::from(format!(
-                "Could not find entity {:?}",
-                entity
-            )))),
-            Some(model) => {
-                ActiveModel {
-                    id: Unchanged(model.id),
-                    name: Set(entity.name),
-                    components_info: Set(entity.components_info),
-                    owner_id: Unchanged(model.id),
-                }
-                .update(&self.db_context.get_connection())
-                .await
-            }
-        };
-        updated_model
+        ActiveModel {
+            id: Unchanged(entity.id),
+            name: Set(entity.name),
+            components_info: Set(entity.components_info),
+            owner_id: Unchanged(entity.id),
+        }
+        .update(&self.db_context.get_connection())
+        .await
     }
 
     /// Returns and deletes a single model entity

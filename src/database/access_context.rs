@@ -82,24 +82,14 @@ impl EntityContextTrait<Access> for AccessContext {
     /// # Note
     /// The access entity's ids will never be changed. If this behavior is wanted, delete the old access and create a new one.
     async fn update(&self, entity: Access) -> Result<Access, DbErr> {
-        let res = &self.get_by_id(entity.id).await?;
-        let updated_access: Result<Access, DbErr> = match res {
-            None => Err(DbErr::RecordNotFound(String::from(format!(
-                "Could not find entity {:?}",
-                entity
-            )))),
-            Some(access) => {
-                ActiveModel {
-                    id: Unchanged(access.id), //TODO ved ikke om unchanged betyder det jeg tror det betyder
-                    role: Default::default(),
-                    model_id: Unchanged(access.model_id),
-                    user_id: Unchanged(access.user_id),
-                }
-                .update(&self.db_context.get_connection())
-                .await
-            }
-        };
-        return updated_access;
+        ActiveModel {
+            id: Unchanged(entity.id),
+            role: Set(entity.role),
+            model_id: Unchanged(entity.model_id),
+            user_id: Unchanged(entity.user_id),
+        }
+        .update(&self.db_context.get_connection())
+        .await
     }
 
     /// Deletes a access entity by id
