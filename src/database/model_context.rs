@@ -44,24 +44,14 @@ impl EntityContextTrait<Model> for ModelContext {
     }
 
     async fn update(&self, entity: Model) -> Result<Model, DbErr> {
-        let res = &self.get_by_id(entity.id).await?;
-        let updated_model: Result<Model, DbErr> = match res {
-            None => Err(DbErr::RecordNotFound(String::from(format!(
-                "Could not find entity {:?}",
-                entity
-            )))),
-            Some(model) => {
-                ActiveModel {
-                    id: Unchanged(model.id),
-                    name: Set(entity.name),
-                    components_info: Set(entity.components_info),
-                    owner_id: Unchanged(model.id),
-                }
-                .update(&self.db_context.get_connection())
-                .await
-            }
-        };
-        updated_model
+        ActiveModel {
+            id: Unchanged(entity.id),
+            name: Set(entity.name),
+            components_info: Set(entity.components_info),
+            owner_id: Unchanged(entity.id),
+        }
+        .update(&self.db_context.get_connection())
+        .await
     }
 
     async fn delete(&self, entity_id: i32) -> Result<Model, DbErr> {
