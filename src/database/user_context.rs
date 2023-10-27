@@ -90,24 +90,14 @@ impl EntityContextTrait<User> for UserContext {
     /// # Note
     /// The user entity's id will never be changed. If this behavior is wanted, delete the old user and create a new one.
     async fn update(&self, entity: User) -> Result<User, DbErr> {
-        let res = &self.get_by_id(entity.id).await?;
-        let updated_user: Result<User, DbErr> = match res {
-            None => Err(DbErr::RecordNotFound(format!(
-                "Could not find entity {:?}",
-                entity
-            ))),
-            Some(user) => {
-                ActiveModel {
-                    id: Unchanged(user.id), //TODO ved ikke om unchanged betyder det jeg tror det betyder
-                    email: Set(entity.email),
-                    username: Set(entity.username),
-                    password: Set(entity.password),
-                }
-                .update(&self.db_context.get_connection())
-                .await
-            }
-        };
-        return updated_user;
+        ActiveModel {
+            id: Unchanged(entity.id),
+            email: Set(entity.email),
+            username: Set(entity.username),
+            password: Set(entity.password),
+        }
+        .update(&self.db_context.get_connection())
+        .await
     }
 
     /// Returns and deletes a user entity by id

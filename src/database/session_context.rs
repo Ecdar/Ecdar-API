@@ -93,24 +93,14 @@ impl EntityContextTrait<Session> for SessionContext {
     /// |----|--------------------------------------|---------------------------|---------|
     /// | 1  | 4473240f-2acb-422f-bd1a-5214554ed0e0 | 2023-10-24T13:49:16+02:00 | 2       |
     async fn update(&self, entity: Session) -> Result<Session, DbErr> {
-        let res = &self.get_by_id(entity.id).await?;
-        let updated_session: Result<Session, DbErr> = match res {
-            None => Err(DbErr::RecordNotFound(String::from(format!(
-                "Could not find entity {:?}",
-                entity
-            )))),
-            Some(session) => {
-                ActiveModel {
-                    id: Unchanged(session.id),
-                    token: Set(entity.token),
-                    created_at: Set(entity.created_at),
-                    user_id: Unchanged(session.user_id), //TODO Should it be allowed to change the user_id of a session?
-                }
-                .update(&self.db_context.get_connection())
-                .await
-            }
-        };
-        return updated_session;
+        ActiveModel {
+            id: Unchanged(entity.id),
+            token: Set(entity.token),
+            created_at: Set(entity.created_at),
+            user_id: Unchanged(entity.user_id),
+        }
+        .update(&self.db_context.get_connection())
+        .await
     }
 
     /// Deletes a model in the database with a specific id.
