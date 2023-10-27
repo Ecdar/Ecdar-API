@@ -125,9 +125,7 @@ impl EntityContextTrait<User> for UserContext {
     async fn delete(&self, entity_id: i32) -> Result<User, DbErr> {
         let user = self.get_by_id(entity_id).await?;
         match user {
-            None => Err(DbErr::Exec(RuntimeErr::Internal(
-                "No record was deleted".into(),
-            ))),
+            None => Err(DbErr::RecordNotFound("No record was deleted".into())),
             Some(user) => {
                 UserEntity::delete_by_id(entity_id)
                     .exec(&self.db_context.get_connection())
