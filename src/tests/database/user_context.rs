@@ -1,49 +1,33 @@
 #[cfg(test)]
 mod database_tests {
     use crate::tests::database::helpers::*;
-    use futures::FutureExt;
-    use sea_orm::DbErr::Exec;
-    use sea_orm::RuntimeErr::SqlxError;
-    use sea_orm::{entity::prelude::*, Database, IntoActiveModel};
+    use sea_orm::{entity::prelude::*, IntoActiveModel};
     use std::matches;
 
     use crate::database::database_context::DatabaseContextTrait;
+    use crate::entities::sea_orm_active_enums::Role;
     use crate::{
         database::{
             entity_context::EntityContextTrait,
             user_context::{DbErr, UserContext},
         },
+        entities::access::{Entity as AccessEntity, Model as AccessModel},
+        entities::model::{Entity as ModelEntity, Model as ModelModel},
+        entities::session::{Entity as SessionEntity, Model as SessionModel},
         entities::user::{
             ActiveModel as UserActiveModel, Entity as UserEntity, Model as UserModel,
         },
-        entities::model::{
-            Entity as ModelEntity, Model as ModelModel,
-        },
-        entities::access::{
-            Entity as AccessEntity, Model as AccessModel,
-        },
-        entities::session::{
-            Entity as SessionEntity, Model as SessionModel,
-        },
     };
-    use crate::entities::sea_orm_active_enums::Role;
 
-    fn two_template_users() -> Vec<UserModel> {
-        vec![
-            UserModel {
-                id: 1,
-                email: "anders@mail.dk".to_string(),
-                username: "anders".to_string(),
-                password: "123".to_string(),
-            },
-            UserModel {
-                id: 2,
-                email: "mike@mail.dk".to_string(),
-                username: "mikemanden".to_string(),
-                password: "qwerty".to_string(),
-            },
-        ]
+    fn user_generator(x: i32) -> UserModel {
+        UserModel {
+            id: &x + 1,
+            email: format!("mail{}@mail.dk", &x),
+            username: format!("username{}", &x),
+            password: format!("qwerty{}", &x),
+        }
     }
+
     // Test the functionality of the 'create' function, which creates a user in the database
     #[tokio::test]
     async fn create_test() {
@@ -52,12 +36,9 @@ mod database_tests {
         let user_context = UserContext::new(db_context);
 
         // Creates a model of the user which will be created
-        let new_user = UserModel {
-            id: 1,
-            email: "anders21@student.aau.dk".to_owned(),
-            username: "andemad".to_owned(),
-            password: "rask".to_owned(),
-        };
+
+        let users: Vec<UserModel> = create_entities(1, user_generator);
+        let new_user = users[0].clone();
 
         // Creates the user in the database using the 'create' function
         let created_user = user_context.create(new_user.clone()).await.unwrap();
@@ -143,24 +124,11 @@ mod database_tests {
         let db_context = setup_db_with_entities(vec![AnyEntity::User]).await;
         let user_context = UserContext::new(db_context);
 
-        // Creates a model of the user which will be created
-        let new_user1 = UserModel {
-            id: 1,
-            email: "anders21@student.aau.dk".to_owned(),
-            username: "andemad1".to_owned(),
-            password: "rask".to_owned(),
-        };
-
-        let new_user2 = UserModel {
-            id: 1,
-            email: "anders22@student.aau.dk".to_owned(),
-            username: "andemad2".to_owned(),
-            password: "rask".to_owned(),
-        };
+        let users: Vec<UserModel> = create_entities(2, user_generator);
 
         // Creates the user in the database using the 'create' function
-        let created_user1 = user_context.create(new_user1.clone()).await.unwrap();
-        let created_user2 = user_context.create(new_user2.clone()).await.unwrap();
+        let created_user1 = user_context.create(users[0].clone()).await.unwrap();
+        let created_user2 = user_context.create(users[1].clone()).await.unwrap();
 
         let fetched_user1 = UserEntity::find_by_id(created_user1.id)
             .one(&user_context.db_context.get_connection())
@@ -187,13 +155,8 @@ mod database_tests {
         let db_context = setup_db_with_entities(vec![AnyEntity::User]).await;
         let user_context = UserContext::new(db_context.clone());
 
-        // Creates a model of the user which will be created
-        let new_user = UserModel {
-            id: 1,
-            email: "anders21@student.aau.dk".to_owned(),
-            username: "andemad".to_owned(),
-            password: "rask".to_owned(),
-        };
+        let users: Vec<UserModel> = create_entities(1, user_generator);
+        let new_user = users[0].clone();
 
         // Creates the user in the database using the 'create' function
         UserEntity::insert(new_user.clone().into_active_model())
@@ -213,20 +176,7 @@ mod database_tests {
         let db_context = setup_db_with_entities(vec![AnyEntity::User]).await;
         let user_context = UserContext::new(db_context.clone());
 
-        let users_vec: Vec<UserModel> = vec![
-            UserModel {
-                id: 1,
-                email: "anders21@student.aau.dk".to_string(),
-                username: "anders".to_string(),
-                password: "123".to_string(),
-            },
-            UserModel {
-                id: 2,
-                email: "mike@mail.dk".to_string(),
-                username: "mikeManden".to_string(),
-                password: "qwerty".to_string(),
-            },
-        ];
+        let users_vec: Vec<UserModel> = create_entities(1, user_generator);
 
         let active_users_vec = users_vec
             .clone()
@@ -394,9 +344,9 @@ mod database_tests {
         let db_context = setup_db_with_entities(vec![AnyEntity::User]).await;
         let user_context = UserContext::new(db_context.clone());
 
-        let users: Vec<UserModel> = create_entities(1,|x| UserModel {
-            id: &x+1,
-            email: format!("mail{}@mail.dk",&x),
+        let users: Vec<UserModel> = create_entities(1, |x| UserModel {
+            id: &x + 1,
+            email: format!("mail{}@mail.dk", &x),
             username: format!("username{}", &x),
             password: format!("qwerty{}", &x),
         });
@@ -425,22 +375,15 @@ mod database_tests {
         let db_context = setup_db_with_entities(vec![AnyEntity::User, AnyEntity::Model]).await;
         let user_context = UserContext::new(db_context.clone());
 
-        let users: Vec<UserModel> = create_entities(1,|x| UserModel {
-            id: &x+1,
-            email: format!("mail{}@mail.dk",&x),
-            username: format!("username{}", &x),
-            password: format!("qwerty{}", &x),
-        });
+        let users: Vec<UserModel> = create_entities(1, user_generator);
+        let user = users[0].clone();
 
-        let models: Vec<ModelModel> = create_entities(1,|x| ModelModel {
-            id: &x+1,
+        let model = ModelModel {
+            id: 1,
             name: "test".to_string(),
             components_info: "{}".to_owned().parse().unwrap(),
             owner_id: 1,
-        });
-
-        let user = users[0].clone();
-        let model = models[0].clone();
+        };
 
         UserEntity::insert(user.clone().into_active_model())
             .exec(&db_context.get_connection())
@@ -469,33 +412,27 @@ mod database_tests {
     #[tokio::test]
     async fn delete_access_model_test() -> () {
         // Setting up database and user context
-        let db_context = setup_db_with_entities(vec![AnyEntity::User, AnyEntity::Model, AnyEntity::Access]).await;
+        let db_context =
+            setup_db_with_entities(vec![AnyEntity::User, AnyEntity::Model, AnyEntity::Access])
+                .await;
         let user_context = UserContext::new(db_context.clone());
 
-        let users: Vec<UserModel> = create_entities(1,|x| UserModel {
-            id: &x+1,
-            email: format!("mail{}@mail.dk",&x),
-            username: format!("username{}", &x),
-            password: format!("qwerty{}", &x),
-        });
+        let users: Vec<UserModel> = create_entities(1, user_generator);
+        let user = users[0].clone();
 
-        let models: Vec<ModelModel> = create_entities(1,|x| ModelModel {
-            id: &x+1,
+        let model = ModelModel {
+            id: 1,
             name: "test".to_string(),
             components_info: "{}".to_owned().parse().unwrap(),
             owner_id: 1,
-        });
+        };
 
-        let accesses: Vec<AccessModel> = create_entities(1,|x| AccessModel {
-            id: &x+1,
+        let access = AccessModel {
+            id: 1,
             role: Role::Commenter,
             model_id: 1,
             user_id: 1,
-        });
-
-        let user = users[0].clone();
-        let model = models[0].clone();
-        let access = accesses[0].clone();
+        };
 
         UserEntity::insert(user.clone().into_active_model())
             .exec(&db_context.get_connection())
@@ -536,15 +473,10 @@ mod database_tests {
         let db_context = setup_db_with_entities(vec![AnyEntity::User, AnyEntity::Session]).await;
         let user_context = UserContext::new(db_context.clone());
 
-        let users: Vec<UserModel> = create_entities(1,|x| UserModel {
-            id: &x+1,
-            email: format!("mail{}@mail.dk",&x),
-            username: format!("username{}", &x),
-            password: format!("qwerty{}", &x),
-        });
+        let users: Vec<UserModel> = create_entities(1, user_generator);
 
-        let sessions: Vec<SessionModel> = create_entities(1,|x| SessionModel {
-            id: &x+1,
+        let sessions: Vec<SessionModel> = create_entities(1, |x| SessionModel {
+            id: &x + 1,
             token: Default::default(),
             created_at: Default::default(),
             user_id: 1,
