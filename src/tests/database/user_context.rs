@@ -138,6 +138,19 @@ mod database_tests {
         // Assert if the new_user, created_user, and fetched_user are the same
         assert_eq!(new_user, fetched_user);
     }
+
+    #[tokio::test]
+    async fn get_by_non_existing_id_test() {
+        // Setting up database and user context
+        let db_context = setup_db_with_entities(vec![AnyEntity::User]).await;
+        let user_context = UserContext::new(db_context.clone());
+
+        // Fetches the user created using the 'get_by_id' function
+        let fetched_user = user_context.get_by_id(1).await.unwrap();
+
+        assert!(fetched_user.is_none());
+    }
+
     #[tokio::test]
     async fn get_all_test() -> () {
         // Setting up database and user context
@@ -156,6 +169,18 @@ mod database_tests {
         let result = user_context.get_all().await.unwrap();
 
         assert_eq!(users_vec, result);
+    }
+
+    #[tokio::test]
+    async fn get_all_empty_test() -> () {
+        // Setting up database and user context
+        let db_context = setup_db_with_entities(vec![AnyEntity::User]).await;
+        let user_context = UserContext::new(db_context.clone());
+
+        let result = user_context.get_all().await.unwrap();
+        let empty_users: Vec<UserModel> = vec![];
+
+        assert_eq!(empty_users, result);
     }
 
     #[tokio::test]
