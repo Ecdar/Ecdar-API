@@ -4,9 +4,7 @@ use crate::entities::prelude::Model as ModelEntity;
 use crate::entities::query;
 use crate::EntityContextTrait;
 use async_trait::async_trait;
-use sea_orm::{
-    ActiveModelTrait, DbErr, EntityTrait, IntoActiveModel, ModelTrait, RuntimeErr, Set, Unchanged,
-};
+use sea_orm::{ActiveModelTrait, DbErr, EntityTrait, IntoActiveModel, ModelTrait, Set, Unchanged};
 
 pub struct ModelContext {
     db_context: Box<dyn DatabaseContextTrait>,
@@ -23,6 +21,17 @@ impl EntityContextTrait<Model> for ModelContext {
     }
 
     /// Used for creating a Model entity
+    /// # Example
+    /// ```
+    /// let model = Model {
+    ///     id: Default::default(),
+    ///     name: "Model name".to_owned(),
+    ///     components_info: "{}".to_owned().parse().unwrap(),
+    ///     owner_id: 1
+    /// };
+    /// let model_context: ModelContext = ModelContext::new(...);
+    /// model_context.create(model);
+    /// ```
     async fn create(&self, entity: Model) -> Result<Model, DbErr> {
         let model = ActiveModel {
             id: Default::default(),
@@ -34,18 +43,41 @@ impl EntityContextTrait<Model> for ModelContext {
         Ok(model)
     }
 
+    /// Returns a single model entity (Uses primary key)
+    /// # Example
+    /// ```
+    /// let model_context: ModelContext = ModelContext::new(...);
+    /// let model = model_context.get_by_id(1).unwrap();
+    /// ```
     async fn get_by_id(&self, entity_id: i32) -> Result<Option<Model>, DbErr> {
         ModelEntity::find_by_id(entity_id)
             .one(&self.db_context.get_connection())
             .await
     }
 
+    /// Returns a all model entities (Uses primary key)
+    /// # Example
+    /// ```
+    /// let model_context: ModelContext = ModelContext::new(...);
+    /// let model = model_context.get_all().unwrap();
+    /// ```
     async fn get_all(&self) -> Result<Vec<Model>, DbErr> {
         ModelEntity::find()
             .all(&self.db_context.get_connection())
             .await
     }
 
+    /// Updates a single model entity
+    /// # Example
+    /// ```
+    /// let update_model = Model {
+    ///     name: "new name",
+    ///     ..original_model
+    /// };
+    ///
+    /// let model_context: ModelContext = ModelContext::new(...);
+    /// let model = model_context.update(update_model).unwrap();
+    /// ```
     async fn update(&self, entity: Model) -> Result<Model, DbErr> {
         let existing_model = self.get_by_id(entity.id).await?;
 
@@ -73,12 +105,16 @@ impl EntityContextTrait<Model> for ModelContext {
         };
     }
 
+    /// Returns and deletes a single model entity
+    /// # Example
+    /// ```
+    /// let model_context: ModelContext = ModelContext::new(...);
+    /// let model = model_context.delete().unwrap();
+    /// ```
     async fn delete(&self, entity_id: i32) -> Result<Model, DbErr> {
         let model = self.get_by_id(entity_id).await?;
         match model {
-            None => Err(DbErr::Exec(RuntimeErr::Internal(
-                "No record was deleted".into(),
-            ))),
+            None => Err(DbErr::RecordNotFound("No record was deleted".into())),
             Some(model) => {
                 ModelEntity::delete_by_id(entity_id)
                     .exec(&self.db_context.get_connection())
@@ -89,6 +125,6 @@ impl EntityContextTrait<Model> for ModelContext {
     }
 }
 
-//#[cfg(test)]
-//#[path = "../tests/database/model_context.rs"]
-//mod tests;
+#[cfg(test)]
+#[path = "../tests/database/model_context.rs"]
+mod tests;

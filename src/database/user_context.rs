@@ -4,7 +4,7 @@ use crate::entities::prelude::User as UserEntity;
 use crate::entities::user::{ActiveModel, Model as User};
 use sea_orm::prelude::async_trait::async_trait;
 use sea_orm::ActiveValue::{Set, Unchanged};
-use sea_orm::{ActiveModelTrait, DbErr, EntityTrait, RuntimeErr};
+use sea_orm::{ActiveModelTrait, DbErr, EntityTrait};
 
 pub struct UserContext {
     db_context: Box<dyn DatabaseContextTrait>,

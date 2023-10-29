@@ -4,7 +4,7 @@ use crate::entities::access::{ActiveModel, Model as Access};
 use crate::entities::prelude::Access as AccessEntity;
 use sea_orm::prelude::async_trait::async_trait;
 use sea_orm::ActiveValue::{Set, Unchanged};
-use sea_orm::{ActiveModelTrait, DbErr, EntityTrait, RuntimeErr};
+use sea_orm::{ActiveModelTrait, DbErr, EntityTrait};
 
 pub struct AccessContext {
     db_context: Box<dyn DatabaseContextTrait>,
@@ -96,9 +96,7 @@ impl EntityContextTrait<Access> for AccessContext {
     async fn delete(&self, entity_id: i32) -> Result<Access, DbErr> {
         let access = self.get_by_id(entity_id).await?;
         match access {
-            None => Err(DbErr::Exec(RuntimeErr::Internal(
-                "No record was deleted".into(),
-            ))),
+            None => Err(DbErr::RecordNotFound("No record was deleted".into())),
             Some(access) => {
                 AccessEntity::delete_by_id(entity_id)
                     .exec(&self.db_context.get_connection())

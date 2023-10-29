@@ -3,7 +3,7 @@ use crate::entities::in_use::{ActiveModel, Model as InUse};
 use crate::entities::prelude::InUse as InUseEntity;
 use crate::EntityContextTrait;
 use async_trait::async_trait;
-use sea_orm::{ActiveModelTrait, DbErr, EntityTrait, RuntimeErr, Set, Unchanged};
+use sea_orm::{ActiveModelTrait, DbErr, EntityTrait, Set, Unchanged};
 
 pub struct InUseContext {
     db_context: Box<dyn DatabaseContextTrait>,
@@ -55,9 +55,7 @@ impl EntityContextTrait<InUse> for InUseContext {
     async fn delete(&self, entity_id: i32) -> Result<InUse, DbErr> {
         let in_use = self.get_by_id(entity_id).await?;
         match in_use {
-            None => Err(DbErr::Exec(RuntimeErr::Internal(
-                "No record was deleted".into(),
-            ))),
+            None => Err(DbErr::RecordNotFound("No record was deleted".into())),
             Some(in_use) => {
                 InUseEntity::delete_by_id(entity_id)
                     .exec(&self.db_context.get_connection())

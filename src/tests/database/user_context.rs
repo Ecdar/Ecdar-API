@@ -55,7 +55,7 @@ mod database_tests {
         users[0].clone().username = users[1].clone().username;
 
         // Creates the user in the database using the 'create' function
-        let created_user1 = user_context.create(users[0].clone()).await.unwrap();
+        let _created_user1 = user_context.create(users[0].clone()).await.unwrap();
         let created_user2 = user_context.create(users[0].clone()).await;
 
         // Assert if the new_user, created_user, and fetched_user are the same
@@ -76,7 +76,7 @@ mod database_tests {
         users[0].clone().email = users[1].clone().email;
 
         // Creates the user in the database using the 'create' function
-        let created_user1 = user_context.create(users[0].clone()).await.unwrap();
+        let _created_user1 = user_context.create(users[0].clone()).await.unwrap();
         let created_user2 = user_context.create(users[0].clone()).await;
 
         // Assert if the new_user, created_user, and fetched_user are the same

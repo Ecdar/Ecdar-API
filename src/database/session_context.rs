@@ -122,9 +122,7 @@ impl EntityContextTrait<Session> for SessionContext {
     async fn delete(&self, id: i32) -> Result<Session, DbErr> {
         let session = self.get_by_id(id).await?;
         match session {
-            None => Err(DbErr::Exec(sea_orm::RuntimeErr::Internal(
-                "No record was deleted".into(),
-            ))),
+            None => Err(DbErr::RecordNotFound("No record was deleted".into())),
             Some(session) => {
                 SessionEntity::delete_by_id(id)
                     .exec(&self.db_context.get_connection())

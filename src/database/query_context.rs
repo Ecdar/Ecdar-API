@@ -4,7 +4,7 @@ use crate::entities::prelude::Query as QueryEntity;
 use crate::entities::query::{ActiveModel, Model as Query};
 use sea_orm::prelude::async_trait::async_trait;
 use sea_orm::ActiveValue::{Set, Unchanged};
-use sea_orm::{ActiveModelTrait, DbErr, EntityTrait, RuntimeErr};
+use sea_orm::{ActiveModelTrait, DbErr, EntityTrait};
 
 pub struct QueryContext {
     db_context: Box<dyn DatabaseContextTrait>,
@@ -109,9 +109,7 @@ impl EntityContextTrait<Query> for QueryContext {
     async fn delete(&self, entity_id: i32) -> Result<Query, DbErr> {
         let query = self.get_by_id(entity_id).await?;
         match query {
-            None => Err(DbErr::Exec(RuntimeErr::Internal(
-                "No record was deleted".into(),
-            ))),
+            None => Err(DbErr::RecordNotFound("No record was deleted".into())),
             Some(query) => {
                 QueryEntity::delete_by_id(entity_id)
                     .exec(&self.db_context.get_connection())
