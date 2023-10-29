@@ -10,7 +10,7 @@ mod database_tests {
             database_context::DatabaseContext, entity_context::EntityContextTrait,
             session_context::SessionContext,
         },
-        entities::session::{Entity, Model},
+        entities::{session, user},
     };
 
     use chrono::offset::Local;
@@ -18,9 +18,8 @@ mod database_tests {
     async fn setup_schema(db: &DatabaseConnection) {
         let schema = Schema::new(DatabaseBackend::Sqlite);
 
-        let session_stmt: TableCreateStatement = schema.create_table_from_entity(Entity);
-        let user_stmt: TableCreateStatement =
-            schema.create_table_from_entity(crate::entities::user::Entity);
+        let session_stmt: TableCreateStatement = schema.create_table_from_entity(session::Entity);
+        let user_stmt: TableCreateStatement = schema.create_table_from_entity(user::Entity);
         db.execute(db.get_database_backend().build(&session_stmt))
             .await
             .unwrap();
@@ -65,7 +64,7 @@ mod database_tests {
         // Setting up a sqlite database in memory.
         let (session_context, user_id) = setup_session_context().await;
 
-        let new_session = Model {
+        let new_session = session::Model {
             id: 1,
             token: Uuid::parse_str("4473240f-2acb-422f-bd1a-5214554ed0e0").unwrap(),
             created_at: Local::now().naive_utc(),
@@ -74,7 +73,7 @@ mod database_tests {
 
         let created_session = session_context.create(new_session).await.unwrap();
 
-        let fetched_session = Entity::find_by_id(created_session.id)
+        let fetched_session = session::Entity::find_by_id(created_session.id)
             .one(&session_context.db_context.get_connection())
             .await
             .unwrap();
@@ -86,7 +85,7 @@ mod database_tests {
     async fn get_by_id_test() {
         let (session_context, user_id) = setup_session_context().await;
 
-        let new_session = Model {
+        let new_session = session::Model {
             id: 1,
             token: Uuid::parse_str("4473240f-2acb-422f-bd1a-5214554ed0e0").unwrap(),
             created_at: Local::now().naive_utc(),
@@ -117,14 +116,14 @@ mod database_tests {
         let (session_context, user_id) = setup_session_context().await;
 
         // Create the sessions structs
-        let session1 = Model {
+        let session1 = session::Model {
             id: 1,
             token: Uuid::parse_str("4473240f-2acb-422f-bd1a-5214554ed0e0").unwrap(),
             created_at: Local::now().naive_utc(),
             user_id,
         };
 
-        let session2 = Model {
+        let session2 = session::Model {
             id: 2,
             token: Uuid::parse_str("75ecdf25-538c-4fe0-872d-525570c96b91").unwrap(),
             created_at: Local::now().naive_utc(),
@@ -153,7 +152,7 @@ mod database_tests {
     async fn update_test() {
         let (session_context, user_id) = setup_session_context().await;
 
-        let original_session = Model {
+        let original_session = session::Model {
             id: 1,
             token: Uuid::parse_str("5c5e9172-9dff-4f35-afde-029a6f99652c").unwrap(),
             created_at: Local::now().naive_utc(),
@@ -162,7 +161,7 @@ mod database_tests {
 
         let original_session = session_context.create(original_session).await.unwrap();
 
-        let altered_session = Model {
+        let altered_session = session::Model {
             token: Uuid::parse_str("ddd9b7a3-98ff-43b0-b5b5-aa2abaea9d96").unwrap(),
             ..original_session
         };
@@ -182,7 +181,7 @@ mod database_tests {
     async fn update_test_failed_test() {
         let (session_context, user_id) = setup_session_context().await;
 
-        let original_session = Model {
+        let original_session = session::Model {
             id: 1,
             token: Uuid::parse_str("5c5e9172-9dff-4f35-afde-029a6f99652c").unwrap(),
             created_at: Local::now().naive_utc(),
@@ -198,7 +197,7 @@ mod database_tests {
     async fn update_id_test() {
         let (session_context, user_id) = setup_session_context().await;
 
-        let original_session = Model {
+        let original_session = session::Model {
             id: 1,
             token: Uuid::parse_str("5c5e9172-9dff-4f35-afde-029a6f99652c").unwrap(),
             created_at: Local::now().naive_utc(),
@@ -207,7 +206,7 @@ mod database_tests {
 
         let original_session = session_context.create(original_session).await.unwrap();
 
-        let altered_session = Model {
+        let altered_session = session::Model {
             id: 2,
             ..original_session
         };
@@ -221,7 +220,7 @@ mod database_tests {
     async fn delete_test() {
         let (session_context, user_id) = setup_session_context().await;
 
-        let original_session = Model {
+        let original_session = session::Model {
             id: 1,
             token: Uuid::parse_str("5c5e9172-9dff-4f35-afde-029a6f99652c").unwrap(),
             created_at: Local::now().naive_utc(),

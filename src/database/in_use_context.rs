@@ -1,6 +1,5 @@
 use crate::database::database_context::DatabaseContextTrait;
-use crate::entities::in_use::{ActiveModel, Model as InUse};
-use crate::entities::prelude::InUse as InUseEntity;
+use crate::entities::in_use;
 use crate::EntityContextTrait;
 use async_trait::async_trait;
 use sea_orm::{ActiveModelTrait, DbErr, EntityTrait, Set, Unchanged};
@@ -9,41 +8,41 @@ pub struct InUseContext {
     db_context: Box<dyn DatabaseContextTrait>,
 }
 
-pub trait InUseContextTrait: EntityContextTrait<InUse> {}
+pub trait InUseContextTrait: EntityContextTrait<in_use::Model> {}
 
 impl InUseContextTrait for InUseContext {}
 
 #[async_trait]
-impl EntityContextTrait<InUse> for InUseContext {
+impl EntityContextTrait<in_use::Model> for InUseContext {
     fn new(db_context: Box<dyn DatabaseContextTrait>) -> InUseContext {
         InUseContext { db_context }
     }
 
     /// Used for creating a Model entity
-    async fn create(&self, entity: InUse) -> Result<InUse, DbErr> {
-        let in_use = ActiveModel {
+    async fn create(&self, entity: in_use::Model) -> Result<in_use::Model, DbErr> {
+        let in_use = in_use::ActiveModel {
             model_id: Set(entity.model_id),
             session_id: Set(entity.session_id),
             latest_activity: Set(entity.latest_activity),
         };
-        let in_use: InUse = in_use.insert(&self.db_context.get_connection()).await?;
+        let in_use: in_use::Model = in_use.insert(&self.db_context.get_connection()).await?;
         Ok(in_use)
     }
 
-    async fn get_by_id(&self, entity_id: i32) -> Result<Option<InUse>, DbErr> {
-        InUseEntity::find_by_id(entity_id)
+    async fn get_by_id(&self, entity_id: i32) -> Result<Option<in_use::Model>, DbErr> {
+        in_use::Entity::find_by_id(entity_id)
             .one(&self.db_context.get_connection())
             .await
     }
 
-    async fn get_all(&self) -> Result<Vec<InUse>, DbErr> {
-        InUseEntity::find()
+    async fn get_all(&self) -> Result<Vec<in_use::Model>, DbErr> {
+        in_use::Entity::find()
             .all(&self.db_context.get_connection())
             .await
     }
 
-    async fn update(&self, entity: InUse) -> Result<InUse, DbErr> {
-        ActiveModel {
+    async fn update(&self, entity: in_use::Model) -> Result<in_use::Model, DbErr> {
+        in_use::ActiveModel {
             model_id: Unchanged(entity.model_id),
             session_id: Unchanged(entity.session_id),
             latest_activity: Set(entity.latest_activity),
@@ -52,12 +51,12 @@ impl EntityContextTrait<InUse> for InUseContext {
         .await
     }
 
-    async fn delete(&self, entity_id: i32) -> Result<InUse, DbErr> {
+    async fn delete(&self, entity_id: i32) -> Result<in_use::Model, DbErr> {
         let in_use = self.get_by_id(entity_id).await?;
         match in_use {
             None => Err(DbErr::RecordNotFound("No record was deleted".into())),
             Some(in_use) => {
-                InUseEntity::delete_by_id(entity_id)
+                in_use::Entity::delete_by_id(entity_id)
                     .exec(&self.db_context.get_connection())
                     .await?;
                 Ok(in_use)

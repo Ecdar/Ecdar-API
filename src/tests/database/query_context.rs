@@ -5,9 +5,7 @@ mod database_tests {
             database_context::DatabaseContext, entity_context::EntityContextTrait,
             model_context::ModelContext, query_context::QueryContext, user_context::UserContext,
         },
-        entities::model::{Entity as ModelEntity, Model},
-        entities::query::{Entity as QueryEntity, Model as Query},
-        entities::user::{Entity as UserEntity, Model as User},
+        entities::{model, query, user},
     };
     use sea_orm::{
         entity::prelude::*, sea_query::TableCreateStatement, Database, DatabaseBackend,
@@ -19,11 +17,11 @@ mod database_tests {
         let schema = Schema::new(DatabaseBackend::Sqlite);
 
         // Derive from Entity
-        let stmt: TableCreateStatement = schema.create_table_from_entity(UserEntity);
+        let stmt: TableCreateStatement = schema.create_table_from_entity(user::Entity);
         let _ = db.execute(db.get_database_backend().build(&stmt)).await;
-        let stmt: TableCreateStatement = schema.create_table_from_entity(ModelEntity);
+        let stmt: TableCreateStatement = schema.create_table_from_entity(model::Entity);
         let _ = db.execute(db.get_database_backend().build(&stmt)).await;
-        let stmt: TableCreateStatement = schema.create_table_from_entity(QueryEntity);
+        let stmt: TableCreateStatement = schema.create_table_from_entity(query::Entity);
         let _ = db.execute(db.get_database_backend().build(&stmt)).await;
     }
 
@@ -38,7 +36,7 @@ mod database_tests {
         let model_context = ModelContext::new(db_context.clone());
         let query_context = QueryContext::new(db_context.clone());
 
-        let user = User {
+        let user = user::Model {
             id: 1,
             email: "test@test.com".to_string(),
             username: "anders".to_string(),
@@ -46,7 +44,7 @@ mod database_tests {
         };
         user_context.create(user).await?;
 
-        let model = Model {
+        let model = model::Model {
             id: 1,
             name: "Test".to_string(),
             components_info: "{}".to_owned().parse().unwrap(),
@@ -54,7 +52,7 @@ mod database_tests {
         };
         model_context.create(model).await?;
 
-        let new_query = Query {
+        let new_query = query::Model {
             id: 1,
             string: "query_string".to_owned(),
             result: Some("{}".to_owned().parse().unwrap()),
@@ -63,7 +61,7 @@ mod database_tests {
         };
         let created_query = query_context.create(new_query).await?;
 
-        let fetched_query = QueryEntity::find_by_id(created_query.id)
+        let fetched_query = query::Entity::find_by_id(created_query.id)
             .one(&query_context.db_context.get_connection())
             .await?
             .clone()
@@ -87,7 +85,7 @@ mod database_tests {
         let model_context = ModelContext::new(db_context.clone());
         let query_context = QueryContext::new(db_context.clone());
 
-        let user = User {
+        let user = user::Model {
             id: 1,
             email: "test@test.com".to_string(),
             username: "anders".to_string(),
@@ -95,7 +93,7 @@ mod database_tests {
         };
         user_context.create(user).await?;
 
-        let model = Model {
+        let model = model::Model {
             id: 1,
             name: "Test".to_string(),
             components_info: "{}".to_owned().parse().unwrap(),
@@ -103,7 +101,7 @@ mod database_tests {
         };
         model_context.create(model).await?;
 
-        let new_query = Query {
+        let new_query = query::Model {
             id: 1,
             string: "query_string".to_owned(),
             result: Some("{}".to_owned().parse().unwrap()),
@@ -112,13 +110,13 @@ mod database_tests {
         };
         let created_query = query_context.create(new_query).await?;
 
-        let fetched_query = QueryEntity::find_by_id(created_query.id)
+        let fetched_query = query::Entity::find_by_id(created_query.id)
             .one(&query_context.db_context.get_connection())
             .await?
             .clone()
             .unwrap();
 
-        let updated_query = Query {
+        let updated_query = query::Model {
             id: fetched_query.id,
             string: "updated query string".to_owned(),
             result: fetched_query.result,

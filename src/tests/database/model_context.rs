@@ -11,14 +11,7 @@ mod database_tests {
             entity_context::EntityContextTrait, model_context::ModelContext,
             user_context::UserContext,
         },
-        entities::access::{Entity as AccessEntity, Model as AccessModel},
-        entities::in_use::{Entity as InUseEntity, Model as InUseModel},
-        entities::model::{
-            ActiveModel as ModelActiveModel, Entity as ModelEntity, Model as ModelModel,
-        },
-        entities::query::{Entity as QueryEntity, Model as QueryModel},
-        entities::session::{Entity as SessionEntity, Model as SessionModel},
-        entities::user::{Entity as UserEntity, Model as UserModel},
+        entities::{access, in_use, model, query, session, user},
     };
 
     // Test the functionality of the 'create' function, which creates a user in the database
@@ -29,21 +22,21 @@ mod database_tests {
         let model_context = ModelContext::new(db_context.clone());
         let _user_context = UserContext::new(db_context.clone());
 
-        let users: Vec<UserModel> = create_users(1);
+        let users: Vec<user::Model> = create_users(1);
 
-        UserEntity::insert(users[0].clone().into_active_model())
+        user::Entity::insert(users[0].clone().into_active_model())
             .exec(&db_context.get_connection())
             .await
             .unwrap();
 
         // Creates a model of the user which will be created
-        let models: Vec<ModelModel> = create_models(1, 1);
+        let models: Vec<model::Model> = create_models(1, 1);
         let new_model = models[0].clone();
 
         // Creates the user in the database using the 'create' function
         let created_model = model_context.create(new_model.clone()).await.unwrap();
 
-        let fetched_model = ModelEntity::find_by_id(created_model.id)
+        let fetched_model = model::Entity::find_by_id(created_model.id)
             .one(&model_context.db_context.get_connection())
             .await
             .unwrap()
@@ -60,10 +53,10 @@ mod database_tests {
         let db_context = setup_db_with_entities(vec![AnyEntity::Model, AnyEntity::User]).await;
         let model_context = ModelContext::new(db_context.clone());
 
-        let users: Vec<UserModel> = create_users(1);
-        let models: Vec<ModelModel> = create_models(2, users[0].clone().id);
+        let users: Vec<user::Model> = create_users(1);
+        let models: Vec<model::Model> = create_models(2, users[0].clone().id);
 
-        UserEntity::insert(users[0].clone().into_active_model())
+        user::Entity::insert(users[0].clone().into_active_model())
             .exec(&db_context.get_connection())
             .await
             .unwrap();
@@ -72,13 +65,13 @@ mod database_tests {
         let created_model1 = model_context.create(models[0].clone()).await.unwrap();
         let created_model2 = model_context.create(models[1].clone()).await.unwrap();
 
-        let fetched_model1 = ModelEntity::find_by_id(created_model1.id)
+        let fetched_model1 = model::Entity::find_by_id(created_model1.id)
             .one(&model_context.db_context.get_connection())
             .await
             .unwrap()
             .unwrap();
 
-        let fetched_model2 = ModelEntity::find_by_id(created_model2.id)
+        let fetched_model2 = model::Entity::find_by_id(created_model2.id)
             .one(&model_context.db_context.get_connection())
             .await
             .unwrap()
@@ -97,17 +90,17 @@ mod database_tests {
         let db_context = setup_db_with_entities(vec![AnyEntity::Model, AnyEntity::User]).await;
         let model_context = ModelContext::new(db_context.clone());
 
-        let users: Vec<UserModel> = create_users(1);
-        let models: Vec<ModelModel> = create_models(1, users[0].clone().id);
+        let users: Vec<user::Model> = create_users(1);
+        let models: Vec<model::Model> = create_models(1, users[0].clone().id);
         let new_model = models[0].clone();
 
-        UserEntity::insert(users[0].clone().into_active_model())
+        user::Entity::insert(users[0].clone().into_active_model())
             .exec(&db_context.get_connection())
             .await
             .unwrap();
 
         // Creates the user in the database using the 'create' function
-        ModelEntity::insert(new_model.clone().into_active_model())
+        model::Entity::insert(new_model.clone().into_active_model())
             .exec(&db_context.get_connection())
             .await
             .unwrap();
@@ -141,10 +134,10 @@ mod database_tests {
         let db_context = setup_db_with_entities(vec![AnyEntity::Model, AnyEntity::User]).await;
         let model_context = ModelContext::new(db_context.clone());
 
-        let users: Vec<UserModel> = create_users(1);
-        let models: Vec<ModelModel> = create_models(2, users[0].clone().id);
+        let users: Vec<user::Model> = create_users(1);
+        let models: Vec<model::Model> = create_models(2, users[0].clone().id);
 
-        UserEntity::insert(users[0].clone().into_active_model())
+        user::Entity::insert(users[0].clone().into_active_model())
             .exec(&db_context.get_connection())
             .await
             .unwrap();
@@ -153,9 +146,9 @@ mod database_tests {
             .clone()
             .into_iter()
             .map(|x| x.into_active_model())
-            .collect::<Vec<ModelActiveModel>>();
+            .collect::<Vec<model::ActiveModel>>();
 
-        ModelEntity::insert_many(active_models_vec)
+        model::Entity::insert_many(active_models_vec)
             .exec(&db_context.get_connection())
             .await
             .unwrap();
@@ -172,28 +165,28 @@ mod database_tests {
             setup_db_with_entities(vec![AnyEntity::Model, AnyEntity::User, AnyEntity::Query]).await;
         let model_context = ModelContext::new(db_context.clone());
 
-        let users: Vec<UserModel> = create_users(1);
-        let models: Vec<ModelModel> = create_models(2, users[0].clone().id);
+        let users: Vec<user::Model> = create_users(1);
+        let models: Vec<model::Model> = create_models(2, users[0].clone().id);
         let model = models[0].clone();
 
-        UserEntity::insert(users[0].clone().into_active_model())
+        user::Entity::insert(users[0].clone().into_active_model())
             .exec(&db_context.get_connection())
             .await
             .unwrap();
 
-        ModelEntity::insert(model.clone().into_active_model())
+        model::Entity::insert(model.clone().into_active_model())
             .exec(&db_context.get_connection())
             .await
             .unwrap();
 
-        let new_model = ModelModel {
+        let new_model = model::Model {
             name: models[0].clone().name + "123",
             ..model
         };
 
         let updated_model = model_context.update(new_model.clone()).await.unwrap();
 
-        let fetched_model = ModelEntity::find_by_id(updated_model.id)
+        let fetched_model = model::Entity::find_by_id(updated_model.id)
             .one(&db_context.get_connection())
             .await
             .unwrap()
@@ -210,39 +203,39 @@ mod database_tests {
             setup_db_with_entities(vec![AnyEntity::Model, AnyEntity::Query, AnyEntity::User]).await;
         let model_context = ModelContext::new(db_context.clone());
 
-        let users: Vec<UserModel> = create_users(1);
-        let models: Vec<ModelModel> = create_models(2, users[0].clone().id);
+        let users: Vec<user::Model> = create_users(1);
+        let models: Vec<model::Model> = create_models(2, users[0].clone().id);
         let model = models[0].clone();
-        let queries: Vec<QueryModel> = create_query(1, model.id);
+        let queries: Vec<query::Model> = create_query(1, model.id);
         let query = queries[0].clone();
-        let new_query = QueryModel {
+        let new_query = query::Model {
             outdated: false,
             ..query
         };
 
-        UserEntity::insert(users[0].clone().into_active_model())
+        user::Entity::insert(users[0].clone().into_active_model())
             .exec(&db_context.get_connection())
             .await
             .unwrap();
 
-        ModelEntity::insert(model.clone().into_active_model())
+        model::Entity::insert(model.clone().into_active_model())
             .exec(&db_context.get_connection())
             .await
             .unwrap();
 
-        QueryEntity::insert(new_query.clone().into_active_model())
+        query::Entity::insert(new_query.clone().into_active_model())
             .exec(&db_context.get_connection())
             .await
             .unwrap();
 
-        let new_model = ModelModel {
+        let new_model = model::Model {
             name: models[0].clone().name + "123",
             ..model
         };
 
         let updated_model = model_context.update(new_model.clone()).await.unwrap();
 
-        let fetched_query = QueryEntity::find_by_id(updated_model.id)
+        let fetched_query = query::Entity::find_by_id(updated_model.id)
             .one(&db_context.get_connection())
             .await
             .unwrap()
@@ -257,7 +250,7 @@ mod database_tests {
         let db_context = setup_db_with_entities(vec![AnyEntity::Model]).await;
         let model_context = ModelContext::new(db_context.clone());
 
-        let models: Vec<ModelModel> = create_models(2, 1);
+        let models: Vec<model::Model> = create_models(2, 1);
         let model = models[0].clone();
 
         let updated_model = model_context.update(model.clone()).await;
@@ -275,23 +268,23 @@ mod database_tests {
         let db_context = setup_db_with_entities(vec![AnyEntity::Model, AnyEntity::User]).await;
         let model_context = ModelContext::new(db_context.clone());
 
-        let users: Vec<UserModel> = create_users(1);
-        let models: Vec<ModelModel> = create_models(2, users[0].clone().id);
+        let users: Vec<user::Model> = create_users(1);
+        let models: Vec<model::Model> = create_models(2, users[0].clone().id);
         let model = models[0].clone();
 
-        UserEntity::insert(users[0].clone().into_active_model())
+        user::Entity::insert(users[0].clone().into_active_model())
             .exec(&db_context.get_connection())
             .await
             .unwrap();
 
-        ModelEntity::insert(model.clone().into_active_model())
+        model::Entity::insert(model.clone().into_active_model())
             .exec(&db_context.get_connection())
             .await
             .unwrap();
 
         let deleted_model = model_context.delete(model.id).await.unwrap();
 
-        let all_models = ModelEntity::find()
+        let all_models = model::Entity::find()
             .all(&db_context.get_connection())
             .await
             .unwrap();
@@ -307,32 +300,32 @@ mod database_tests {
             setup_db_with_entities(vec![AnyEntity::Model, AnyEntity::Query, AnyEntity::User]).await;
         let model_context = ModelContext::new(db_context.clone());
 
-        let users: Vec<UserModel> = create_users(1);
-        let models: Vec<ModelModel> = create_models(1, users[0].clone().id);
-        let queries: Vec<QueryModel> = create_query(1, models[0].clone().id);
+        let users: Vec<user::Model> = create_users(1);
+        let models: Vec<model::Model> = create_models(1, users[0].clone().id);
+        let queries: Vec<query::Model> = create_query(1, models[0].clone().id);
         let model = models[0].clone();
         let query = queries[0].clone();
 
-        UserEntity::insert(users[0].clone().into_active_model())
+        user::Entity::insert(users[0].clone().into_active_model())
             .exec(&db_context.get_connection())
             .await
             .unwrap();
-        ModelEntity::insert(model.clone().into_active_model())
+        model::Entity::insert(model.clone().into_active_model())
             .exec(&db_context.get_connection())
             .await
             .unwrap();
-        QueryEntity::insert(query.clone().into_active_model())
+        query::Entity::insert(query.clone().into_active_model())
             .exec(&db_context.get_connection())
             .await
             .unwrap();
 
         model_context.delete(model.id).await.unwrap();
 
-        let all_queries = QueryEntity::find()
+        let all_queries = query::Entity::find()
             .all(&db_context.get_connection())
             .await
             .unwrap();
-        let all_models = ModelEntity::find()
+        let all_models = model::Entity::find()
             .all(&db_context.get_connection())
             .await
             .unwrap();
@@ -349,33 +342,33 @@ mod database_tests {
                 .await;
         let model_context = ModelContext::new(db_context.clone());
 
-        let users: Vec<UserModel> = create_users(1);
-        let models: Vec<ModelModel> = create_models(1, users[0].clone().id);
-        let accesses: Vec<AccessModel> = create_accesses(1, 1, models[0].clone().id);
+        let users: Vec<user::Model> = create_users(1);
+        let models: Vec<model::Model> = create_models(1, users[0].clone().id);
+        let accesses: Vec<access::Model> = create_accesses(1, 1, models[0].clone().id);
 
         let model = models[0].clone();
         let access = accesses[0].clone();
 
-        UserEntity::insert(users[0].clone().into_active_model())
+        user::Entity::insert(users[0].clone().into_active_model())
             .exec(&db_context.get_connection())
             .await
             .unwrap();
-        ModelEntity::insert(model.clone().into_active_model())
+        model::Entity::insert(model.clone().into_active_model())
             .exec(&db_context.get_connection())
             .await
             .unwrap();
-        AccessEntity::insert(access.clone().into_active_model())
+        access::Entity::insert(access.clone().into_active_model())
             .exec(&db_context.get_connection())
             .await
             .unwrap();
 
         model_context.delete(model.id).await.unwrap();
 
-        let all_models = ModelEntity::find()
+        let all_models = model::Entity::find()
             .all(&db_context.get_connection())
             .await
             .unwrap();
-        let all_accesses = AccessEntity::find()
+        let all_accesses = access::Entity::find()
             .all(&db_context.get_connection())
             .await
             .unwrap();
@@ -396,38 +389,38 @@ mod database_tests {
         .await;
         let model_context = ModelContext::new(db_context.clone());
 
-        let users: Vec<UserModel> = create_users(1);
-        let sessions: Vec<SessionModel> = create_sessions(1, users[0].clone().id);
-        let models: Vec<ModelModel> = create_models(1, users[0].clone().id);
-        let in_uses: Vec<InUseModel> = create_in_use(1, models[0].clone().id, 1);
+        let users: Vec<user::Model> = create_users(1);
+        let sessions: Vec<session::Model> = create_sessions(1, users[0].clone().id);
+        let models: Vec<model::Model> = create_models(1, users[0].clone().id);
+        let in_uses: Vec<in_use::Model> = create_in_use(1, models[0].clone().id, 1);
 
         let model = models[0].clone();
         let in_use = in_uses[0].clone();
 
-        UserEntity::insert(users[0].clone().into_active_model())
+        user::Entity::insert(users[0].clone().into_active_model())
             .exec(&db_context.get_connection())
             .await
             .unwrap();
-        SessionEntity::insert(sessions[0].clone().into_active_model())
+        session::Entity::insert(sessions[0].clone().into_active_model())
             .exec(&db_context.get_connection())
             .await
             .unwrap();
-        ModelEntity::insert(model.clone().into_active_model())
+        model::Entity::insert(model.clone().into_active_model())
             .exec(&db_context.get_connection())
             .await
             .unwrap();
-        InUseEntity::insert(in_use.clone().into_active_model())
+        in_use::Entity::insert(in_use.clone().into_active_model())
             .exec(&db_context.get_connection())
             .await
             .unwrap();
 
         model_context.delete(model.id).await.unwrap();
 
-        let all_models = ModelEntity::find()
+        let all_models = model::Entity::find()
             .all(&db_context.get_connection())
             .await
             .unwrap();
-        let all_in_uses = InUseEntity::find()
+        let all_in_uses = in_use::Entity::find()
             .all(&db_context.get_connection())
             .await
             .unwrap();
