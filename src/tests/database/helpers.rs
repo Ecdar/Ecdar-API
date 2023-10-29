@@ -64,7 +64,7 @@ impl AnyEntity {
 ///     password: format!("qwerty{}", &x),
 /// );
 /// ```
-#[allow(dead_code)]
+
 pub fn create_entities<M, F>(amount: i32, model_creator: F) -> Vec<M>
 where
     F: Fn(i32) -> M,
@@ -75,18 +75,6 @@ where
     }
     vector
 }
-
-#[macro_export]
-macro_rules! activate {
-    ($x:expr, $type:ty) => {
-        $x.clone()
-            .into_iter()
-            .map(|x| x.into_active_model())
-            .collect::<Vec<$type>>()
-    };
-}
-
-pub use activate;
 
 pub fn create_users(amount: i32) -> Vec<user::Model> {
     create_entities(amount, |i| user::Model {
@@ -152,3 +140,15 @@ macro_rules! to_active_models {
         models
     }};
 }
+
+#[macro_export]
+macro_rules! activate {
+    ($x:expr, $type:ty) => {
+        $x.clone()
+            .into_iter()
+            .map(|x| x.into_active_model())
+            .collect::<Vec<$type>>()
+    };
+}
+
+pub use activate;
