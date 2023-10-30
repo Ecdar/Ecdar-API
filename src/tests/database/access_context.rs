@@ -5,10 +5,7 @@ mod database_tests {
         create_accesses, create_models, create_users, setup_db_with_entities, AnyEntity,
     };
     use crate::{
-        database::{
-            access_context::AccessContext, entity_context::EntityContextTrait,
-            model_context::ModelContext, user_context::UserContext,
-        },
+        database::{access_context::AccessContext, entity_context::EntityContextTrait},
         entities::{access, model, sea_orm_active_enums::Role, user},
         to_active_models,
     };
@@ -21,17 +18,22 @@ mod database_tests {
             setup_db_with_entities(vec![AnyEntity::User, AnyEntity::Model, AnyEntity::Access])
                 .await;
 
-        let user_context = UserContext::new(db_context.clone());
-        let model_context = ModelContext::new(db_context.clone());
         let access_context = AccessContext::new(db_context.clone());
 
         let new_user = create_users(1)[0].clone();
         let new_model = create_models(1, new_user.id)[0].clone();
         let new_access = create_accesses(1, new_user.id, new_model.id)[0].clone();
 
+        user::Entity::insert(new_user.into_active_model())
+            .exec(&db_context.get_connection())
+            .await
+            .unwrap();
+        model::Entity::insert(new_model.into_active_model())
+            .exec(&db_context.get_connection())
+            .await
+            .unwrap();
+
         // Creates the access in the database using the 'create' function
-        user_context.create(new_user).await.unwrap();
-        model_context.create(new_model).await.unwrap();
         let created_access = access_context.create(new_access).await.unwrap();
 
         let fetched_access = access::Entity::find_by_id(created_access.id)
@@ -50,8 +52,6 @@ mod database_tests {
         let db_context =
             setup_db_with_entities(vec![AnyEntity::User, AnyEntity::Model, AnyEntity::Access])
                 .await;
-        let user_context = UserContext::new(db_context.clone());
-        let model_context = ModelContext::new(db_context.clone());
         let access_context = AccessContext::new(db_context.clone());
 
         let new_user = create_users(1)[0].to_owned();
@@ -60,9 +60,16 @@ mod database_tests {
         // Creates a model of the access which will be created
         let new_access = create_accesses(1, new_user.id, new_model.id)[0].clone();
 
+        user::Entity::insert(new_user.into_active_model())
+            .exec(&db_context.get_connection())
+            .await
+            .unwrap();
+        model::Entity::insert(new_model.into_active_model())
+            .exec(&db_context.get_connection())
+            .await
+            .unwrap();
+
         // Creates the access in the database using the 'create' function
-        user_context.create(new_user).await.unwrap();
-        model_context.create(new_model).await.unwrap();
         let created_access = access_context.create(new_access).await.unwrap();
 
         // Fetches the access created using the 'get_by_id' function
@@ -82,8 +89,7 @@ mod database_tests {
         let db_context =
             setup_db_with_entities(vec![AnyEntity::User, AnyEntity::Model, AnyEntity::Access])
                 .await;
-        let user_context = UserContext::new(db_context.clone());
-        let model_context = ModelContext::new(db_context.clone());
+
         let access_context = AccessContext::new(db_context.clone());
 
         let new_user = create_users(1)[0].to_owned();
@@ -92,9 +98,14 @@ mod database_tests {
         // Creates a model of the access which will be created
         let new_accesses = create_accesses(3, new_user.id, new_model.id);
 
-        // Creates the access in the database using the 'create' function
-        user_context.create(new_user).await.unwrap();
-        model_context.create(new_model).await.unwrap();
+        user::Entity::insert(new_user.into_active_model())
+            .exec(&db_context.get_connection())
+            .await
+            .unwrap();
+        model::Entity::insert(new_model.into_active_model())
+            .exec(&db_context.get_connection())
+            .await
+            .unwrap();
         access::Entity::insert_many(to_active_models!(new_accesses))
             .exec(&db_context.get_connection())
             .await
@@ -107,8 +118,7 @@ mod database_tests {
         let db_context =
             setup_db_with_entities(vec![AnyEntity::User, AnyEntity::Model, AnyEntity::Access])
                 .await;
-        let user_context = UserContext::new(db_context.clone());
-        let model_context = ModelContext::new(db_context.clone());
+
         let access_context = AccessContext::new(db_context.clone());
 
         let new_user = create_users(1)[0].clone();

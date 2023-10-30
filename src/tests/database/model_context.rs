@@ -7,10 +7,7 @@ mod database_tests {
 
     use crate::database::database_context::DatabaseContextTrait;
     use crate::{
-        database::{
-            entity_context::EntityContextTrait, model_context::ModelContext,
-            user_context::UserContext,
-        },
+        database::{entity_context::EntityContextTrait, model_context::ModelContext},
         entities::{access, in_use, model, query, session, user},
     };
 
@@ -20,7 +17,6 @@ mod database_tests {
         // Setting up database and user context
         let db_context = setup_db_with_entities(vec![AnyEntity::Model, AnyEntity::User]).await;
         let model_context = ModelContext::new(db_context.clone());
-        let _user_context = UserContext::new(db_context.clone());
 
         let users: Vec<user::Model> = create_users(1);
 
