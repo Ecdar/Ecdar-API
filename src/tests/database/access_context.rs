@@ -5,10 +5,7 @@ mod database_tests {
         create_accesses, create_models, create_users, setup_db_with_entities, AnyEntity,
     };
     use crate::{
-        database::{
-            access_context::AccessContext, entity_context::EntityContextTrait,
-            model_context::ModelContext, user_context::UserContext,
-        },
+        database::{access_context::AccessContext, entity_context::EntityContextTrait},
         entities::{access, model, sea_orm_active_enums::Role, user},
         to_active_models,
     };
@@ -60,6 +57,56 @@ mod database_tests {
     }
 
     #[tokio::test]
+    async fn create_check_unique_pair_model_id_user_id_test() -> () {
+        todo!()
+        // SHOULD WORK BUT SQLITE DOES NOT ENFORCE PAIR-WISE UNIQUE CONSTRAINT
+        //     // Setting up a sqlite database in memory to test on
+        //     let db_context =
+        //         setup_db_with_entities(vec![AnyEntity::User, AnyEntity::Model, AnyEntity::Access])
+        //             .await;
+        //     let user_context = UserContext::new(db_context.clone());
+        //     let model_context = ModelContext::new(db_context.clone());
+        //     let access_context = AccessContext::new(db_context.clone());
+        //
+        //     let new_user = create_users(1)[0].to_owned();
+        //     let new_model = create_models(1, new_user.id)[0].clone();
+        //
+        //     // Creates a model of the access which will be created
+        //     let new_accesses = create_accesses(3, new_user.id, new_model.id);
+        //
+        //     // Creates the access in the database using the 'create' function
+        //     user_context.create(new_user).await.unwrap();
+        //     model_context.create(new_model).await.unwrap();
+        //     let _ = access_context.create(new_accesses[0].clone()).await.unwrap(); // should work
+        //     let res = access_context.create(new_accesses[1].clone()).await.expect_err("This should not be Ok()");
+    }
+
+    #[tokio::test]
+    async fn create_auto_increment_test() -> () {
+        let (_db_context, access_context, access, _, _) = seed_db().await;
+
+        let created_access1 = access_context.create(access.clone()).await.unwrap();
+        let created_access2 = access_context.create(access.clone()).await.unwrap();
+
+        let fetched_access1 = access::Entity::find_by_id(created_access1.id)
+            .one(&access_context.db_context.get_connection())
+            .await
+            .unwrap()
+            .unwrap();
+
+        let fetched_access2 = access::Entity::find_by_id(created_access2.id)
+            .one(&access_context.db_context.get_connection())
+            .await
+            .unwrap()
+            .unwrap();
+
+        assert_ne!(fetched_access1.id, fetched_access2.id);
+        assert_ne!(created_access1.id, created_access2.id);
+        assert_eq!(created_access1.id, fetched_access1.id);
+        assert_eq!(created_access2.id, fetched_access2.id);
+    }
+
+    #[tokio::test]
     async fn get_by_id_test() -> () {
         let (db_context, access_context, access, _, _) = seed_db().await;
 
@@ -74,12 +121,23 @@ mod database_tests {
         // Assert if the fetched access is the same as the created access
         assert_eq!(access, fetched_access);
     }
+
+    #[tokio::test]
+    async fn get_by_non_existing_id_test() {
+        let (_, access_context, _, _, _) = seed_db().await;
+
+        // Fetches the user created using the 'get_by_id' function
+        let fetched_access = access_context.get_by_id(1).await.unwrap();
+
+        assert!(fetched_access.is_none());
+    }
+
     #[tokio::test]
     async fn get_all_test() -> () {
-        let (db_context, access_context, access, user, model) = seed_db().await;
+        let (db_context, access_context, _, user, model) = seed_db().await;
 
         // Creates a model of the access which will be created
-        let mut new_accesses = create_accesses(3, user.id, model.id);
+        let new_accesses = create_accesses(3, user.id, model.id);
 
         // Creates the access in the database using the 'create' function
         access::Entity::insert_many(to_active_models!(new_accesses.clone()))
@@ -95,6 +153,16 @@ mod database_tests {
         for (i, access) in sorted.into_iter().enumerate() {
             assert_eq!(access, new_accesses[i]);
         }
+    }
+
+    #[tokio::test]
+    async fn get_all_empty_test() -> () {
+        let (_, access_context, _, _, _) = seed_db().await;
+
+        let result = access_context.get_all().await.unwrap();
+        let empty_accesses: Vec<access::Model> = vec![];
+
+        assert_eq!(empty_accesses, result);
     }
 
     #[tokio::test]
@@ -123,29 +191,6 @@ mod database_tests {
         assert_eq!(updated_access, fetched_access);
     }
 
-    // SHOULD WORK BUT SQLITE DOES NOT ENFORCE PAIR-WISE UNIQUE CONSTRAINT
-    // #[tokio::test]
-    // async fn unique_model_id_and_user_id_constraint_violation_test() -> () {
-    //     // Setting up a sqlite database in memory to test on
-    //     let db_context =
-    //         setup_db_with_entities(vec![AnyEntity::User, AnyEntity::Model, AnyEntity::Access])
-    //             .await;
-    //     let user_context = UserContext::new(db_context.clone());
-    //     let model_context = ModelContext::new(db_context.clone());
-    //     let access_context = AccessContext::new(db_context.clone());
-    //
-    //     let new_user = create_users(1)[0].to_owned();
-    //     let new_model = create_models(1, new_user.id)[0].clone();
-    //
-    //     // Creates a model of the access which will be created
-    //     let new_accesses = create_accesses(3, new_user.id, new_model.id);
-    //
-    //     // Creates the access in the database using the 'create' function
-    //     user_context.create(new_user).await.unwrap();
-    //     model_context.create(new_model).await.unwrap();
-    //     let _ = access_context.create(new_accesses[0].clone()).await.unwrap(); // should work
-    //     let res = access_context.create(new_accesses[1].clone()).await.expect_err("This should not be Ok()");
-    // }
     #[tokio::test]
     async fn update_does_not_modify_id_test() -> () {
         let (db_context, access_context, access, _, _) = seed_db().await;
@@ -198,10 +243,16 @@ mod database_tests {
     }
 
     #[tokio::test]
-    async fn create_auto_increment_test() -> () {}
+    async fn update_non_existing_id_test() {
+        let (_, access_context, access, _, _) = seed_db().await;
 
-    #[tokio::test]
-    async fn create_check_unique_pair_test() -> () {}
+        let updated_access = access_context.update(access.clone()).await;
+
+        assert!(matches!(
+            updated_access.unwrap_err(),
+            DbErr::RecordNotUpdated
+        ));
+    }
 
     #[tokio::test]
     async fn delete_test() -> () {
@@ -211,5 +262,27 @@ mod database_tests {
             .exec(&db_context.get_connection())
             .await
             .unwrap();
+
+        let deleted_access = access_context.delete(access.id).await.unwrap();
+
+        let all_accesses = access::Entity::find()
+            .all(&db_context.get_connection())
+            .await
+            .unwrap();
+
+        assert_eq!(access, deleted_access);
+        assert_eq!(all_accesses.len(), 0);
+    }
+
+    #[tokio::test]
+    async fn delete_non_existing_id_test() {
+        let (_, access_context, _, _, _) = seed_db().await;
+
+        let deleted_access = access_context.delete(1).await;
+
+        assert!(matches!(
+            deleted_access.unwrap_err(),
+            DbErr::RecordNotFound(_)
+        ));
     }
 }
