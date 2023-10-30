@@ -1,8 +1,5 @@
 use crate::entities::sea_orm_active_enums::Role;
-use crate::entities::{
-    access::Model as AccessModel, in_use::Model as InUseModel, model::Model as ModelModel,
-    query::Model as QueryModel, session::Model as SessionModel, user::Model as UserModel,
-};
+use crate::entities::{access, in_use, model, query, session, user};
 use crate::{
     database::database_context::DatabaseContext, entities::access::Entity as AccessEntity,
     entities::in_use::Entity as InUseEntity, entities::model::Entity as ModelEntity,
@@ -67,7 +64,7 @@ impl AnyEntity {
 ///     password: format!("qwerty{}", &x),
 /// );
 /// ```
-#[allow(dead_code)]
+
 pub fn create_entities<M, F>(amount: i32, model_creator: F) -> Vec<M>
 where
     F: Fn(i32) -> M,
@@ -79,20 +76,8 @@ where
     vector
 }
 
-#[macro_export]
-macro_rules! activate {
-    ($x:expr, $type:ty) => {
-        $x.clone()
-            .into_iter()
-            .map(|x| x.into_active_model())
-            .collect::<Vec<$type>>()
-    };
-}
-
-pub use activate;
-
-pub fn create_users(amount: i32) -> Vec<UserModel> {
-    create_entities(amount, |i| UserModel {
+pub fn create_users(amount: i32) -> Vec<user::Model> {
+    create_entities(amount, |i| user::Model {
         id: i + 1,
         email: format!("mail{}@mail.dk", &i),
         username: format!("username{}", &i),
@@ -100,8 +85,8 @@ pub fn create_users(amount: i32) -> Vec<UserModel> {
     })
 }
 
-pub fn create_models(amount: i32, user_id: i32) -> Vec<ModelModel> {
-    create_entities(amount, |i| ModelModel {
+pub fn create_models(amount: i32, user_id: i32) -> Vec<model::Model> {
+    create_entities(amount, |i| model::Model {
         id: i + 1,
         name: "name".to_string(),
         components_info: "{}".to_owned().parse().unwrap(),
@@ -109,8 +94,8 @@ pub fn create_models(amount: i32, user_id: i32) -> Vec<ModelModel> {
     })
 }
 
-pub fn create_accesses(amount: i32, user_id: i32, model_id: i32) -> Vec<AccessModel> {
-    create_entities(amount, |i| AccessModel {
+pub fn create_accesses(amount: i32, user_id: i32, model_id: i32) -> Vec<access::Model> {
+    create_entities(amount, |i| access::Model {
         id: i + 1,
         role: Role::Commenter,
         model_id,
@@ -118,8 +103,8 @@ pub fn create_accesses(amount: i32, user_id: i32, model_id: i32) -> Vec<AccessMo
     })
 }
 
-pub fn create_sessions(amount: i32, user_id: i32) -> Vec<SessionModel> {
-    create_entities(amount, |i| SessionModel {
+pub fn create_sessions(amount: i32, user_id: i32) -> Vec<session::Model> {
+    create_entities(amount, |i| session::Model {
         id: i + 1,
         token: Default::default(),
         user_id,
@@ -127,16 +112,16 @@ pub fn create_sessions(amount: i32, user_id: i32) -> Vec<SessionModel> {
     })
 }
 
-pub fn create_in_use(amount: i32, model_id: i32, session_id: i32) -> Vec<InUseModel> {
-    create_entities(amount, |_| InUseModel {
+pub fn create_in_use(amount: i32, model_id: i32, session_id: i32) -> Vec<in_use::Model> {
+    create_entities(amount, |_| in_use::Model {
         model_id,
         session_id,
         latest_activity: Default::default(),
     })
 }
 
-pub fn create_query(amount: i32, model_id: i32) -> Vec<QueryModel> {
-    create_entities(amount, |i| QueryModel {
+pub fn create_query(amount: i32, model_id: i32) -> Vec<query::Model> {
+    create_entities(amount, |i| query::Model {
         id: i + 1,
         string: "".to_string(),
         result: None,
@@ -156,3 +141,14 @@ macro_rules! to_active_models {
     }};
 }
 
+#[macro_export]
+macro_rules! activate {
+    ($x:expr, $type:ty) => {
+        $x.clone()
+            .into_iter()
+            .map(|x| x.into_active_model())
+            .collect::<Vec<$type>>()
+    };
+}
+
+pub use activate;

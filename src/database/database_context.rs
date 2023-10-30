@@ -1,6 +1,5 @@
-use sea_orm::{Database, DatabaseConnection, DbErr};
-
 use sea_orm::prelude::async_trait::async_trait;
+use sea_orm::{Database, DatabaseConnection, DbErr};
 use std::env;
 
 #[derive(Clone)]

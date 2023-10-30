@@ -6,10 +6,7 @@ mod database_tests {
             entity_context::EntityContextTrait, model_context::ModelContext,
             user_context::UserContext,
         },
-        entities::access::{Entity as AccessEntity, Model as Access},
-        entities::model::{Entity as ModelEntity, Model},
-        entities::sea_orm_active_enums::Role,
-        entities::user::{Entity as UserEntity, Model as User},
+        entities::{access, model, sea_orm_active_enums::Role, user},
     };
     use sea_orm::{
         entity::prelude::*, sea_query::TableCreateStatement, Database, DatabaseBackend,
@@ -21,11 +18,11 @@ mod database_tests {
         let schema = Schema::new(DatabaseBackend::Sqlite);
 
         // Derive from Entity
-        let stmt: TableCreateStatement = schema.create_table_from_entity(UserEntity);
+        let stmt: TableCreateStatement = schema.create_table_from_entity(user::Entity);
         let _ = db.execute(db.get_database_backend().build(&stmt)).await;
-        let stmt: TableCreateStatement = schema.create_table_from_entity(ModelEntity);
+        let stmt: TableCreateStatement = schema.create_table_from_entity(model::Entity);
         let _ = db.execute(db.get_database_backend().build(&stmt)).await;
-        let stmt: TableCreateStatement = schema.create_table_from_entity(AccessEntity);
+        let stmt: TableCreateStatement = schema.create_table_from_entity(access::Entity);
         let _ = db.execute(db.get_database_backend().build(&stmt)).await;
     }
 
@@ -41,14 +38,14 @@ mod database_tests {
         let model_context = ModelContext::new(db_context.clone());
         let access_context = AccessContext::new(db_context.clone());
 
-        let new_user = User {
+        let new_user = user::Model {
             id: 1,
             email: "anders21@student.aau.dk".to_owned(),
             username: "andemad".to_owned(),
             password: "rask".to_owned(),
         };
 
-        let new_model = Model {
+        let new_model = model::Model {
             id: 1,
             name: "System".to_owned(),
             components_info: "{}".to_owned().parse().unwrap(),
@@ -56,7 +53,7 @@ mod database_tests {
         };
 
         // Creates a model of the access which will be created
-        let new_access = Access {
+        let new_access = access::Model {
             id: 1,
             role: Role::Editor,
             user_id: 1,
@@ -68,7 +65,7 @@ mod database_tests {
         model_context.create(new_model).await?;
         let created_access = access_context.create(new_access).await?;
 
-        let fetched_access = AccessEntity::find_by_id(created_access.id)
+        let fetched_access = access::Entity::find_by_id(created_access.id)
             .one(&access_context.db_context.get_connection())
             .await?
             .clone()
@@ -87,21 +84,19 @@ mod database_tests {
         // Setting up a sqlite database in memory to test on
         let db_connection = Database::connect("sqlite::memory:").await.unwrap();
         setup_schema(&db_connection).await;
-        let db_context = Box::new(DatabaseContext {
-            db_connection: db_connection,
-        });
+        let db_context = Box::new(DatabaseContext { db_connection });
         let user_context = UserContext::new(db_context.clone());
         let model_context = ModelContext::new(db_context.clone());
         let access_context = AccessContext::new(db_context.clone());
 
-        let new_user = User {
+        let new_user = user::Model {
             id: 1,
             email: "anders21@student.aau.dk".to_owned(),
             username: "andemad".to_owned(),
             password: "rask".to_owned(),
         };
 
-        let new_model = Model {
+        let new_model = model::Model {
             id: 1,
             name: "System".to_owned(),
             components_info: "{}".to_owned().parse().unwrap(),
@@ -109,7 +104,7 @@ mod database_tests {
         };
 
         // Creates a model of the access which will be created
-        let new_access = Access {
+        let new_access = access::Model {
             id: 1,
             role: Role::Editor,
             user_id: 1,
