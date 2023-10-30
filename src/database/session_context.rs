@@ -135,4 +135,3 @@ impl EntityContextTrait<session::Model> for SessionContext {
 #[cfg(test)]
 #[path = "../tests/database/session_context.rs"]
 mod tests;
-

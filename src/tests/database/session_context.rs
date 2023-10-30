@@ -362,4 +362,3 @@ mod database_tests {
         assert!(result.is_err());
     }
 }
-
