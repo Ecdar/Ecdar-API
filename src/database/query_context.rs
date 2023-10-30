@@ -1,21 +1,20 @@
 use crate::database::database_context::DatabaseContextTrait;
 use crate::database::entity_context::EntityContextTrait;
-use crate::entities::prelude::Query as QueryEntity;
-use crate::entities::query::{ActiveModel, Model as Query};
+use crate::entities::query;
 use sea_orm::prelude::async_trait::async_trait;
 use sea_orm::ActiveValue::{Set, Unchanged};
-use sea_orm::{ActiveModelTrait, DbErr, EntityTrait, RuntimeErr};
+use sea_orm::{ActiveModelTrait, DbErr, EntityTrait};
 
 pub struct QueryContext {
     db_context: Box<dyn DatabaseContextTrait>,
 }
 
-pub trait QueryContextTrait: EntityContextTrait<Query> {}
+pub trait QueryContextTrait: EntityContextTrait<query::Model> {}
 
 impl QueryContextTrait for QueryContext {}
 
 #[async_trait]
-impl EntityContextTrait<Query> for QueryContext {
+impl EntityContextTrait<query::Model> for QueryContext {
     fn new(db_context: Box<dyn DatabaseContextTrait>) -> QueryContext {
         QueryContext { db_context }
     }
@@ -33,8 +32,8 @@ impl EntityContextTrait<Query> for QueryContext {
     /// let context : QueryContext = QueryContext::new(...);
     /// context.create(model);
     /// ```
-    async fn create(&self, entity: Query) -> Result<Query, DbErr> {
-        let query = ActiveModel {
+    async fn create(&self, entity: query::Model) -> Result<query::Model, DbErr> {
+        let query = query::ActiveModel {
             id: Default::default(),
             string: Set(entity.string),
             model_id: Set(entity.model_id),
@@ -52,8 +51,8 @@ impl EntityContextTrait<Query> for QueryContext {
     /// let model : Model = context.get_by_id(1).unwrap();
     /// assert_eq!(model.string,"query_string".into());
     /// ```
-    async fn get_by_id(&self, entity_id: i32) -> Result<Option<Query>, DbErr> {
-        QueryEntity::find_by_id(entity_id)
+    async fn get_by_id(&self, entity_id: i32) -> Result<Option<query::Model>, DbErr> {
+        query::Entity::find_by_id(entity_id)
             .one(&self.db_context.get_connection())
             .await
     }
@@ -65,8 +64,8 @@ impl EntityContextTrait<Query> for QueryContext {
     /// let model : vec<Model> = context.get_all().unwrap();
     /// assert_eq!(model.len(),5);
     /// ```
-    async fn get_all(&self) -> Result<Vec<Query>, DbErr> {
-        QueryEntity::find()
+    async fn get_all(&self) -> Result<Vec<query::Model>, DbErr> {
+        query::Entity::find()
             .all(&self.db_context.get_connection())
             .await
     }
@@ -93,8 +92,8 @@ impl EntityContextTrait<Query> for QueryContext {
     /// ```
     /// ## Note
     /// The user entity's id will never be changed. If this behavior is wanted, delete the old user and create a one.
-    async fn update(&self, entity: Query) -> Result<Query, DbErr> {
-        ActiveModel {
+    async fn update(&self, entity: query::Model) -> Result<query::Model, DbErr> {
+        query::ActiveModel {
             id: Unchanged(entity.id),
             string: Set(entity.string),
             result: Set(entity.result),
@@ -106,14 +105,12 @@ impl EntityContextTrait<Query> for QueryContext {
     }
 
     /// Delete a query entity by id
-    async fn delete(&self, entity_id: i32) -> Result<Query, DbErr> {
+    async fn delete(&self, entity_id: i32) -> Result<query::Model, DbErr> {
         let query = self.get_by_id(entity_id).await?;
         match query {
-            None => Err(DbErr::Exec(RuntimeErr::Internal(
-                "No record was deleted".into(),
-            ))),
+            None => Err(DbErr::RecordNotFound("No record was deleted".into())),
             Some(query) => {
-                QueryEntity::delete_by_id(entity_id)
+                query::Entity::delete_by_id(entity_id)
                     .exec(&self.db_context.get_connection())
                     .await?;
                 Ok(query)
