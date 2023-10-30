@@ -1,11 +1,12 @@
-use std::fmt::Display;
-use crate::entities::model::{Model, ActiveModel};
-use crate::entities::prelude::Model as ModelEntity;
 use crate::database::database_context::DatabaseContextTrait;
+use crate::entities::model::{ActiveModel, Model};
+use crate::entities::prelude::Model as ModelEntity;
 use crate::EntityContextTrait;
 use async_trait::async_trait;
 use sea_orm::{ActiveModelTrait, DbErr, EntityTrait, RuntimeErr, Set, Unchanged};
+use std::fmt::Display;
 
+#[derive(Debug)]
 pub struct ModelContext {
     db_context: Box<dyn DatabaseContextTrait>,
 }
@@ -21,7 +22,7 @@ impl EntityContextTrait<Model> for ModelContext {
     }
 
     /// Used for creating a Model entity
-    /// # Example 
+    /// # Example
     /// ```
     /// let model = Model {
     ///     id: Default::default(),
@@ -74,7 +75,7 @@ impl EntityContextTrait<Model> for ModelContext {
     ///     name: "new name",
     ///     ..original_model
     /// };
-    /// 
+    ///
     /// let model_context: ModelContext = ModelContext::new(...);
     /// let model = model_context.update(update_model).unwrap();
     /// ```

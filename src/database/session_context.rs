@@ -7,10 +7,10 @@ use crate::database::entity_context::EntityContextTrait;
 use crate::entities::prelude::Session as SessionEntity;
 use crate::entities::session::{ActiveModel, Model as Session};
 
+#[derive(Debug)]
 pub struct SessionContext {
     db_context: Box<dyn DatabaseContextTrait>,
 }
-
 
 pub trait SessionContextTrait: EntityContextTrait<Session> {}
 
@@ -64,7 +64,9 @@ impl EntityContextTrait<Session> for SessionContext {
     /// let session: Result<Vec<Model>, DbErr> = session_context.get_all().await;
     /// ```
     async fn get_all(&self) -> Result<Vec<Session>, DbErr> {
-        SessionEntity::find().all(&self.db_context.get_connection()).await
+        SessionEntity::find()
+            .all(&self.db_context.get_connection())
+            .await
     }
 
     /// Updates a model in the database based on the provided model.

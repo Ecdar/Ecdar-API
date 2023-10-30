@@ -2,10 +2,19 @@ use sea_orm::{Database, DatabaseConnection, DbErr};
 
 use sea_orm::prelude::async_trait::async_trait;
 use std::env;
+use std::fmt::Debug;
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct DatabaseContext {
     pub(crate) db_connection: DatabaseConnection,
+}
+
+impl Debug for dyn DatabaseContextTrait {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("DatabaseContextTrait")
+            .field("db_connection", &self.get_connection())
+            .finish()
+    }
 }
 
 #[async_trait]
