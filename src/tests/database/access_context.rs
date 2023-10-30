@@ -25,8 +25,6 @@ mod database_tests {
             setup_db_with_entities(vec![AnyEntity::User, AnyEntity::Model, AnyEntity::Access])
                 .await;
 
-        let _user_context = UserContext::new(db_context.clone());
-        let _model_context = ModelContext::new(db_context.clone());
         let access_context = AccessContext::new(db_context.clone());
 
         let user = create_users(1)[0].clone();
@@ -213,7 +211,5 @@ mod database_tests {
             .exec(&db_context.get_connection())
             .await
             .unwrap();
-
-        acces
     }
 }
