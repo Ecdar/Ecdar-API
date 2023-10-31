@@ -1,7 +1,10 @@
+use std::env;
+
+use tonic::{Code, Request, Response, Status};
+
 use crate::api::server::server::ecdar_api_auth_server::EcdarApiAuth;
 use crate::api::server::server::ecdar_api_server::EcdarApi;
 use crate::api::server::server::ecdar_backend_client::EcdarBackendClient;
-use crate::api::server::server::{CreateUserRequest, CreateUserResponse};
 use crate::database::access_context::AccessContext;
 use crate::database::database_context::DatabaseContext;
 use crate::database::entity_context::EntityContextTrait;
@@ -10,9 +13,6 @@ use crate::database::model_context::ModelContext;
 use crate::database::query_context::QueryContext;
 use crate::database::session_context::SessionContext;
 use crate::database::user_context::UserContext;
-use crate::entities::*;
-use std::env;
-use tonic::{Code, Request, Response, Status};
 
 use super::server::server::UpdateUserRequest;
 use super::{
@@ -20,7 +20,7 @@ use super::{
     server::server::{
         ecdar_backend_server::EcdarBackend, GetAuthTokenRequest, GetAuthTokenResponse,
         QueryRequest, QueryResponse, SimulationStartRequest, SimulationStepRequest,
-        SimulationStepResponse, UserTokenResponse,
+        SimulationStepResponse, UserTokenResponse, DeleteUserRequest, CreateUserRequest, CreateUserResponse
     },
 };
 
@@ -54,28 +54,90 @@ impl ConcreteEcdarApi {
 
 #[tonic::async_trait]
 impl EcdarApi for ConcreteEcdarApi {
+    async fn list_models_info(
+        &self,
+        _request: Request<()>,
+    ) -> Result<Response<()>, Status> {
+        todo!()
+    }
+
+    async fn get_model(
+        &self,
+        _request: Request<()>,
+    ) -> Result<Response<()>, Status> {
+        todo!()
+    }
+
+    async fn create_model(
+        &self,
+        _request: Request<()>,
+    ) -> Result<Response<()>, Status> {
+        todo!()
+    }
+
+    async fn update_model(
+        &self,
+        _request: Request<()>,
+    ) -> Result<Response<()>, Status> {
+        todo!()
+    }
+
+    async fn delete_model(
+        &self,
+        _request: Request<()>,
+    ) -> Result<Response<()>, Status> {
+        todo!()
+    }
+
     async fn create_user(
         &self,
-        request: Request<CreateUserRequest>,
+        _request: Request<CreateUserRequest>,
     ) -> Result<Response<CreateUserResponse>, Status> {
-        let message = request.into_inner().clone();
+        todo!()
+    }
 
-        let mut user = user::Model {
-            id: Default::default(),
-            username: message.clone().username,
-            password: message.clone().password,
-            email: message.clone().email,
+    async fn update_user(
+        &self,
+        _request: Request<()>,
+    ) -> Result<Response<()>, Status> {
+        todo!()
+    }
+
+    async fn delete_user(
+        &self,
+        request: Request<DeleteUserRequest>,
+    ) -> Result<Response<()>, Status> {
+        // Get uid from request metadata
+        let uid = match request.metadata().get("uid").unwrap().to_str() {
+            Ok(uid) => uid,
+            Err(_) => return Err(Status::new(Code::Internal, "Could not get uid from request metadata")),
         };
 
-        user = self
-            .user_context
-            .create(user.clone())
-            .await
-            .expect("Failed to create user");
+        match self.user_context.delete(uid.parse().unwrap()).await {
+            Ok(_) => Ok(Response::new(())),
+            Err(error) => Err(Status::new(Code::Internal, error.to_string())),
+        }
+    }
 
-        let token = auth::create_jwt(&user.id.to_string()).expect("Failed to create token");
+    async fn create_access(
+        &self,
+        _request: Request<()>,
+    ) -> Result<Response<()>, Status> {
+        todo!()
+    }
 
-        Ok(Response::new(CreateUserResponse { token }))
+    async fn update_access(
+        &self,
+        _request: Request<()>,
+    ) -> Result<Response<()>, Status> {
+        todo!()
+    }
+
+    async fn delete_access(
+        &self,
+        _request: Request<()>,
+    ) -> Result<Response<()>, Status> {
+        todo!()
     }
 
     async fn update_user(
