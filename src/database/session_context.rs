@@ -1,3 +1,4 @@
+use chrono::Utc;
 use sea_orm::prelude::async_trait::async_trait;
 use sea_orm::ActiveValue::{Set, Unchanged};
 use sea_orm::{ActiveModelTrait, DbErr, EntityTrait};
@@ -37,7 +38,7 @@ impl EntityContextTrait<session::Model> for SessionContext {
         let session = session::ActiveModel {
             id: Default::default(),
             token: Set(entity.token),
-            created_at: Set(entity.created_at),
+            created_at: Set(Utc::now().naive_local()),
             user_id: Set(entity.user_id),
         };
 
