@@ -17,9 +17,9 @@ use tonic::{Code, Request, Response, Status};
 use super::{
     auth,
     server::server::{
-        ecdar_backend_server::EcdarBackend, GetAuthTokenRequest, GetAuthTokenResponse,
-        QueryRequest, QueryResponse, SimulationStartRequest, SimulationStepRequest,
-        SimulationStepResponse, UserTokenResponse,
+        ecdar_backend_server::EcdarBackend, DeleteUserRequest, GetAuthTokenRequest,
+        GetAuthTokenResponse, QueryRequest, QueryResponse, SimulationStartRequest,
+        SimulationStepRequest, SimulationStepResponse, UpdateUserRequest, UserTokenResponse,
     },
 };
 
@@ -53,7 +53,65 @@ impl ConcreteEcdarApi {
 
 #[tonic::async_trait]
 impl EcdarApi for ConcreteEcdarApi {
+    async fn list_models_info(&self, _request: Request<()>) -> Result<Response<()>, Status> {
+        todo!()
+    }
 
+    async fn get_model(&self, _request: Request<()>) -> Result<Response<()>, Status> {
+        todo!()
+    }
+
+    async fn create_model(&self, _request: Request<()>) -> Result<Response<()>, Status> {
+        todo!()
+    }
+
+    async fn update_model(&self, _request: Request<()>) -> Result<Response<()>, Status> {
+        todo!()
+    }
+
+    async fn delete_model(&self, _request: Request<()>) -> Result<Response<()>, Status> {
+        todo!()
+    }
+
+    async fn update_user(
+        &self,
+        _request: Request<UpdateUserRequest>,
+    ) -> Result<Response<()>, Status> {
+        todo!()
+    }
+
+    async fn delete_user(
+        &self,
+        request: Request<DeleteUserRequest>,
+    ) -> Result<Response<()>, Status> {
+        // Get uid from request metadata
+        let uid = match request.metadata().get("uid").unwrap().to_str() {
+            Ok(uid) => uid,
+            Err(_) => {
+                return Err(Status::new(
+                    Code::Internal,
+                    "Could not get uid from request metadata",
+                ))
+            }
+        };
+
+        match self.user_context.delete(uid.parse().unwrap()).await {
+            Ok(_) => Ok(Response::new(())),
+            Err(error) => Err(Status::new(Code::Internal, error.to_string())),
+        }
+    }
+
+    async fn create_access(&self, _request: Request<()>) -> Result<Response<()>, Status> {
+        todo!()
+    }
+
+    async fn update_access(&self, _request: Request<()>) -> Result<Response<()>, Status> {
+        todo!()
+    }
+
+    async fn delete_access(&self, _request: Request<()>) -> Result<Response<()>, Status> {
+        todo!()
+    }
 }
 
 #[tonic::async_trait]
@@ -76,22 +134,18 @@ impl EcdarApiAuth for ConcreteEcdarApi {
         request: Request<CreateUserRequest>,
     ) -> Result<Response<CreateUserResponse>, Status> {
         let message = request.into_inner().clone();
-
         let mut user = user::Model {
             id: Default::default(),
             username: message.clone().username,
             password: message.clone().password,
             email: message.clone().email,
         };
-
         user = self
             .user_context
             .create(user.clone())
             .await
             .expect("Failed to create user");
-
         let token = auth::create_jwt(&user.id.to_string()).expect("Failed to create token");
-
         Ok(Response::new(CreateUserResponse { token }))
     }
 }

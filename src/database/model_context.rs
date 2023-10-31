@@ -4,7 +4,6 @@ use crate::entities::prelude::Model as ModelEntity;
 use crate::EntityContextTrait;
 use async_trait::async_trait;
 use sea_orm::{ActiveModelTrait, DbErr, EntityTrait, RuntimeErr, Set, Unchanged};
-use std::fmt::Display;
 
 #[derive(Debug)]
 pub struct ModelContext {
