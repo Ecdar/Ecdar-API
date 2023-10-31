@@ -1,36 +1,44 @@
 #[cfg(test)]
 mod database_tests {
     use crate::tests::database::helpers::*;
+    use crate::{
+        database::{entity_context::EntityContextTrait, model_context::ModelContext},
+        entities::{access, in_use, model, query, session, user},
+        to_active_models,
+    };
     use sea_orm::error::DbErr;
     use sea_orm::{entity::prelude::*, IntoActiveModel};
     use std::matches;
 
-    use crate::database::database_context::DatabaseContextTrait;
-    use crate::{
-        database::{entity_context::EntityContextTrait, model_context::ModelContext},
-        entities::{access, in_use, model, query, session, user},
-    };
+    async fn seed_db() -> (ModelContext, model::Model, user::Model) {
+        let db_context = setup_db_with_entities(vec![
+            AnyEntity::User,
+            AnyEntity::Session,
+            AnyEntity::Model,
+            AnyEntity::InUse,
+            AnyEntity::Query,
+            AnyEntity::Access,
+        ])
+        .await;
 
-    // Test the functionality of the 'create' function, which creates a user in the database
-    #[tokio::test]
-    async fn create_test() {
-        // Setting up database and user context
-        let db_context = setup_db_with_entities(vec![AnyEntity::Model, AnyEntity::User]).await;
         let model_context = ModelContext::new(db_context.clone());
 
-        let users: Vec<user::Model> = create_users(1);
+        let user = create_users(1)[0].clone();
+        let model = create_models(1, user.id)[0].clone();
 
-        user::Entity::insert(users[0].clone().into_active_model())
-            .exec(&db_context.get_connection())
+        user::Entity::insert(user.clone().into_active_model())
+            .exec(&model_context.db_context.get_connection())
             .await
             .unwrap();
 
-        // Creates a model of the user which will be created
-        let models: Vec<model::Model> = create_models(1, 1);
-        let new_model = models[0].clone();
+        (model_context, model, user)
+    }
 
-        // Creates the user in the database using the 'create' function
-        let created_model = model_context.create(new_model.clone()).await.unwrap();
+    #[tokio::test]
+    async fn create_test() {
+        let (model_context, model, _) = seed_db().await;
+
+        let created_model = model_context.create(model.clone()).await.unwrap();
 
         let fetched_model = model::Entity::find_by_id(created_model.id)
             .one(&model_context.db_context.get_connection())
@@ -38,28 +46,16 @@ mod database_tests {
             .unwrap()
             .unwrap();
 
-        // Assert if the new_user, created_user, and fetched_user are the same
-        assert_eq!(new_model, created_model);
-        assert_eq!(created_model, fetched_model);
+        assert_eq!(model, created_model);
+        assert_eq!(fetched_model, created_model);
     }
 
     #[tokio::test]
     async fn create_auto_increment_test() {
-        // Setting up database and user context
-        let db_context = setup_db_with_entities(vec![AnyEntity::Model, AnyEntity::User]).await;
-        let model_context = ModelContext::new(db_context.clone());
+        let (model_context, model, _) = seed_db().await;
 
-        let users: Vec<user::Model> = create_users(1);
-        let models: Vec<model::Model> = create_models(2, users[0].clone().id);
-
-        user::Entity::insert(users[0].clone().into_active_model())
-            .exec(&db_context.get_connection())
-            .await
-            .unwrap();
-
-        // Creates the model in the database using the 'create' function
-        let created_model1 = model_context.create(models[0].clone()).await.unwrap();
-        let created_model2 = model_context.create(models[1].clone()).await.unwrap();
+        let created_model1 = model_context.create(model.clone()).await.unwrap();
+        let created_model2 = model_context.create(model.clone()).await.unwrap();
 
         let fetched_model1 = model::Entity::find_by_id(created_model1.id)
             .one(&model_context.db_context.get_connection())
@@ -73,7 +69,6 @@ mod database_tests {
             .unwrap()
             .unwrap();
 
-        // Assert if the new_user, created_user, and fetched_user are the same
         assert_ne!(fetched_model1.id, fetched_model2.id);
         assert_ne!(created_model1.id, created_model2.id);
         assert_eq!(created_model1.id, fetched_model1.id);
@@ -82,108 +77,73 @@ mod database_tests {
 
     #[tokio::test]
     async fn get_by_id_test() {
-        // Setting up database and user context
-        let db_context = setup_db_with_entities(vec![AnyEntity::Model, AnyEntity::User]).await;
-        let model_context = ModelContext::new(db_context.clone());
+        let (model_context, model, _) = seed_db().await;
 
-        let users: Vec<user::Model> = create_users(1);
-        let models: Vec<model::Model> = create_models(1, users[0].clone().id);
-        let new_model = models[0].clone();
-
-        user::Entity::insert(users[0].clone().into_active_model())
-            .exec(&db_context.get_connection())
+        model::Entity::insert(model.clone().into_active_model())
+            .exec(&model_context.db_context.get_connection())
             .await
             .unwrap();
 
-        // Creates the user in the database using the 'create' function
-        model::Entity::insert(new_model.clone().into_active_model())
-            .exec(&db_context.get_connection())
-            .await
-            .unwrap();
+        let fetched_model = model_context.get_by_id(model.id).await.unwrap().unwrap();
 
-        // Fetches the user created using the 'get_by_id' function
-        let fetched_model = model_context
-            .get_by_id(new_model.id)
-            .await
-            .unwrap()
-            .unwrap();
-
-        // Assert if the new_user, created_user, and fetched_user are the same
-        assert_eq!(new_model, fetched_model);
+        assert_eq!(model, fetched_model);
     }
 
     #[tokio::test]
     async fn get_by_non_existing_id_test() {
-        // Setting up database and user context
-        let db_context = setup_db_with_entities(vec![AnyEntity::Model]).await;
-        let model_context = ModelContext::new(db_context.clone());
+        let (model_context, _, _) = seed_db().await;
 
-        // Fetches the user created using the 'get_by_id' function
         let fetched_model = model_context.get_by_id(1).await.unwrap();
 
         assert!(fetched_model.is_none());
     }
 
     #[tokio::test]
-    async fn get_all_test() -> () {
-        // Setting up database and user context
-        let db_context = setup_db_with_entities(vec![AnyEntity::Model, AnyEntity::User]).await;
-        let model_context = ModelContext::new(db_context.clone());
+    async fn get_all_test() {
+        let (model_context, _, user) = seed_db().await;
 
-        let users: Vec<user::Model> = create_users(1);
-        let models: Vec<model::Model> = create_models(2, users[0].clone().id);
+        let new_models = create_models(3, user.id);
 
-        user::Entity::insert(users[0].clone().into_active_model())
-            .exec(&db_context.get_connection())
+        model::Entity::insert_many(to_active_models!(new_models.clone()))
+            .exec(&model_context.db_context.get_connection())
             .await
             .unwrap();
 
-        let active_models_vec = models
-            .clone()
-            .into_iter()
-            .map(|x| x.into_active_model())
-            .collect::<Vec<model::ActiveModel>>();
+        assert_eq!(model_context.get_all().await.unwrap().len(), 3);
 
-        model::Entity::insert_many(active_models_vec)
-            .exec(&db_context.get_connection())
-            .await
-            .unwrap();
+        let mut sorted = new_models.clone();
+        sorted.sort_by_key(|k| k.id);
 
-        let result = model_context.get_all().await.unwrap();
-
-        assert_eq!(models, result);
+        for (i, model) in sorted.into_iter().enumerate() {
+            assert_eq!(model, new_models[i]);
+        }
     }
 
     #[tokio::test]
-    async fn update_test() -> () {
-        // Setting up database and user context
-        let db_context =
-            setup_db_with_entities(vec![AnyEntity::Model, AnyEntity::User, AnyEntity::Query]).await;
-        let model_context = ModelContext::new(db_context.clone());
+    async fn get_all_empty_test() {
+        let (model_context, _, _) = seed_db().await;
 
-        let users: Vec<user::Model> = create_users(1);
-        let models: Vec<model::Model> = create_models(2, users[0].clone().id);
-        let model = models[0].clone();
+        let result = model_context.get_all().await.unwrap();
+        let empty_models: Vec<model::Model> = vec![];
 
-        user::Entity::insert(users[0].clone().into_active_model())
-            .exec(&db_context.get_connection())
-            .await
-            .unwrap();
+        assert_eq!(empty_models, result);
+    }
+
+    #[tokio::test]
+    async fn update_test() {
+        let (model_context, model, _) = seed_db().await;
 
         model::Entity::insert(model.clone().into_active_model())
-            .exec(&db_context.get_connection())
+            .exec(&model_context.db_context.get_connection())
             .await
             .unwrap();
 
-        let new_model = model::Model {
-            name: models[0].clone().name + "123",
-            ..model
-        };
+        let new_model = model::Model { ..model };
 
         let updated_model = model_context.update(new_model.clone()).await.unwrap();
 
         let fetched_model = model::Entity::find_by_id(updated_model.id)
-            .one(&db_context.get_connection())
+            .one(&model_context.db_context.get_connection())
             .await
             .unwrap()
             .unwrap();
@@ -193,46 +153,117 @@ mod database_tests {
     }
 
     #[tokio::test]
-    async fn update_check_query_outdated_test() {
-        // Setting up database and user context
-        let db_context =
-            setup_db_with_entities(vec![AnyEntity::Model, AnyEntity::Query, AnyEntity::User]).await;
-        let model_context = ModelContext::new(db_context.clone());
+    async fn update_modifies_name_test() {
+        let (model_context, model, _) = seed_db().await;
 
-        let users: Vec<user::Model> = create_users(1);
-        let models: Vec<model::Model> = create_models(2, users[0].clone().id);
-        let model = models[0].clone();
-        let queries: Vec<query::Model> = create_query(1, model.id);
-        let query = queries[0].clone();
-        let new_query = query::Model {
-            outdated: false,
-            ..query
+        let model = model::Model {
+            name: "model1".into(),
+            ..model.clone()
         };
 
-        user::Entity::insert(users[0].clone().into_active_model())
-            .exec(&db_context.get_connection())
-            .await
-            .unwrap();
-
         model::Entity::insert(model.clone().into_active_model())
-            .exec(&db_context.get_connection())
-            .await
-            .unwrap();
-
-        query::Entity::insert(new_query.clone().into_active_model())
-            .exec(&db_context.get_connection())
+            .exec(&model_context.db_context.get_connection())
             .await
             .unwrap();
 
         let new_model = model::Model {
-            name: models[0].clone().name + "123",
-            ..model
+            name: "model2".into(),
+            ..model.clone()
         };
 
         let updated_model = model_context.update(new_model.clone()).await.unwrap();
 
+        assert_ne!(model, updated_model);
+        assert_ne!(model, new_model);
+    }
+
+    #[tokio::test]
+    async fn update_modifies_components_info_test() {
+        let (model_context, model, _) = seed_db().await;
+
+        let model = model::Model {
+            components_info: "{\"a\":1}".to_owned().parse().unwrap(),
+            ..model.clone()
+        };
+
+        model::Entity::insert(model.clone().into_active_model())
+            .exec(&model_context.db_context.get_connection())
+            .await
+            .unwrap();
+
+        let new_model = model::Model {
+            components_info: "{\"a\":2}".to_owned().parse().unwrap(),
+            ..model.clone()
+        };
+
+        let updated_model = model_context.update(new_model.clone()).await.unwrap();
+
+        assert_ne!(model, updated_model);
+        assert_ne!(model, new_model);
+    }
+
+    #[tokio::test]
+    async fn update_does_not_modify_id_test() {
+        let (model_context, model, _) = seed_db().await;
+
+        model::Entity::insert(model.clone().into_active_model())
+            .exec(&model_context.db_context.get_connection())
+            .await
+            .unwrap();
+
+        let new_model = model::Model {
+            id: &model.id + 1,
+            ..model.clone()
+        };
+
+        let res = model_context.update(new_model.clone()).await;
+
+        assert!(matches!(res.unwrap_err(), DbErr::RecordNotUpdated));
+    }
+
+    #[tokio::test]
+    async fn update_does_not_modify_owner_id_test() {
+        let (model_context, model, _) = seed_db().await;
+
+        model::Entity::insert(model.clone().into_active_model())
+            .exec(&model_context.db_context.get_connection())
+            .await
+            .unwrap();
+
+        let new_model = model::Model {
+            owner_id: &model.owner_id + 1,
+            ..model.clone()
+        };
+
+        let res = model_context.update(new_model.clone()).await.unwrap();
+
+        assert_eq!(model, res);
+    }
+
+    #[tokio::test]
+    async fn update_check_query_outdated_test() {
+        let (model_context, model, _) = seed_db().await;
+
+        let mut query = create_query(1, model.id)[0].clone();
+
+        query.outdated = false;
+
+        model::Entity::insert(model.clone().into_active_model())
+            .exec(&model_context.db_context.get_connection())
+            .await
+            .unwrap();
+
+        query::Entity::insert(query.clone().into_active_model())
+            .exec(&model_context.db_context.get_connection())
+            .await
+            .unwrap();
+
+        let new_model = model::Model { ..model };
+
+        let updated_model = model_context.update(new_model.clone()).await.unwrap();
+
         let fetched_query = query::Entity::find_by_id(updated_model.id)
-            .one(&db_context.get_connection())
+            .one(&model_context.db_context.get_connection())
             .await
             .unwrap()
             .unwrap();
@@ -242,16 +273,10 @@ mod database_tests {
 
     #[tokio::test]
     async fn update_non_existing_id_test() {
-        // Setting up database and user context
-        let db_context = setup_db_with_entities(vec![AnyEntity::Model]).await;
-        let model_context = ModelContext::new(db_context.clone());
-
-        let models: Vec<model::Model> = create_models(2, 1);
-        let model = models[0].clone();
+        let (model_context, model, _) = seed_db().await;
 
         let updated_model = model_context.update(model.clone()).await;
 
-        // Assert if the new_user, created_user, and fetched_user are the same
         assert!(matches!(
             updated_model.unwrap_err(),
             DbErr::RecordNotUpdated
@@ -259,29 +284,19 @@ mod database_tests {
     }
 
     #[tokio::test]
-    async fn delete_test() -> () {
+    async fn delete_test() {
         // Setting up database and user context
-        let db_context = setup_db_with_entities(vec![AnyEntity::Model, AnyEntity::User]).await;
-        let model_context = ModelContext::new(db_context.clone());
-
-        let users: Vec<user::Model> = create_users(1);
-        let models: Vec<model::Model> = create_models(2, users[0].clone().id);
-        let model = models[0].clone();
-
-        user::Entity::insert(users[0].clone().into_active_model())
-            .exec(&db_context.get_connection())
-            .await
-            .unwrap();
+        let (model_context, model, _) = seed_db().await;
 
         model::Entity::insert(model.clone().into_active_model())
-            .exec(&db_context.get_connection())
+            .exec(&model_context.db_context.get_connection())
             .await
             .unwrap();
 
         let deleted_model = model_context.delete(model.id).await.unwrap();
 
         let all_models = model::Entity::find()
-            .all(&db_context.get_connection())
+            .all(&model_context.db_context.get_connection())
             .await
             .unwrap();
 
@@ -290,39 +305,28 @@ mod database_tests {
     }
 
     #[tokio::test]
-    async fn delete_cascade_query_test() -> () {
-        // Setting up database and user context
-        let db_context =
-            setup_db_with_entities(vec![AnyEntity::Model, AnyEntity::Query, AnyEntity::User]).await;
-        let model_context = ModelContext::new(db_context.clone());
+    async fn delete_cascade_query_test() {
+        let (model_context, model, _) = seed_db().await;
 
-        let users: Vec<user::Model> = create_users(1);
-        let models: Vec<model::Model> = create_models(1, users[0].clone().id);
-        let queries: Vec<query::Model> = create_query(1, models[0].clone().id);
-        let model = models[0].clone();
-        let query = queries[0].clone();
+        let query = create_query(1, model.clone().id)[0].clone();
 
-        user::Entity::insert(users[0].clone().into_active_model())
-            .exec(&db_context.get_connection())
-            .await
-            .unwrap();
         model::Entity::insert(model.clone().into_active_model())
-            .exec(&db_context.get_connection())
+            .exec(&model_context.db_context.get_connection())
             .await
             .unwrap();
         query::Entity::insert(query.clone().into_active_model())
-            .exec(&db_context.get_connection())
+            .exec(&model_context.db_context.get_connection())
             .await
             .unwrap();
 
         model_context.delete(model.id).await.unwrap();
 
         let all_queries = query::Entity::find()
-            .all(&db_context.get_connection())
+            .all(&model_context.db_context.get_connection())
             .await
             .unwrap();
         let all_models = model::Entity::find()
-            .all(&db_context.get_connection())
+            .all(&model_context.db_context.get_connection())
             .await
             .unwrap();
 
@@ -331,41 +335,28 @@ mod database_tests {
     }
 
     #[tokio::test]
-    async fn delete_cascade_access_test() -> () {
-        // Setting up database and user context
-        let db_context =
-            setup_db_with_entities(vec![AnyEntity::Model, AnyEntity::Access, AnyEntity::User])
-                .await;
-        let model_context = ModelContext::new(db_context.clone());
+    async fn delete_cascade_access_test() {
+        let (model_context, model, _) = seed_db().await;
 
-        let users: Vec<user::Model> = create_users(1);
-        let models: Vec<model::Model> = create_models(1, users[0].clone().id);
-        let accesses: Vec<access::Model> = create_accesses(1, 1, models[0].clone().id);
+        let access = create_accesses(1, 1, model.clone().id)[0].clone();
 
-        let model = models[0].clone();
-        let access = accesses[0].clone();
-
-        user::Entity::insert(users[0].clone().into_active_model())
-            .exec(&db_context.get_connection())
-            .await
-            .unwrap();
         model::Entity::insert(model.clone().into_active_model())
-            .exec(&db_context.get_connection())
+            .exec(&model_context.db_context.get_connection())
             .await
             .unwrap();
         access::Entity::insert(access.clone().into_active_model())
-            .exec(&db_context.get_connection())
+            .exec(&model_context.db_context.get_connection())
             .await
             .unwrap();
 
         model_context.delete(model.id).await.unwrap();
 
         let all_models = model::Entity::find()
-            .all(&db_context.get_connection())
+            .all(&model_context.db_context.get_connection())
             .await
             .unwrap();
         let all_accesses = access::Entity::find()
-            .all(&db_context.get_connection())
+            .all(&model_context.db_context.get_connection())
             .await
             .unwrap();
 
@@ -374,50 +365,33 @@ mod database_tests {
     }
 
     #[tokio::test]
-    async fn delete_cascade_in_use_test() -> () {
-        // Setting up database and user context
-        let db_context = setup_db_with_entities(vec![
-            AnyEntity::Model,
-            AnyEntity::InUse,
-            AnyEntity::User,
-            AnyEntity::Session,
-        ])
-        .await;
-        let model_context = ModelContext::new(db_context.clone());
+    async fn delete_cascade_in_use_test() {
+        let (model_context, model, user) = seed_db().await;
 
-        let users: Vec<user::Model> = create_users(1);
-        let sessions: Vec<session::Model> = create_sessions(1, users[0].clone().id);
-        let models: Vec<model::Model> = create_models(1, users[0].clone().id);
-        let in_uses: Vec<in_use::Model> = create_in_use(1, models[0].clone().id, 1);
+        let session = create_sessions(1, user.clone().id)[0].clone();
+        let in_use = create_in_use(1, model.clone().id, 1)[0].clone();
 
-        let model = models[0].clone();
-        let in_use = in_uses[0].clone();
-
-        user::Entity::insert(users[0].clone().into_active_model())
-            .exec(&db_context.get_connection())
-            .await
-            .unwrap();
-        session::Entity::insert(sessions[0].clone().into_active_model())
-            .exec(&db_context.get_connection())
+        session::Entity::insert(session.clone().into_active_model())
+            .exec(&model_context.db_context.get_connection())
             .await
             .unwrap();
         model::Entity::insert(model.clone().into_active_model())
-            .exec(&db_context.get_connection())
+            .exec(&model_context.db_context.get_connection())
             .await
             .unwrap();
         in_use::Entity::insert(in_use.clone().into_active_model())
-            .exec(&db_context.get_connection())
+            .exec(&model_context.db_context.get_connection())
             .await
             .unwrap();
 
         model_context.delete(model.id).await.unwrap();
 
         let all_models = model::Entity::find()
-            .all(&db_context.get_connection())
+            .all(&model_context.db_context.get_connection())
             .await
             .unwrap();
         let all_in_uses = in_use::Entity::find()
-            .all(&db_context.get_connection())
+            .all(&model_context.db_context.get_connection())
             .await
             .unwrap();
 
@@ -427,13 +401,10 @@ mod database_tests {
 
     #[tokio::test]
     async fn delete_non_existing_id_test() {
-        // Setting up database and user context
-        let db_context = setup_db_with_entities(vec![AnyEntity::Model]).await;
-        let model_context = ModelContext::new(db_context.clone());
+        let (model_context, _, _) = seed_db().await;
 
         let deleted_model = model_context.delete(1).await;
 
-        // Assert if the new_user, created_user, and fetched_user are the same
         assert!(matches!(
             deleted_model.unwrap_err(),
             DbErr::RecordNotFound(_)

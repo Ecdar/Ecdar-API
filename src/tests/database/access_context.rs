@@ -37,7 +37,7 @@ mod database_tests {
     async fn create_test() {
         let (access_context, access, _, _) = seed_db().await;
 
-        let created_access = access_context.create(access).await.unwrap();
+        let created_access = access_context.create(access.clone()).await.unwrap();
 
         let fetched_access = access::Entity::find_by_id(created_access.id)
             .one(&access_context.db_context.get_connection())
@@ -46,6 +46,7 @@ mod database_tests {
             .unwrap();
 
         // Assert if the fetched access is the same as the created access
+        assert_eq!(access, created_access);
         assert_eq!(fetched_access, created_access);
     }
 

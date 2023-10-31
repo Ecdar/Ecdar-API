@@ -42,9 +42,11 @@ mod database_tests {
     #[tokio::test]
     async fn create_test() {
         // Setting up a sqlite database in memory.
-        let (session_context, session, _, _) = seed_db().await;
+        let (session_context, mut session, _, _) = seed_db().await;
 
-        let created_session = session_context.create(session).await.unwrap();
+        let created_session = session_context.create(session.clone()).await.unwrap();
+
+        session.created_at = created_session.created_at;
 
         let fetched_session = session::Entity::find_by_id(created_session.id)
             .one(&session_context.db_context.get_connection())
@@ -52,6 +54,7 @@ mod database_tests {
             .unwrap()
             .unwrap();
 
+        assert_eq!(session, created_session);
         assert_eq!(fetched_session, created_session);
     }
 

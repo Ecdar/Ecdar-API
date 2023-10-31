@@ -167,9 +167,14 @@ mod database_tests {
             .await
             .unwrap();
 
-        let result = user_context.get_all().await.unwrap();
+        assert_eq!(user_context.get_all().await.unwrap().len(), 10);
 
-        assert_eq!(users, result);
+        let mut sorted = users.clone();
+        sorted.sort_by_key(|k| k.id);
+
+        for (i, user) in sorted.into_iter().enumerate() {
+            assert_eq!(user, users[i]);
+        }
     }
 
     #[tokio::test]

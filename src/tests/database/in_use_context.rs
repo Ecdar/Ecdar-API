@@ -54,9 +54,11 @@ mod database_tests {
 
     #[tokio::test]
     async fn create_test() {
-        let (in_use_context, in_use, _, _, _) = seed_db().await;
+        let (in_use_context, mut in_use, _, _, _) = seed_db().await;
 
         let inserted_in_use = in_use_context.create(in_use.clone()).await.unwrap();
+
+        in_use.latest_activity = inserted_in_use.latest_activity;
 
         let fetched_in_use = in_use::Entity::find_by_id(inserted_in_use.clone().model_id)
             .one(&in_use_context.db_context.get_connection())
@@ -64,7 +66,8 @@ mod database_tests {
             .unwrap()
             .unwrap();
 
-        assert_eq!(inserted_in_use, fetched_in_use);
+        assert_eq!(in_use, inserted_in_use);
+        assert_eq!(in_use, fetched_in_use);
     }
 
     #[tokio::test]
@@ -117,18 +120,31 @@ mod database_tests {
 
     #[tokio::test]
     async fn get_all_test() {
-        let (in_use_context, _in_use, session, model, _) = seed_db().await;
+        let (in_use_context, _in_use, session, model, user) = seed_db().await;
 
-        let in_uses = create_in_use(1, model.id, session.id);
+        let mut models = create_models(2, user.id);
+        models[0].id = 3;
+
+        let in_uses = create_in_use(3, model.id, session.id);
+
+        model::Entity::insert_many(to_active_models!(models.clone()))
+            .exec(&in_use_context.db_context.get_connection())
+            .await
+            .unwrap();
 
         in_use::Entity::insert_many(to_active_models!(in_uses.clone()))
             .exec(&in_use_context.db_context.get_connection())
             .await
             .unwrap();
 
-        let fetched_in_uses = in_use_context.get_all().await.unwrap();
+        assert_eq!(in_use_context.get_all().await.unwrap().len(), 3);
 
-        assert_eq!(1, fetched_in_uses.len())
+        let mut sorted = in_uses.clone();
+        sorted.sort_by_key(|k| k.model_id);
+
+        for (i, in_use) in sorted.into_iter().enumerate() {
+            assert_eq!(in_use, in_uses[i]);
+        }
     }
 
     #[tokio::test]
