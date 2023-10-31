@@ -1,3 +1,4 @@
+#![cfg(test)]
 use crate::entities::sea_orm_active_enums::Role;
 use crate::entities::{access, in_use, model, query, session, user};
 use crate::{
@@ -140,15 +141,3 @@ macro_rules! to_active_models {
         models
     }};
 }
-
-#[macro_export]
-macro_rules! activate {
-    ($x:expr, $type:ty) => {
-        $x.clone()
-            .into_iter()
-            .map(|x| x.into_active_model())
-            .collect::<Vec<$type>>()
-    };
-}
-
-pub use activate;

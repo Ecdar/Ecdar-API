@@ -13,13 +13,13 @@ mod database_tests {
             in_use_context::{DbErr, InUseContext},
         },
         entities::{in_use, model, session, user},
+        to_active_models,
     };
 
     struct Seed {
         in_use_context: InUseContext,
         models: Vec<model::Model>,
         sessions: Vec<session::Model>,
-        users: Vec<user::Model>,
     }
 
     async fn seed_db() -> Seed {
@@ -41,15 +41,15 @@ mod database_tests {
         let mut models: Vec<model::Model> = create_models(2, user.clone().id);
         models[1].owner_id = users[1].id;
 
-        user::Entity::insert_many(activate!(users.clone(), user::ActiveModel))
+        user::Entity::insert_many(to_active_models!(users.clone()))
             .exec(&db_context.get_connection())
             .await
             .unwrap();
-        model::Entity::insert_many(activate!(models.clone(), model::ActiveModel))
+        model::Entity::insert_many(to_active_models!(models.clone()))
             .exec(&db_context.get_connection())
             .await
             .unwrap();
-        session::Entity::insert_many(activate!(sessions.clone(), session::ActiveModel))
+        session::Entity::insert_many(to_active_models!(sessions.clone()))
             .exec(&db_context.get_connection())
             .await
             .unwrap();
@@ -60,7 +60,6 @@ mod database_tests {
             in_use_context,
             models,
             sessions,
-            users,
         }
     }
 
@@ -92,7 +91,7 @@ mod database_tests {
         let in_uses: Vec<in_use::Model> =
             create_in_use(1, seed.models[0].clone().id, seed.sessions[0].clone().id);
 
-        let mut in_use = in_uses[0].clone();
+        let in_use = in_uses[0].clone();
         let inserted_in_use = seed.in_use_context.create(in_use.clone()).await.unwrap();
 
         let fetched_in_use = in_use::Entity::find_by_id(inserted_in_use.clone().model_id)
@@ -149,7 +148,7 @@ mod database_tests {
         in_uses[1].model_id = seed.models[1].id;
         in_uses[1].session_id = seed.sessions[1].id;
 
-        in_use::Entity::insert_many(activate!(in_uses.clone(), in_use::ActiveModel))
+        in_use::Entity::insert_many(to_active_models!(in_uses.clone()))
             .exec(&seed.in_use_context.db_context.get_connection())
             .await
             .unwrap();

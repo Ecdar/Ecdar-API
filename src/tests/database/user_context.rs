@@ -154,7 +154,7 @@ mod database_tests {
 
         let users_vec: Vec<user::Model> = create_users(1);
 
-        let active_users_vec = activate!(users_vec, user::ActiveModel);
+        let active_users_vec = to_active_models!(users_vec.clone());
 
         user::Entity::insert_many(active_users_vec)
             .exec(&db_context.get_connection())
