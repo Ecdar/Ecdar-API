@@ -2,6 +2,7 @@ use crate::database::database_context::DatabaseContextTrait;
 use crate::entities::in_use;
 use crate::EntityContextTrait;
 use async_trait::async_trait;
+use chrono::Utc;
 use sea_orm::{ActiveModelTrait, DbErr, EntityTrait, Set, Unchanged};
 
 pub struct InUseContext {
@@ -23,7 +24,7 @@ impl EntityContextTrait<in_use::Model> for InUseContext {
         let in_use = in_use::ActiveModel {
             model_id: Set(entity.model_id),
             session_id: Set(entity.session_id),
-            latest_activity: Set(entity.latest_activity),
+            latest_activity: Set(Utc::now().naive_local()),
         };
         let in_use: in_use::Model = in_use.insert(&self.db_context.get_connection()).await?;
         Ok(in_use)
@@ -65,6 +66,6 @@ impl EntityContextTrait<in_use::Model> for InUseContext {
     }
 }
 
-//#[cfg(test)]
-//#[path = "../tests/database/model_context.rs"]
-//mod tests;
+#[cfg(test)]
+#[path = "../tests/database/in_use_context.rs"]
+mod tests;
