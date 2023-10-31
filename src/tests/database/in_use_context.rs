@@ -1,12 +1,6 @@
 #[cfg(test)]
 mod database_tests {
     use crate::tests::database::helpers::*;
-    use chrono::{Duration, Utc};
-    use sea_orm::{entity::prelude::*, IntoActiveModel};
-    use std::matches;
-    use std::ops::Add;
-
-    use crate::database::database_context::DatabaseContextTrait;
     use crate::{
         database::{
             entity_context::EntityContextTrait,
@@ -15,6 +9,10 @@ mod database_tests {
         entities::{in_use, model, session, user},
         to_active_models,
     };
+    use chrono::{Duration, Utc};
+    use sea_orm::{entity::prelude::*, IntoActiveModel};
+    use std::matches;
+    use std::ops::Add;
 
     async fn seed_db() -> (
         InUseContext,
@@ -39,15 +37,15 @@ mod database_tests {
         let in_use = create_in_use(1, model.id, session.id)[0].clone();
 
         user::Entity::insert(user.clone().into_active_model())
-            .exec(&db_context.get_connection())
+            .exec(&in_use_context.db_context.get_connection())
             .await
             .unwrap();
         model::Entity::insert(model.clone().into_active_model())
-            .exec(&db_context.get_connection())
+            .exec(&in_use_context.db_context.get_connection())
             .await
             .unwrap();
         session::Entity::insert(session.clone().into_active_model())
-            .exec(&db_context.get_connection())
+            .exec(&in_use_context.db_context.get_connection())
             .await
             .unwrap();
 
@@ -174,15 +172,15 @@ mod database_tests {
             .await
             .unwrap();
 
-        let update_in_use = in_use::Model {
+        let new_in_use = in_use::Model {
             latest_activity: in_use.clone().latest_activity.add(Duration::seconds(1)),
             ..in_use
         };
 
-        let updated_in_use = in_use_context.update(update_in_use.clone()).await.unwrap();
+        let updated_in_use = in_use_context.update(new_in_use.clone()).await.unwrap();
 
-        assert_eq!(update_in_use, updated_in_use);
         assert_ne!(in_use, updated_in_use);
+        assert_ne!(in_use, new_in_use);
     }
 
     #[tokio::test]

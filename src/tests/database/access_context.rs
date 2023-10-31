@@ -1,6 +1,5 @@
 #[cfg(test)]
 mod database_tests {
-    use crate::database::database_context::{DatabaseContext, DatabaseContextTrait};
     use crate::tests::database::helpers::{
         create_accesses, create_models, create_users, setup_db_with_entities, AnyEntity,
     };
@@ -11,13 +10,7 @@ mod database_tests {
     };
     use sea_orm::{entity::prelude::*, IntoActiveModel};
 
-    async fn seed_db() -> (
-        Box<DatabaseContext>,
-        AccessContext,
-        access::Model,
-        user::Model,
-        model::Model,
-    ) {
+    async fn seed_db() -> (AccessContext, access::Model, user::Model, model::Model) {
         let db_context =
             setup_db_with_entities(vec![AnyEntity::User, AnyEntity::Model, AnyEntity::Access])
                 .await;
@@ -29,20 +22,20 @@ mod database_tests {
         let access = create_accesses(1, user.id, model.id)[0].clone();
 
         user::Entity::insert(user.clone().into_active_model())
-            .exec(&db_context.get_connection())
+            .exec(&access_context.db_context.get_connection())
             .await
             .unwrap();
         model::Entity::insert(model.clone().into_active_model())
-            .exec(&db_context.get_connection())
+            .exec(&access_context.db_context.get_connection())
             .await
             .unwrap();
 
-        (db_context, access_context, access, user, model)
+        (access_context, access, user, model)
     }
     // Test the functionality of the 'create' function, which creates a access in the database
     #[tokio::test]
     async fn create_test() {
-        let (_db_context, access_context, access, _, _) = seed_db().await;
+        let (access_context, access, _, _) = seed_db().await;
 
         let created_access = access_context.create(access).await.unwrap();
 
@@ -83,7 +76,7 @@ mod database_tests {
 
     #[tokio::test]
     async fn create_auto_increment_test() {
-        let (_db_context, access_context, access, _, _) = seed_db().await;
+        let (access_context, access, _, _) = seed_db().await;
 
         let created_access1 = access_context.create(access.clone()).await.unwrap();
         let created_access2 = access_context.create(access.clone()).await.unwrap();
@@ -108,10 +101,10 @@ mod database_tests {
 
     #[tokio::test]
     async fn get_by_id_test() {
-        let (db_context, access_context, access, _, _) = seed_db().await;
+        let (access_context, access, _, _) = seed_db().await;
 
         access::Entity::insert(access.clone().into_active_model())
-            .exec(&db_context.get_connection())
+            .exec(&access_context.db_context.get_connection())
             .await
             .unwrap();
 
@@ -124,7 +117,7 @@ mod database_tests {
 
     #[tokio::test]
     async fn get_by_non_existing_id_test() {
-        let (_, access_context, _, _, _) = seed_db().await;
+        let (access_context, _, _, _) = seed_db().await;
 
         // Fetches the user created using the 'get_by_id' function
         let fetched_access = access_context.get_by_id(1).await.unwrap();
@@ -134,14 +127,14 @@ mod database_tests {
 
     #[tokio::test]
     async fn get_all_test() {
-        let (db_context, access_context, _, user, model) = seed_db().await;
+        let (access_context, _, user, model) = seed_db().await;
 
         // Creates a model of the access which will be created
         let new_accesses = create_accesses(3, user.id, model.id);
 
         // Creates the access in the database using the 'create' function
         access::Entity::insert_many(to_active_models!(new_accesses.clone()))
-            .exec(&db_context.get_connection())
+            .exec(&access_context.db_context.get_connection())
             .await
             .unwrap();
 
@@ -157,7 +150,7 @@ mod database_tests {
 
     #[tokio::test]
     async fn get_all_empty_test() {
-        let (_, access_context, _, _, _) = seed_db().await;
+        let (access_context, _, _, _) = seed_db().await;
 
         let result = access_context.get_all().await.unwrap();
         let empty_accesses: Vec<access::Model> = vec![];
@@ -167,10 +160,10 @@ mod database_tests {
 
     #[tokio::test]
     async fn update_test() {
-        let (db_context, access_context, access, _, _) = seed_db().await;
+        let (access_context, access, _, _) = seed_db().await;
 
         access::Entity::insert(access.clone().into_active_model())
-            .exec(&db_context.get_connection())
+            .exec(&access_context.db_context.get_connection())
             .await
             .unwrap();
 
@@ -182,7 +175,7 @@ mod database_tests {
         let updated_access = access_context.update(updated_access.clone()).await.unwrap();
 
         let fetched_access = access::Entity::find_by_id(updated_access.id)
-            .one(&db_context.get_connection())
+            .one(&access_context.db_context.get_connection())
             .await
             .unwrap()
             .unwrap();
@@ -192,10 +185,35 @@ mod database_tests {
     }
 
     #[tokio::test]
-    async fn update_does_not_modify_id_test() {
-        let (db_context, access_context, access, _, _) = seed_db().await;
+    async fn update_modifies_role_test() {
+        let (access_context, access, _, _) = seed_db().await;
+
+        let access = access::Model {
+            role: Role::Editor,
+            ..access
+        };
+
         access::Entity::insert(access.clone().into_active_model())
-            .exec(&db_context.get_connection())
+            .exec(&access_context.db_context.get_connection())
+            .await
+            .unwrap();
+
+        let new_access = access::Model {
+            role: Role::Commenter,
+            ..access
+        };
+
+        let updated_access = access_context.update(new_access.clone()).await.unwrap();
+
+        assert_ne!(access, updated_access);
+        assert_ne!(access, new_access);
+    }
+
+    #[tokio::test]
+    async fn update_does_not_modify_id_test() {
+        let (access_context, access, _, _) = seed_db().await;
+        access::Entity::insert(access.clone().into_active_model())
+            .exec(&access_context.db_context.get_connection())
             .await
             .unwrap();
 
@@ -209,10 +227,10 @@ mod database_tests {
     }
     #[tokio::test]
     async fn update_does_not_modify_model_id_test() {
-        let (db_context, access_context, access, _, _) = seed_db().await;
+        let (access_context, access, _, _) = seed_db().await;
 
         access::Entity::insert(access.clone().into_active_model())
-            .exec(&db_context.get_connection())
+            .exec(&access_context.db_context.get_connection())
             .await
             .unwrap();
 
@@ -226,10 +244,10 @@ mod database_tests {
     }
     #[tokio::test]
     async fn update_does_not_modify_user_id_test() {
-        let (db_context, access_context, access, _, _) = seed_db().await;
+        let (access_context, access, _, _) = seed_db().await;
 
         access::Entity::insert(access.clone().into_active_model())
-            .exec(&db_context.get_connection())
+            .exec(&access_context.db_context.get_connection())
             .await
             .unwrap();
 
@@ -244,7 +262,7 @@ mod database_tests {
 
     #[tokio::test]
     async fn update_non_existing_id_test() {
-        let (_, access_context, access, _, _) = seed_db().await;
+        let (access_context, access, _, _) = seed_db().await;
 
         let updated_access = access_context.update(access.clone()).await;
 
@@ -256,17 +274,17 @@ mod database_tests {
 
     #[tokio::test]
     async fn delete_test() {
-        let (db_context, access_context, access, _, _) = seed_db().await;
+        let (access_context, access, _, _) = seed_db().await;
 
         access::Entity::insert(access.clone().into_active_model())
-            .exec(&db_context.get_connection())
+            .exec(&access_context.db_context.get_connection())
             .await
             .unwrap();
 
         let deleted_access = access_context.delete(access.id).await.unwrap();
 
         let all_accesses = access::Entity::find()
-            .all(&db_context.get_connection())
+            .all(&access_context.db_context.get_connection())
             .await
             .unwrap();
 
@@ -276,7 +294,7 @@ mod database_tests {
 
     #[tokio::test]
     async fn delete_non_existing_id_test() {
-        let (_, access_context, _, _, _) = seed_db().await;
+        let (access_context, _, _, _) = seed_db().await;
 
         let deleted_access = access_context.delete(1).await;
 

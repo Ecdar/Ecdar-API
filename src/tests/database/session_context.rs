@@ -10,16 +10,9 @@ mod database_tests {
         to_active_models,
     };
 
-    use crate::database::database_context::{DatabaseContext, DatabaseContextTrait};
     use chrono::{Duration, Utc};
 
-    async fn seed_db() -> (
-        Box<DatabaseContext>,
-        SessionContext,
-        session::Model,
-        user::Model,
-        model::Model,
-    ) {
+    async fn seed_db() -> (SessionContext, session::Model, user::Model, model::Model) {
         let db_context = setup_db_with_entities(vec![
             AnyEntity::User,
             AnyEntity::Session,
@@ -35,21 +28,21 @@ mod database_tests {
         let session = create_sessions(1, user.id)[0].clone();
 
         user::Entity::insert(user.clone().into_active_model())
-            .exec(&db_context.get_connection())
+            .exec(&session_context.db_context.get_connection())
             .await
             .unwrap();
         model::Entity::insert(model.clone().into_active_model())
-            .exec(&db_context.get_connection())
+            .exec(&session_context.db_context.get_connection())
             .await
             .unwrap();
 
-        (db_context, session_context, session, user, model)
+        (session_context, session, user, model)
     }
 
     #[tokio::test]
     async fn create_test() {
         // Setting up a sqlite database in memory.
-        let (_db_context, session_context, session, _, _) = seed_db().await;
+        let (session_context, session, _, _) = seed_db().await;
 
         let created_session = session_context.create(session).await.unwrap();
 
@@ -66,7 +59,7 @@ mod database_tests {
     async fn create_default_created_at_test() {
         let t_min = Utc::now().timestamp();
 
-        let (_db_context, session_context, session, _, _) = seed_db().await;
+        let (session_context, session, _, _) = seed_db().await;
 
         let _created_session = session_context.create(session.clone()).await.unwrap();
 
@@ -85,7 +78,7 @@ mod database_tests {
     #[tokio::test]
     async fn create_auto_increment_test() {
         // Setting up database and session context
-        let (_db_context, session_context, _, user, _) = seed_db().await;
+        let (session_context, _, user, _) = seed_db().await;
 
         let sessions = create_sessions(2, user.id);
 
@@ -114,10 +107,10 @@ mod database_tests {
 
     #[tokio::test]
     async fn get_by_id_test() {
-        let (db_context, session_context, session, _, _) = seed_db().await;
+        let (session_context, session, _, _) = seed_db().await;
 
         session::Entity::insert(session.clone().into_active_model())
-            .exec(&db_context.get_connection())
+            .exec(&session_context.db_context.get_connection())
             .await
             .unwrap();
 
@@ -132,7 +125,7 @@ mod database_tests {
 
     #[tokio::test]
     async fn get_by_non_existing_id_test() {
-        let (_db_context, session_context, _, _, _) = seed_db().await;
+        let (session_context, _, _, _) = seed_db().await;
 
         let fetched_session = session_context.get_by_id(1).await.unwrap();
 
@@ -141,7 +134,7 @@ mod database_tests {
 
     #[tokio::test]
     async fn get_all_test() {
-        let (_db_context, session_context, _, user, _) = seed_db().await;
+        let (session_context, _, user, _) = seed_db().await;
 
         let new_sessions = create_sessions(3, user.id);
 
@@ -162,7 +155,7 @@ mod database_tests {
 
     #[tokio::test]
     async fn get_all_empty_test() {
-        let (_db_context, session_context, _, _, _) = seed_db().await;
+        let (session_context, _, _, _) = seed_db().await;
 
         let result = session_context.get_all().await.unwrap();
         let empty_accesses: Vec<session::Model> = vec![];
@@ -172,7 +165,7 @@ mod database_tests {
 
     #[tokio::test]
     async fn update_test() {
-        let (db_context, session_context, session, _, _) = seed_db().await;
+        let (session_context, session, _, _) = seed_db().await;
 
         session::Entity::insert(session.clone().into_active_model())
             .exec(&session_context.db_context.get_connection())
@@ -185,7 +178,7 @@ mod database_tests {
         let updated_session = session_context.update(new_session.clone()).await.unwrap();
 
         let fetched_session = session::Entity::find_by_id(updated_session.id)
-            .one(&db_context.get_connection())
+            .one(&session_context.db_context.get_connection())
             .await
             .unwrap()
             .unwrap();
@@ -196,9 +189,9 @@ mod database_tests {
 
     #[tokio::test]
     async fn update_does_not_modify_id_test() {
-        let (db_context, session_context, session, _, _) = seed_db().await;
+        let (session_context, session, _, _) = seed_db().await;
         session::Entity::insert(session.clone().into_active_model())
-            .exec(&db_context.get_connection())
+            .exec(&session_context.db_context.get_connection())
             .await
             .unwrap();
 
@@ -213,9 +206,9 @@ mod database_tests {
 
     #[tokio::test]
     async fn update_does_not_modify_created_at_test() {
-        let (db_context, session_context, session, _, _) = seed_db().await;
+        let (session_context, session, _, _) = seed_db().await;
         session::Entity::insert(session.clone().into_active_model())
-            .exec(&db_context.get_connection())
+            .exec(&session_context.db_context.get_connection())
             .await
             .unwrap();
 
@@ -233,9 +226,9 @@ mod database_tests {
 
     #[tokio::test]
     async fn update_does_not_modify_user_id_test() {
-        let (db_context, session_context, session, _, _) = seed_db().await;
+        let (session_context, session, _, _) = seed_db().await;
         session::Entity::insert(session.clone().into_active_model())
-            .exec(&db_context.get_connection())
+            .exec(&session_context.db_context.get_connection())
             .await
             .unwrap();
 
@@ -253,9 +246,9 @@ mod database_tests {
 
     #[tokio::test]
     async fn update_does_not_modify_token_test() {
-        let (db_context, session_context, session, _, _) = seed_db().await;
+        let (session_context, session, _, _) = seed_db().await;
         session::Entity::insert(session.clone().into_active_model())
-            .exec(&db_context.get_connection())
+            .exec(&session_context.db_context.get_connection())
             .await
             .unwrap();
 
@@ -273,7 +266,7 @@ mod database_tests {
 
     #[tokio::test]
     async fn update_non_existing_id_test() {
-        let (_db_context, session_context, session, _, _) = seed_db().await;
+        let (session_context, session, _, _) = seed_db().await;
 
         let updated_session = session_context.update(session.clone()).await;
 
@@ -285,7 +278,7 @@ mod database_tests {
 
     #[tokio::test]
     async fn delete_test() {
-        let (db_context, session_context, session, _, _) = seed_db().await;
+        let (session_context, session, _, _) = seed_db().await;
 
         session::Entity::insert(session.clone().into_active_model())
             .exec(&session_context.db_context.get_connection())
@@ -295,7 +288,7 @@ mod database_tests {
         let deleted_session = session_context.delete(session.id).await.unwrap();
 
         let all_sessions = session::Entity::find()
-            .all(&db_context.get_connection())
+            .all(&session_context.db_context.get_connection())
             .await
             .unwrap();
 
@@ -305,27 +298,27 @@ mod database_tests {
 
     #[tokio::test]
     async fn delete_cascade_in_use_test() {
-        let (db_context, session_context, session, _, model) = seed_db().await;
+        let (session_context, session, _, model) = seed_db().await;
 
         let in_use = create_in_use(1, model.id, session.id)[0].clone();
 
         session::Entity::insert(session.clone().into_active_model())
-            .exec(&db_context.get_connection())
+            .exec(&session_context.db_context.get_connection())
             .await
             .unwrap();
         in_use::Entity::insert(in_use.clone().into_active_model())
-            .exec(&db_context.get_connection())
+            .exec(&session_context.db_context.get_connection())
             .await
             .unwrap();
 
         session_context.delete(session.id).await.unwrap();
 
         let all_sessions = session::Entity::find()
-            .all(&db_context.get_connection())
+            .all(&session_context.db_context.get_connection())
             .await
             .unwrap();
         let all_in_uses = in_use::Entity::find()
-            .all(&db_context.get_connection())
+            .all(&session_context.db_context.get_connection())
             .await
             .unwrap();
 
@@ -335,7 +328,7 @@ mod database_tests {
 
     #[tokio::test]
     async fn delete_non_existing_id_test() {
-        let (_db_context, session_context, _, _, _) = seed_db().await;
+        let (session_context, _, _, _) = seed_db().await;
 
         let deleted_session = session_context.delete(1).await;
 
