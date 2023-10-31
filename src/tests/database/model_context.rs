@@ -244,7 +244,7 @@ mod database_tests {
     async fn update_check_query_outdated_test() {
         let (model_context, model, _) = seed_db().await;
 
-        let mut query = create_query(1, model.id)[0].clone();
+        let mut query = create_queries(1, model.id)[0].clone();
 
         query.outdated = false;
 
@@ -308,7 +308,7 @@ mod database_tests {
     async fn delete_cascade_query_test() {
         let (model_context, model, _) = seed_db().await;
 
-        let query = create_query(1, model.clone().id)[0].clone();
+        let query = create_queries(1, model.clone().id)[0].clone();
 
         model::Entity::insert(model.clone().into_active_model())
             .exec(&model_context.db_context.get_connection())
@@ -369,7 +369,7 @@ mod database_tests {
         let (model_context, model, user) = seed_db().await;
 
         let session = create_sessions(1, user.clone().id)[0].clone();
-        let in_use = create_in_use(1, model.clone().id, 1)[0].clone();
+        let in_use = create_in_uses(1, model.clone().id, 1)[0].clone();
 
         session::Entity::insert(session.clone().into_active_model())
             .exec(&model_context.db_context.get_connection())

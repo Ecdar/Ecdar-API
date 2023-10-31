@@ -34,7 +34,7 @@ mod database_tests {
         let user = create_users(1)[0].clone();
         let model = create_models(1, user.id)[0].clone();
         let session = create_sessions(1, user.id)[0].clone();
-        let in_use = create_in_use(1, model.id, session.id)[0].clone();
+        let in_use = create_in_uses(1, model.id, session.id)[0].clone();
 
         user::Entity::insert(user.clone().into_active_model())
             .exec(&in_use_context.db_context.get_connection())
@@ -78,7 +78,7 @@ mod database_tests {
 
         let inserted_in_use = in_use_context.create(in_use.clone()).await.unwrap();
 
-        let fetched_in_use = in_use::Entity::find_by_id(inserted_in_use.clone().model_id)
+        let fetched_in_use = in_use::Entity::find_by_id(inserted_in_use.model_id)
             .one(&in_use_context.db_context.get_connection())
             .await
             .unwrap()
@@ -125,7 +125,7 @@ mod database_tests {
         let mut models = create_models(2, user.id);
         models[0].id = 3;
 
-        let in_uses = create_in_use(3, model.id, session.id);
+        let in_uses = create_in_uses(3, model.id, session.id);
 
         model::Entity::insert_many(to_active_models!(models.clone()))
             .exec(&in_use_context.db_context.get_connection())

@@ -98,7 +98,7 @@ impl EntityContextTrait<query::Model> for QueryContext {
             string: Set(entity.string),
             result: Set(entity.result),
             outdated: Set(entity.outdated),
-            model_id: Set(entity.model_id),
+            model_id: Unchanged(entity.model_id),
         }
         .update(&self.db_context.get_connection())
         .await

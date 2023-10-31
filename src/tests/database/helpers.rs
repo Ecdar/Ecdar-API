@@ -1,12 +1,7 @@
 #![cfg(test)]
+use crate::database::database_context::DatabaseContext;
 use crate::entities::sea_orm_active_enums::Role;
 use crate::entities::{access, in_use, model, query, session, user};
-use crate::{
-    database::database_context::DatabaseContext, entities::access::Entity as AccessEntity,
-    entities::in_use::Entity as InUseEntity, entities::model::Entity as ModelEntity,
-    entities::query::Entity as QueryEntity, entities::session::Entity as SessionEntity,
-    entities::user::Entity as UserEntity,
-};
 use sea_orm::{ConnectionTrait, Database, DatabaseBackend, DatabaseConnection, Schema};
 use uuid::Uuid;
 
@@ -33,12 +28,12 @@ pub enum AnyEntity {
 impl AnyEntity {
     async fn create_table_from(&self, connection: &DatabaseConnection, schema: &Schema) {
         let stmt = match self {
-            AnyEntity::User => schema.create_table_from_entity(UserEntity),
-            AnyEntity::Model => schema.create_table_from_entity(ModelEntity),
-            AnyEntity::Access => schema.create_table_from_entity(AccessEntity),
-            AnyEntity::Session => schema.create_table_from_entity(SessionEntity),
-            AnyEntity::InUse => schema.create_table_from_entity(InUseEntity),
-            AnyEntity::Query => schema.create_table_from_entity(QueryEntity),
+            AnyEntity::User => schema.create_table_from_entity(user::Entity),
+            AnyEntity::Model => schema.create_table_from_entity(model::Entity),
+            AnyEntity::Access => schema.create_table_from_entity(access::Entity),
+            AnyEntity::Session => schema.create_table_from_entity(session::Entity),
+            AnyEntity::InUse => schema.create_table_from_entity(in_use::Entity),
+            AnyEntity::Query => schema.create_table_from_entity(query::Entity),
         };
         connection
             .execute(connection.get_database_backend().build(&stmt))
@@ -114,7 +109,7 @@ pub fn create_sessions(amount: i32, user_id: i32) -> Vec<session::Model> {
     })
 }
 
-pub fn create_in_use(amount: i32, model_id: i32, session_id: i32) -> Vec<in_use::Model> {
+pub fn create_in_uses(amount: i32, model_id: i32, session_id: i32) -> Vec<in_use::Model> {
     create_entities(amount, |i| in_use::Model {
         model_id: model_id + i,
         session_id,
@@ -122,7 +117,7 @@ pub fn create_in_use(amount: i32, model_id: i32, session_id: i32) -> Vec<in_use:
     })
 }
 
-pub fn create_query(amount: i32, model_id: i32) -> Vec<query::Model> {
+pub fn create_queries(amount: i32, model_id: i32) -> Vec<query::Model> {
     create_entities(amount, |i| query::Model {
         id: i + 1,
         string: "".to_string(),

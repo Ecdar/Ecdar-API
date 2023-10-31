@@ -320,7 +320,7 @@ mod database_tests {
     async fn delete_cascade_in_use_test() {
         let (session_context, session, _, model) = seed_db().await;
 
-        let in_use = create_in_use(1, model.id, session.id)[0].clone();
+        let in_use = create_in_uses(1, model.id, session.id)[0].clone();
 
         session::Entity::insert(session.clone().into_active_model())
             .exec(&session_context.db_context.get_connection())
