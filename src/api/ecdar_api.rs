@@ -53,6 +53,24 @@ impl ConcreteEcdarApi {
 
 #[tonic::async_trait]
 impl EcdarApi for ConcreteEcdarApi {
+
+}
+
+#[tonic::async_trait]
+impl EcdarApiAuth for ConcreteEcdarApi {
+    async fn get_auth_token(
+        &self,
+        request: Request<GetAuthTokenRequest>,
+    ) -> Result<Response<GetAuthTokenResponse>, Status> {
+        let uid = "1234";
+        let token = auth::create_jwt(&uid);
+
+        match token {
+            Ok(token) => Ok(Response::new(GetAuthTokenResponse { token })),
+            Err(e) => Err(Status::new(Code::Internal, e.to_string())),
+        }
+    }
+
     async fn create_user(
         &self,
         request: Request<CreateUserRequest>,
@@ -75,22 +93,6 @@ impl EcdarApi for ConcreteEcdarApi {
         let token = auth::create_jwt(&user.id.to_string()).expect("Failed to create token");
 
         Ok(Response::new(CreateUserResponse { token }))
-    }
-}
-
-#[tonic::async_trait]
-impl EcdarApiAuth for ConcreteEcdarApi {
-    async fn get_auth_token(
-        &self,
-        request: Request<GetAuthTokenRequest>,
-    ) -> Result<Response<GetAuthTokenResponse>, Status> {
-        let uid = "1234";
-        let token = auth::create_jwt(&uid);
-
-        match token {
-            Ok(token) => Ok(Response::new(GetAuthTokenResponse { token })),
-            Err(e) => Err(Status::new(Code::Internal, e.to_string())),
-        }
     }
 }
 
