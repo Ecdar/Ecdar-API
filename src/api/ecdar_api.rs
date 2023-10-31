@@ -17,9 +17,9 @@ use crate::database::user_context::UserContext;
 use super::{
     auth,
     server::server::{
-        ecdar_backend_server::EcdarBackend, GetAuthTokenRequest, GetAuthTokenResponse,
-        QueryRequest, QueryResponse, SimulationStartRequest, SimulationStepRequest,
-        SimulationStepResponse, UserTokenResponse, DeleteUserRequest, CreateUserRequest, CreateUserResponse
+        ecdar_backend_server::EcdarBackend, CreateUserRequest, CreateUserResponse,
+        DeleteUserRequest, GetAuthTokenRequest, GetAuthTokenResponse, QueryRequest, QueryResponse,
+        SimulationStartRequest, SimulationStepRequest, SimulationStepResponse, UserTokenResponse,
     },
 };
 
@@ -53,38 +53,23 @@ impl ConcreteEcdarApi {
 
 #[tonic::async_trait]
 impl EcdarApi for ConcreteEcdarApi {
-    async fn list_models_info(
-        &self,
-        _request: Request<()>,
-    ) -> Result<Response<()>, Status> {
+    async fn list_models_info(&self, _request: Request<()>) -> Result<Response<()>, Status> {
         todo!()
     }
 
-    async fn get_model(
-        &self,
-        _request: Request<()>,
-    ) -> Result<Response<()>, Status> {
+    async fn get_model(&self, _request: Request<()>) -> Result<Response<()>, Status> {
         todo!()
     }
 
-    async fn create_model(
-        &self,
-        _request: Request<()>,
-    ) -> Result<Response<()>, Status> {
+    async fn create_model(&self, _request: Request<()>) -> Result<Response<()>, Status> {
         todo!()
     }
 
-    async fn update_model(
-        &self,
-        _request: Request<()>,
-    ) -> Result<Response<()>, Status> {
+    async fn update_model(&self, _request: Request<()>) -> Result<Response<()>, Status> {
         todo!()
     }
 
-    async fn delete_model(
-        &self,
-        _request: Request<()>,
-    ) -> Result<Response<()>, Status> {
+    async fn delete_model(&self, _request: Request<()>) -> Result<Response<()>, Status> {
         todo!()
     }
 
@@ -95,10 +80,7 @@ impl EcdarApi for ConcreteEcdarApi {
         todo!()
     }
 
-    async fn update_user(
-        &self,
-        _request: Request<()>,
-    ) -> Result<Response<()>, Status> {
+    async fn update_user(&self, _request: Request<()>) -> Result<Response<()>, Status> {
         todo!()
     }
 
@@ -113,7 +95,12 @@ impl EcdarApi for ConcreteEcdarApi {
         // Get uid from request metadata
         let uid = match request.metadata().get("uid").unwrap().to_str() {
             Ok(uid) => uid,
-            Err(_) => return Err(Status::new(Code::Internal, "Could not get uid from request metadata")),
+            Err(_) => {
+                return Err(Status::new(
+                    Code::Internal,
+                    "Could not get uid from request metadata",
+                ))
+            }
         };
 
         // Delete user from database
@@ -123,24 +110,15 @@ impl EcdarApi for ConcreteEcdarApi {
         }
     }
 
-    async fn create_access(
-        &self,
-        _request: Request<()>,
-    ) -> Result<Response<()>, Status> {
+    async fn create_access(&self, _request: Request<()>) -> Result<Response<()>, Status> {
         todo!()
     }
 
-    async fn update_access(
-        &self,
-        _request: Request<()>,
-    ) -> Result<Response<()>, Status> {
+    async fn update_access(&self, _request: Request<()>) -> Result<Response<()>, Status> {
         todo!()
     }
 
-    async fn delete_access(
-        &self,
-        _request: Request<()>,
-    ) -> Result<Response<()>, Status> {
+    async fn delete_access(&self, _request: Request<()>) -> Result<Response<()>, Status> {
         todo!()
     }
 }
