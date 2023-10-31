@@ -95,8 +95,8 @@ impl EntityContextTrait<session::Model> for SessionContext {
     async fn update(&self, entity: session::Model) -> Result<session::Model, DbErr> {
         session::ActiveModel {
             id: Unchanged(entity.id),
-            token: Set(entity.token),
-            created_at: Set(entity.created_at),
+            token: Unchanged(entity.token),
+            created_at: Unchanged(entity.created_at),
             user_id: Unchanged(entity.user_id),
         }
         .update(&self.db_context.get_connection())
