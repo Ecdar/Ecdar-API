@@ -2,6 +2,7 @@ use std::env;
 
 use tonic::{Code, Request, Response, Status};
 
+use crate::database::{database_context::DatabaseContext, user_context::UserContext};
 use crate::api::server::server::ecdar_api_auth_server::EcdarApiAuth;
 use crate::api::server::server::ecdar_api_server::EcdarApi;
 use crate::api::server::server::ecdar_backend_client::EcdarBackendClient;
@@ -11,7 +12,7 @@ use super::{
     server::server::{
         ecdar_backend_server::EcdarBackend, GetAuthTokenRequest, GetAuthTokenResponse,
         QueryRequest, QueryResponse, SimulationStartRequest, SimulationStepRequest,
-        SimulationStepResponse, UserTokenResponse,
+        SimulationStepResponse, UserTokenResponse, DeleteUserRequest, DeleteUserResponse
     },
 };
 
@@ -30,7 +31,20 @@ impl ConcreteEcdarApi {
 }
 
 #[tonic::async_trait]
-impl EcdarApi for ConcreteEcdarApi {}
+impl EcdarApi for ConcreteEcdarApi {
+    async fn delete_user(
+        &self,
+        request: Request<DeleteUserRequest>,
+    ) -> Result<Response<DeleteUserResponse>, Status> {
+        // Get uid from request metadata
+        let uid = match request.metadata().get("uid").unwrap().to_str() {
+            Ok(uid) => uid,
+            Err(_) => return Err(Status::new(Code::Internal, "Could not get uid from request metadata")),
+        };
+
+        todo!()
+    }
+}
 
 #[tonic::async_trait]
 impl EcdarApiAuth for ConcreteEcdarApi {

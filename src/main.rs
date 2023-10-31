@@ -19,7 +19,6 @@ use crate::database::in_use_context::InUseContext;
 async fn main() -> Result<(), Box<dyn Error>> {
     dotenv().ok();
 
-    start_grpc_server().await.unwrap();
     let db_context = Box::new(DatabaseContext::new().await?);
     let model_context = Box::new(ModelContext::new(db_context.clone()));
     let user_context = Box::new(UserContext::new(db_context.clone()));
@@ -27,14 +26,16 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let query_context = Box::new(QueryContext::new(db_context.clone()));
     let session_context = Box::new(SessionContext::new(db_context.clone()));
     let in_use_context = Box::new(InUseContext::new(db_context.clone()));
-
+    
     print_all_entities(model_context).await;
     print_all_entities(user_context).await;
     print_all_entities(access_context).await;
     print_all_entities(query_context).await;
     print_all_entities(session_context).await;
     print_all_entities(in_use_context).await;
-
+    
+    start_grpc_server().await.unwrap();
+    
     Ok(())
 }
 
