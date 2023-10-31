@@ -57,7 +57,7 @@ mod database_tests {
     }
 
     #[tokio::test]
-    async fn create_check_unique_pair_model_id_user_id_test() -> () {
+    async fn create_check_unique_pair_model_id_user_id_test() {
         todo!()
         // SHOULD WORK BUT SQLITE DOES NOT ENFORCE PAIR-WISE UNIQUE CONSTRAINT
         //     // Setting up a sqlite database in memory to test on
@@ -82,7 +82,7 @@ mod database_tests {
     }
 
     #[tokio::test]
-    async fn create_auto_increment_test() -> () {
+    async fn create_auto_increment_test() {
         let (_db_context, access_context, access, _, _) = seed_db().await;
 
         let created_access1 = access_context.create(access.clone()).await.unwrap();
@@ -107,7 +107,7 @@ mod database_tests {
     }
 
     #[tokio::test]
-    async fn get_by_id_test() -> () {
+    async fn get_by_id_test() {
         let (db_context, access_context, access, _, _) = seed_db().await;
 
         access::Entity::insert(access.clone().into_active_model())
@@ -133,7 +133,7 @@ mod database_tests {
     }
 
     #[tokio::test]
-    async fn get_all_test() -> () {
+    async fn get_all_test() {
         let (db_context, access_context, _, user, model) = seed_db().await;
 
         // Creates a model of the access which will be created
@@ -156,7 +156,7 @@ mod database_tests {
     }
 
     #[tokio::test]
-    async fn get_all_empty_test() -> () {
+    async fn get_all_empty_test() {
         let (_, access_context, _, _, _) = seed_db().await;
 
         let result = access_context.get_all().await.unwrap();
@@ -166,7 +166,7 @@ mod database_tests {
     }
 
     #[tokio::test]
-    async fn update_test() -> () {
+    async fn update_test() {
         let (db_context, access_context, access, _, _) = seed_db().await;
 
         access::Entity::insert(access.clone().into_active_model())
@@ -192,7 +192,7 @@ mod database_tests {
     }
 
     #[tokio::test]
-    async fn update_does_not_modify_id_test() -> () {
+    async fn update_does_not_modify_id_test() {
         let (db_context, access_context, access, _, _) = seed_db().await;
         access::Entity::insert(access.clone().into_active_model())
             .exec(&db_context.get_connection())
@@ -208,7 +208,7 @@ mod database_tests {
         assert!(matches!(res.unwrap_err(), DbErr::RecordNotUpdated));
     }
     #[tokio::test]
-    async fn update_does_not_modify_model_id_test() -> () {
+    async fn update_does_not_modify_model_id_test() {
         let (db_context, access_context, access, _, _) = seed_db().await;
 
         access::Entity::insert(access.clone().into_active_model())
@@ -225,7 +225,7 @@ mod database_tests {
         assert_eq!(access, res);
     }
     #[tokio::test]
-    async fn update_does_not_modify_user_id_test() -> () {
+    async fn update_does_not_modify_user_id_test() {
         let (db_context, access_context, access, _, _) = seed_db().await;
 
         access::Entity::insert(access.clone().into_active_model())
@@ -255,7 +255,7 @@ mod database_tests {
     }
 
     #[tokio::test]
-    async fn delete_test() -> () {
+    async fn delete_test() {
         let (db_context, access_context, access, _, _) = seed_db().await;
 
         access::Entity::insert(access.clone().into_active_model())
@@ -271,7 +271,7 @@ mod database_tests {
             .unwrap();
 
         assert_eq!(access, deleted_access);
-        assert_eq!(all_accesses.len(), 0);
+        assert!(all_accesses.is_empty());
     }
 
     #[tokio::test]

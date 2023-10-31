@@ -8,6 +8,7 @@ use crate::{
     entities::user::Entity as UserEntity,
 };
 use sea_orm::{ConnectionTrait, Database, DatabaseBackend, DatabaseConnection, Schema};
+use uuid::Uuid;
 
 pub async fn setup_db_with_entities(entities: Vec<AnyEntity>) -> Box<DatabaseContext> {
     let connection = Database::connect("sqlite::memory:").await.unwrap();
@@ -107,7 +108,7 @@ pub fn create_accesses(amount: i32, user_id: i32, model_id: i32) -> Vec<access::
 pub fn create_sessions(amount: i32, user_id: i32) -> Vec<session::Model> {
     create_entities(amount, |i| session::Model {
         id: i + 1,
-        token: Default::default(),
+        token: Uuid::new_v4(),
         user_id,
         created_at: Default::default(),
     })

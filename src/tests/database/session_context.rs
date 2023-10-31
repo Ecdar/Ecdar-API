@@ -2,86 +2,92 @@
 mod database_tests {
     use crate::tests::database::helpers::*;
     use sea_orm::{entity::prelude::*, IntoActiveModel};
+    use std::ops::Add;
 
     use crate::{
         database::{entity_context::EntityContextTrait, session_context::SessionContext},
         entities::{in_use, model, session, user},
+        to_active_models,
     };
 
-    use chrono::offset::Local;
+    use crate::database::database_context::{DatabaseContext, DatabaseContextTrait};
+    use chrono::{Duration, Utc};
 
-    #[tokio::test]
-    async fn create_context() {
-        let session_context = SessionContext::new(
-            setup_db_with_entities(vec![AnyEntity::User, AnyEntity::Session])
-                .await
-                .clone(),
-        );
+    async fn seed_db() -> (
+        Box<DatabaseContext>,
+        SessionContext,
+        session::Model,
+        user::Model,
+        model::Model,
+    ) {
+        let db_context = setup_db_with_entities(vec![
+            AnyEntity::User,
+            AnyEntity::Session,
+            AnyEntity::Model,
+            AnyEntity::InUse,
+        ])
+        .await;
 
-        let test = match session_context.db_context.get_connection().ping().await {
-            Ok(()) => true,
-            Err(_) => false,
-        };
-        assert!(test)
+        let session_context = SessionContext::new(db_context.clone());
+
+        let user = create_users(1)[0].clone();
+        let model = create_models(1, user.id)[0].clone();
+        let session = create_sessions(1, user.id)[0].clone();
+
+        user::Entity::insert(user.clone().into_active_model())
+            .exec(&db_context.get_connection())
+            .await
+            .unwrap();
+        model::Entity::insert(model.clone().into_active_model())
+            .exec(&db_context.get_connection())
+            .await
+            .unwrap();
+
+        (db_context, session_context, session, user, model)
     }
 
     #[tokio::test]
     async fn create_test() {
         // Setting up a sqlite database in memory.
-        let session_context = SessionContext::new(
-            setup_db_with_entities(vec![AnyEntity::User, AnyEntity::Session])
-                .await
-                .clone(),
-        );
+        let (_db_context, session_context, session, _, _) = seed_db().await;
 
-        let users: Vec<user::Model> = create_entities(2, |x| user::Model {
-            id: &x + 1,
-            email: format!("mail{}@mail.dk", &x),
-            username: format!("username{}", &x),
-            password: format!("qwerty{}", &x),
-        });
-
-        user::Entity::insert_many(activate!(users, user::ActiveModel))
-            .exec(&session_context.db_context.get_connection())
-            .await
-            .unwrap();
-
-        let new_session = session::Model {
-            id: 1,
-            token: Uuid::parse_str("4473240f-2acb-422f-bd1a-5214554ed0e0").unwrap(),
-            created_at: Local::now().naive_utc(),
-            user_id: users[0].id,
-        };
-
-        let created_session = session_context.create(new_session).await.unwrap();
+        let created_session = session_context.create(session).await.unwrap();
 
         let fetched_session = session::Entity::find_by_id(created_session.id)
             .one(&session_context.db_context.get_connection())
             .await
+            .unwrap()
             .unwrap();
 
-        assert_eq!(fetched_session.unwrap().token, created_session.token);
+        assert_eq!(fetched_session, created_session);
+    }
+
+    #[tokio::test]
+    async fn create_default_created_at_test() {
+        let t_min = Utc::now().timestamp();
+
+        let (_db_context, session_context, session, _, _) = seed_db().await;
+
+        let _created_session = session_context.create(session.clone()).await.unwrap();
+
+        let fetched_session = session::Entity::find_by_id(1)
+            .one(&session_context.db_context.get_connection())
+            .await
+            .unwrap()
+            .unwrap();
+
+        let t_max = Utc::now().timestamp();
+        let t_actual = fetched_session.clone().created_at.timestamp();
+
+        assert!(t_min <= t_actual && t_actual <= t_max)
     }
 
     #[tokio::test]
     async fn create_auto_increment_test() {
         // Setting up database and session context
-        let db_context = setup_db_with_entities(vec![AnyEntity::User, AnyEntity::Session]).await;
-        let session_context = SessionContext::new(db_context);
+        let (_db_context, session_context, _, user, _) = seed_db().await;
 
-        let users: Vec<user::Model> = create_users(2);
-        user::Entity::insert_many(activate!(users, user::ActiveModel))
-            .exec(&session_context.db_context.get_connection())
-            .await
-            .unwrap();
-
-        let sessions: Vec<session::Model> = create_entities(2, |x| session::Model {
-            id: 1,
-            token: Uuid::parse_str(format!("4473240f-2acb-422f-bd1a-5214554ed0e{}", &x).as_str())
-                .unwrap(),
-            created_at: Local::now().naive_utc(),
-            user_id: &x + 1,
-        });
+        let sessions = create_sessions(2, user.id);
 
         // Creates the sessions in the database using the 'create' function
         let created_session1 = session_context.create(sessions[0].clone()).await.unwrap();
@@ -107,258 +113,235 @@ mod database_tests {
     }
 
     #[tokio::test]
-    async fn check_timestamp() {
-        let session_context = SessionContext::new(
-            setup_db_with_entities(vec![AnyEntity::User, AnyEntity::Session])
-                .await
-                .clone(),
-        );
-
-        let users: Vec<user::Model> = create_users(1);
-
-        user::Entity::insert_many(activate!(users, user::ActiveModel))
-            .exec(&session_context.db_context.get_connection())
-            .await
-            .unwrap();
-
-        let new_session = session::Model {
-            id: 1,
-            token: Uuid::parse_str("4473240f-2acb-422f-bd1a-5214554ed0e0").unwrap(),
-            created_at: Local::now().naive_utc(),
-            user_id: users[0].id,
-        };
-
-        let created_session = session_context.create(new_session.clone()).await.unwrap();
-
-        let fetched_session = session::Entity::find_by_id(1)
-            .one(&session_context.db_context.get_connection())
-            .await
-            .unwrap()
-            .unwrap();
-
-        assert_eq!(new_session.created_at, fetched_session.created_at);
-        assert_eq!(new_session.created_at, created_session.created_at);
-    }
-
-    #[tokio::test]
     async fn get_by_id_test() {
-        let session_context = SessionContext::new(
-            setup_db_with_entities(vec![AnyEntity::User, AnyEntity::Session])
-                .await
-                .clone(),
-        );
+        let (db_context, session_context, session, _, _) = seed_db().await;
 
-        let users: Vec<user::Model> = create_entities(2, |x| user::Model {
-            id: &x + 1,
-            email: format!("mail{}@mail.dk", &x),
-            username: format!("username{}", &x),
-            password: format!("qwerty{}", &x),
-        });
-
-        user::Entity::insert_many(activate!(users, user::ActiveModel))
-            .exec(&session_context.db_context.get_connection())
+        session::Entity::insert(session.clone().into_active_model())
+            .exec(&db_context.get_connection())
             .await
             .unwrap();
 
-        let new_session = session::Model {
-            id: 1,
-            token: Uuid::parse_str("4473240f-2acb-422f-bd1a-5214554ed0e0").unwrap(),
-            created_at: Local::now().naive_utc(),
-            user_id: users[0].id,
-        };
-
-        let created_session = session_context.create(new_session).await.unwrap();
-
-        let fetched_session = session::Entity::find_by_id(1)
-            .one(&session_context.db_context.get_connection())
+        let fetched_session = session_context
+            .get_by_id(session.id)
             .await
             .unwrap()
             .unwrap();
 
-        assert_eq!(fetched_session.token, created_session.token);
+        assert_eq!(session, fetched_session);
     }
 
     #[tokio::test]
-    async fn get_by_id_not_found_test() {
-        let session_context = SessionContext::new(
-            setup_db_with_entities(vec![AnyEntity::User, AnyEntity::Session])
-                .await
-                .clone(),
-        );
+    async fn get_by_non_existing_id_test() {
+        let (_db_context, session_context, _, _, _) = seed_db().await;
 
-        let test = match session_context.get_by_id(1).await.unwrap() {
-            None => true,
-            Some(_) => false,
-        };
+        let fetched_session = session_context.get_by_id(1).await.unwrap();
 
-        assert!(test);
+        assert!(fetched_session.is_none());
     }
 
     #[tokio::test]
     async fn get_all_test() {
-        let session_context = SessionContext::new(
-            setup_db_with_entities(vec![AnyEntity::User, AnyEntity::Session])
-                .await
-                .clone(),
-        );
+        let (_db_context, session_context, _, user, _) = seed_db().await;
 
-        let users: Vec<user::Model> = create_entities(2, |x| user::Model {
-            id: &x + 1,
-            email: format!("mail{}@mail.dk", &x),
-            username: format!("username{}", &x),
-            password: format!("qwerty{}", &x),
-        });
+        let new_sessions = create_sessions(3, user.id);
 
-        user::Entity::insert_many(activate!(users, user::ActiveModel))
+        session::Entity::insert_many(to_active_models!(new_sessions.clone()))
             .exec(&session_context.db_context.get_connection())
             .await
             .unwrap();
 
-        // Create the sessions structs
-        let sessions = create_entities(2, |x| session::Model {
-            id: &x + 1,
-            token: Uuid::parse_str(format!("5c5e9172-9dff-4f35-afde-029a6f99652{}", &x).as_str())
-                .unwrap(),
-            created_at: Local::now().naive_utc(),
-            user_id: 1,
-        });
+        assert_eq!(session_context.get_all().await.unwrap().len(), 3);
 
-        session::Entity::insert_many(activate!(sessions, session::ActiveModel))
-            .exec(&session_context.db_context.get_connection())
-            .await
-            .unwrap();
+        let mut sorted: Vec<session::Model> = new_sessions.clone();
+        sorted.sort_by_key(|k| k.id);
 
-        let length = session_context.get_all().await.unwrap().len();
-
-        assert_eq!(length, 2);
+        for (i, session) in sorted.into_iter().enumerate() {
+            assert_eq!(session, new_sessions[i]);
+        }
     }
 
     #[tokio::test]
-    async fn get_all_not_found_test() {
-        let session_context = SessionContext::new(
-            setup_db_with_entities(vec![AnyEntity::User, AnyEntity::Session])
-                .await
-                .clone(),
-        );
+    async fn get_all_empty_test() {
+        let (_db_context, session_context, _, _, _) = seed_db().await;
 
-        let test = session_context.get_all().await.unwrap().is_empty();
+        let result = session_context.get_all().await.unwrap();
+        let empty_accesses: Vec<session::Model> = vec![];
 
-        assert!(test);
+        assert_eq!(empty_accesses, result);
     }
 
     #[tokio::test]
     async fn update_test() {
-        let session_context = SessionContext::new(
-            setup_db_with_entities(vec![AnyEntity::User, AnyEntity::Session])
-                .await
-                .clone(),
-        );
+        let (db_context, session_context, session, _, _) = seed_db().await;
 
-        let users = create_users(2);
-
-        user::Entity::insert_many(activate!(users, user::ActiveModel))
+        session::Entity::insert(session.clone().into_active_model())
             .exec(&session_context.db_context.get_connection())
             .await
             .unwrap();
 
-        let original_session = session::Model {
-            id: 1,
-            token: Uuid::parse_str("5c5e9172-9dff-4f35-afde-029a6f99652c").unwrap(),
-            created_at: Local::now().naive_utc(),
-            user_id: users[0].id,
-        };
+        //A session has nothing to update
+        let new_session = session::Model { ..session };
 
-        session::Entity::insert(original_session.clone().into_active_model())
-            .exec(&session_context.db_context.get_connection())
-            .await
-            .unwrap();
+        let updated_session = session_context.update(new_session.clone()).await.unwrap();
 
-        let altered_session = session::Model {
-            token: Uuid::parse_str("ddd9b7a3-98ff-43b0-b5b5-aa2abaea9d96").unwrap(),
-            created_at: Local::now().naive_utc(),
-            user_id: 2,
-            ..original_session
-        };
-
-        let altered_session = session_context.update(altered_session).await.unwrap();
-
-        let fetched_session = session_context
-            .get_by_id(altered_session.id)
+        let fetched_session = session::Entity::find_by_id(updated_session.id)
+            .one(&db_context.get_connection())
             .await
             .unwrap()
             .unwrap();
 
-        assert_eq!(original_session, fetched_session);
+        assert_eq!(new_session, updated_session);
+        assert_eq!(updated_session, fetched_session);
+    }
+
+    #[tokio::test]
+    async fn update_does_not_modify_id_test() {
+        let (db_context, session_context, session, _, _) = seed_db().await;
+        session::Entity::insert(session.clone().into_active_model())
+            .exec(&db_context.get_connection())
+            .await
+            .unwrap();
+
+        let updated_session = session::Model {
+            id: &session.id + 1,
+            ..session.clone()
+        };
+        let res = session_context.update(updated_session.clone()).await;
+
+        assert!(matches!(res.unwrap_err(), DbErr::RecordNotFound(_)));
+    }
+
+    #[tokio::test]
+    async fn update_does_not_modify_created_at_test() {
+        let (db_context, session_context, session, _, _) = seed_db().await;
+        session::Entity::insert(session.clone().into_active_model())
+            .exec(&db_context.get_connection())
+            .await
+            .unwrap();
+
+        let updated_session = session::Model {
+            created_at: session.clone().created_at.add(Duration::seconds(1)),
+            ..session.clone()
+        };
+        let res = session_context
+            .update(updated_session.clone())
+            .await
+            .unwrap();
+
+        assert_eq!(session, res);
+    }
+
+    #[tokio::test]
+    async fn update_does_not_modify_user_id_test() {
+        let (db_context, session_context, session, _, _) = seed_db().await;
+        session::Entity::insert(session.clone().into_active_model())
+            .exec(&db_context.get_connection())
+            .await
+            .unwrap();
+
+        let updated_session = session::Model {
+            user_id: &session.user_id + 1,
+            ..session.clone()
+        };
+        let res = session_context
+            .update(updated_session.clone())
+            .await
+            .unwrap();
+
+        assert_eq!(session, res);
+    }
+
+    #[tokio::test]
+    async fn update_does_not_modify_token_test() {
+        let (db_context, session_context, session, _, _) = seed_db().await;
+        session::Entity::insert(session.clone().into_active_model())
+            .exec(&db_context.get_connection())
+            .await
+            .unwrap();
+
+        let updated_session = session::Model {
+            token: Uuid::new_v4(),
+            ..session.clone()
+        };
+        let res = session_context
+            .update(updated_session.clone())
+            .await
+            .unwrap();
+
+        assert_eq!(session, res);
+    }
+
+    #[tokio::test]
+    async fn update_non_existing_id_test() {
+        let (_db_context, session_context, session, _, _) = seed_db().await;
+
+        let updated_session = session_context.update(session.clone()).await;
+
+        assert!(matches!(
+            updated_session.unwrap_err(),
+            DbErr::RecordNotFound(_)
+        ));
     }
 
     #[tokio::test]
     async fn delete_test() {
-        let session_context = SessionContext::new(
-            setup_db_with_entities(vec![
-                AnyEntity::User,
-                AnyEntity::Session,
-                AnyEntity::InUse,
-                AnyEntity::Model,
-            ])
-            .await
-            .clone(),
-        );
+        let (db_context, session_context, session, _, _) = seed_db().await;
 
-        let users = create_users(2);
-
-        user::Entity::insert_many(activate!(users, user::ActiveModel))
+        session::Entity::insert(session.clone().into_active_model())
             .exec(&session_context.db_context.get_connection())
             .await
             .unwrap();
 
-        let original_session = session::Model {
-            id: 1,
-            token: Uuid::parse_str("5c5e9172-9dff-4f35-afde-029a6f99652c").unwrap(),
-            created_at: Local::now().naive_utc(),
-            user_id: 1,
-        };
+        let deleted_session = session_context.delete(session.id).await.unwrap();
 
-        session::Entity::insert(original_session.clone().into_active_model())
-            .exec(&session_context.db_context.get_connection())
+        let all_sessions = session::Entity::find()
+            .all(&db_context.get_connection())
             .await
             .unwrap();
 
-        let model = create_models(1, 1);
-
-        model::Entity::insert(model[0].clone().into_active_model())
-            .exec(&session_context.db_context.get_connection())
-            .await
-            .unwrap();
-
-        let inuse = create_in_use(1, 1, 1);
-
-        in_use::Entity::insert(inuse[0].clone().into_active_model())
-            .exec(&session_context.db_context.get_connection())
-            .await
-            .unwrap();
-
-        let deleted_session = session_context.delete(original_session.id).await.unwrap();
-
-        let in_use_length = in_use::Entity::find()
-            .all(&session_context.db_context.get_connection())
-            .await
-            .unwrap()
-            .len();
-
-        assert_eq!(original_session, deleted_session);
-        assert_eq!(in_use_length, 0);
+        assert_eq!(session, deleted_session);
+        assert!(all_sessions.is_empty());
     }
 
     #[tokio::test]
-    async fn delete_not_found_test() {
-        let session_context = SessionContext::new(
-            setup_db_with_entities(vec![AnyEntity::User, AnyEntity::Session])
-                .await
-                .clone(),
-        );
+    async fn delete_cascade_in_use_test() {
+        let (db_context, session_context, session, _, model) = seed_db().await;
 
-        let result = session_context.delete(3).await;
+        let in_use = create_in_use(1, model.id, session.id)[0].clone();
 
-        assert!(result.is_err());
+        session::Entity::insert(session.clone().into_active_model())
+            .exec(&db_context.get_connection())
+            .await
+            .unwrap();
+        in_use::Entity::insert(in_use.clone().into_active_model())
+            .exec(&db_context.get_connection())
+            .await
+            .unwrap();
+
+        session_context.delete(session.id).await.unwrap();
+
+        let all_sessions = session::Entity::find()
+            .all(&db_context.get_connection())
+            .await
+            .unwrap();
+        let all_in_uses = in_use::Entity::find()
+            .all(&db_context.get_connection())
+            .await
+            .unwrap();
+
+        assert_eq!(all_sessions.len(), 0);
+        assert_eq!(all_in_uses.len(), 0);
+    }
+
+    #[tokio::test]
+    async fn delete_non_existing_id_test() {
+        let (_db_context, session_context, _, _, _) = seed_db().await;
+
+        let deleted_session = session_context.delete(1).await;
+
+        assert!(matches!(
+            deleted_session.unwrap_err(),
+            DbErr::RecordNotFound(_)
+        ));
     }
 }

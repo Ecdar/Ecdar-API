@@ -83,7 +83,7 @@ mod database_tests {
     }
 
     #[tokio::test]
-    async fn create_default_created_at_test() {
+    async fn create_default_latest_activity_test() {
         let t_min = Utc::now().timestamp();
 
         let seed = seed_db().await;
