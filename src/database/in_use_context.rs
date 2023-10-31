@@ -5,6 +5,7 @@ use crate::EntityContextTrait;
 use async_trait::async_trait;
 use sea_orm::{ActiveModelTrait, DbErr, EntityTrait, RuntimeErr, Set, Unchanged};
 
+#[derive(Debug)]
 pub struct InUseContext {
     db_context: Box<dyn DatabaseContextTrait>,
 }
@@ -55,8 +56,8 @@ impl EntityContextTrait<InUse> for InUseContext {
                     session_id: Unchanged(in_use.session_id),
                     latest_activity: Set(entity.latest_activity),
                 }
-                    .update(&self.db_context.get_connection())
-                    .await
+                .update(&self.db_context.get_connection())
+                .await
             }
         };
         updated_in_use

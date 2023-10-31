@@ -2,10 +2,21 @@ use std::env;
 
 use tonic::{Code, Request, Response, Status};
 
-use crate::database::{database_context::DatabaseContext, user_context::UserContext};
 use crate::api::server::server::ecdar_api_auth_server::EcdarApiAuth;
 use crate::api::server::server::ecdar_api_server::EcdarApi;
 use crate::api::server::server::ecdar_backend_client::EcdarBackendClient;
+use crate::api::server::server::{CreateUserRequest, CreateUserResponse};
+use crate::database::access_context::AccessContext;
+use crate::database::database_context::DatabaseContext;
+use crate::database::entity_context::EntityContextTrait;
+use crate::database::in_use_context::InUseContext;
+use crate::database::model_context::ModelContext;
+use crate::database::query_context::QueryContext;
+use crate::database::session_context::SessionContext;
+use crate::database::user_context::UserContext;
+use crate::entities::*;
+use std::env;
+use tonic::{Code, Request, Response, Status};
 
 use super::{
     auth,
@@ -19,13 +30,27 @@ use super::{
 #[derive(Debug)]
 pub struct ConcreteEcdarApi {
     reveaal_address: String,
+    db_context: Box<DatabaseContext>,
+    model_context: Box<ModelContext>,
+    user_context: Box<UserContext>,
+    access_context: Box<AccessContext>,
+    query_context: Box<QueryContext>,
+    session_context: Box<SessionContext>,
+    in_use_context: Box<InUseContext>,
 }
 
 impl ConcreteEcdarApi {
-    pub fn new() -> Self {
+    pub async fn new(db_context: Box<DatabaseContext>) -> Self {
         ConcreteEcdarApi {
             reveaal_address: env::var("REVEAAL_ADDRESS")
                 .expect("Expected REVEAAL_ADDRESS to be set."),
+            db_context: db_context.clone(),
+            model_context: Box::new(ModelContext::new(db_context.clone())),
+            user_context: Box::new(UserContext::new(db_context.clone())),
+            access_context: Box::new(AccessContext::new(db_context.clone())),
+            query_context: Box::new(QueryContext::new(db_context.clone())),
+            session_context: Box::new(SessionContext::new(db_context.clone())),
+            in_use_context: Box::new(InUseContext::new(db_context.clone())),
         }
     }
 }

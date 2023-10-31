@@ -6,6 +6,7 @@ use sea_orm::prelude::async_trait::async_trait;
 use sea_orm::ActiveValue::{Set, Unchanged};
 use sea_orm::{ActiveModelTrait, DbErr, EntityTrait, RuntimeErr};
 
+#[derive(Debug)]
 pub struct AccessContext {
     db_context: Box<dyn DatabaseContextTrait>,
 }

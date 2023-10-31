@@ -1,16 +1,19 @@
 #[cfg(test)]
 mod database_tests {
     use crate::{
-        database:: {
+        database::{
             database_context::DatabaseContext,
             entity_context::EntityContextTrait,
-            model_context::{ModelContext, self},
+            model_context::{self, ModelContext},
             user_context::UserContext,
         },
         entities::model::{Entity as ModelEntity, Model as ModelModel},
         entities::user::{Entity as UserEntity, Model as UserModel},
     };
-    use sea_orm::{DbErr, DatabaseConnection, Schema, DatabaseBackend, sea_query::TableCreateStatement, ConnectionTrait, Database, EntityTrait};
+    use sea_orm::{
+        sea_query::TableCreateStatement, ConnectionTrait, Database, DatabaseBackend,
+        DatabaseConnection, DbErr, EntityTrait, Schema,
+    };
 
     async fn setup_schema(db: &DatabaseConnection) {
         // Setup Schema helper
@@ -51,7 +54,11 @@ mod database_tests {
         let created_user = user_context.create(new_user).await?;
         let created_model = model_context.create(new_model.clone()).await?;
 
-        let fetched_model = ModelEntity::find_by_id(created_model.id).one(&model_context.db_context.get_connection()).await?.clone().unwrap();
+        let fetched_model = ModelEntity::find_by_id(created_model.id)
+            .one(&model_context.db_context.get_connection())
+            .await?
+            .clone()
+            .unwrap();
 
         assert_eq!(fetched_model.name, created_model.name);
 
@@ -123,7 +130,6 @@ mod database_tests {
             components_info: "{}".to_owned().parse().unwrap(),
             owner_id: 1,
         };
-
 
         let created_user = user_context.create(new_user).await?;
         let created_model = model_context.create(new_model).await?;
@@ -210,5 +216,4 @@ mod database_tests {
 
         Ok(())
     }
-
 }
