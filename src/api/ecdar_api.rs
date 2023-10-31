@@ -102,6 +102,10 @@ impl EcdarApi for ConcreteEcdarApi {
         todo!()
     }
 
+    /// Deletes a user from the database.
+    /// # Errors
+    /// Returns an error if the database context fails to delete the user or
+    /// if the uid could not be parsed from the request metadata.
     async fn delete_user(
         &self,
         request: Request<DeleteUserRequest>,
@@ -112,6 +116,7 @@ impl EcdarApi for ConcreteEcdarApi {
             Err(_) => return Err(Status::new(Code::Internal, "Could not get uid from request metadata")),
         };
 
+        // Delete user from database
         match self.user_context.delete(uid.parse().unwrap()).await {
             Ok(_) => Ok(Response::new(())),
             Err(error) => Err(Status::new(Code::Internal, error.to_string())),
