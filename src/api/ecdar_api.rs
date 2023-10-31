@@ -84,23 +84,27 @@ impl EcdarApi for ConcreteEcdarApi {
     ) -> Result<Response<()>, Status> {
         let message = request.get_ref().clone();
 
+        let uid = match request.metadata().get("uid").unwrap().to_str() {
+            Ok(uid) => uid,
+            Err(_) => {
+                return Err(Status::new(
+                    Code::Internal,
+                    "Could not get uid from request metadata",
+                ))
+            }
+        };
+
         let user = user::Model {
-            id: request
-                .metadata()
-                .get("uid")
-                .unwrap()
-                .to_str()
-                .unwrap()
-                .parse()
-                .unwrap(),
+            id: uid.parse().unwrap(),
             username: message.clone().username.unwrap(),
             password: message.clone().password.unwrap(),
             email: message.clone().email.unwrap(),
         };
 
-        let update_user = UserContext::update(&self.user_context, user);
-
-        Ok(Response::new({}))
+        match self.user_context.update(user).await {
+            Ok(_) => Ok(Response::new(())),
+            Err(error) => Err(Status::new(Code::Internal, error.to_string())),
+        }
     }
 }
 
