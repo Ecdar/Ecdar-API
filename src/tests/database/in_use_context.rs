@@ -1,10 +1,10 @@
 #[cfg(test)]
 mod database_tests {
     use crate::tests::database::helpers::*;
-    use chrono::Utc;
+    use chrono::{Duration, Utc};
     use sea_orm::{entity::prelude::*, IntoActiveModel};
     use std::matches;
-    use std::str::FromStr;
+    use std::ops::Add;
 
     use crate::database::database_context::DatabaseContextTrait;
     use crate::{
@@ -16,65 +16,52 @@ mod database_tests {
         to_active_models,
     };
 
-    struct Seed {
-        in_use_context: InUseContext,
-        models: Vec<model::Model>,
-        sessions: Vec<session::Model>,
-    }
-
-    async fn seed_db() -> Seed {
+    async fn seed_db() -> (
+        InUseContext,
+        in_use::Model,
+        session::Model,
+        model::Model,
+        user::Model,
+    ) {
         let db_context = setup_db_with_entities(vec![
+            AnyEntity::User,
             AnyEntity::Session,
             AnyEntity::Model,
-            AnyEntity::User,
             AnyEntity::InUse,
         ])
         .await;
 
-        let users: Vec<user::Model> = create_users(2);
-        let user = users[0].clone();
-
-        let mut sessions: Vec<session::Model> = create_sessions(2, user.clone().id);
-        sessions[1].user_id = users[1].id;
-        sessions[1].token = Uuid::from_str("67e55044-10b1-426f-9247-bb680e5fe0c8".clone()).unwrap();
-
-        let mut models: Vec<model::Model> = create_models(2, user.clone().id);
-        models[1].owner_id = users[1].id;
-
-        user::Entity::insert_many(to_active_models!(users.clone()))
-            .exec(&db_context.get_connection())
-            .await
-            .unwrap();
-        model::Entity::insert_many(to_active_models!(models.clone()))
-            .exec(&db_context.get_connection())
-            .await
-            .unwrap();
-        session::Entity::insert_many(to_active_models!(sessions.clone()))
-            .exec(&db_context.get_connection())
-            .await
-            .unwrap();
-
         let in_use_context = InUseContext::new(db_context.clone());
 
-        Seed {
-            in_use_context,
-            models,
-            sessions,
-        }
+        let user = create_users(1)[0].clone();
+        let model = create_models(1, user.id)[0].clone();
+        let session = create_sessions(1, user.id)[0].clone();
+        let in_use = create_in_use(1, model.id, session.id)[0].clone();
+
+        user::Entity::insert(user.clone().into_active_model())
+            .exec(&db_context.get_connection())
+            .await
+            .unwrap();
+        model::Entity::insert(model.clone().into_active_model())
+            .exec(&db_context.get_connection())
+            .await
+            .unwrap();
+        session::Entity::insert(session.clone().into_active_model())
+            .exec(&db_context.get_connection())
+            .await
+            .unwrap();
+
+        (in_use_context, in_use, session, model, user)
     }
 
     #[tokio::test]
     async fn create_test() {
-        let seed = seed_db().await;
+        let (in_use_context, in_use, _, _, _) = seed_db().await;
 
-        let in_uses: Vec<in_use::Model> =
-            create_in_use(1, seed.models[0].clone().id, seed.sessions[0].clone().id);
-        let in_use = in_uses[0].clone();
-
-        let inserted_in_use = seed.in_use_context.create(in_use.clone()).await.unwrap();
+        let inserted_in_use = in_use_context.create(in_use.clone()).await.unwrap();
 
         let fetched_in_use = in_use::Entity::find_by_id(inserted_in_use.clone().model_id)
-            .one(&seed.in_use_context.db_context.get_connection())
+            .one(&in_use_context.db_context.get_connection())
             .await
             .unwrap()
             .unwrap();
@@ -86,16 +73,12 @@ mod database_tests {
     async fn create_default_latest_activity_test() {
         let t_min = Utc::now().timestamp();
 
-        let seed = seed_db().await;
+        let (in_use_context, in_use, _, _, _) = seed_db().await;
 
-        let in_uses: Vec<in_use::Model> =
-            create_in_use(1, seed.models[0].clone().id, seed.sessions[0].clone().id);
-
-        let in_use = in_uses[0].clone();
-        let inserted_in_use = seed.in_use_context.create(in_use.clone()).await.unwrap();
+        let inserted_in_use = in_use_context.create(in_use.clone()).await.unwrap();
 
         let fetched_in_use = in_use::Entity::find_by_id(inserted_in_use.clone().model_id)
-            .one(&seed.in_use_context.db_context.get_connection())
+            .one(&in_use_context.db_context.get_connection())
             .await
             .unwrap()
             .unwrap();
@@ -109,19 +92,14 @@ mod database_tests {
 
     #[tokio::test]
     async fn get_by_id_test() {
-        let seed = seed_db().await;
-
-        let in_uses: Vec<in_use::Model> =
-            create_in_use(1, seed.models[0].clone().id, seed.sessions[0].clone().id);
-        let in_use = in_uses[0].clone();
+        let (in_use_context, in_use, _, _, _) = seed_db().await;
 
         in_use::Entity::insert(in_use.clone().into_active_model())
-            .exec(&seed.in_use_context.db_context.get_connection())
+            .exec(&in_use_context.db_context.get_connection())
             .await
             .unwrap();
 
-        let fetched_in_use = seed
-            .in_use_context
+        let fetched_in_use = in_use_context
             .get_by_id(in_use.model_id)
             .await
             .unwrap()
@@ -132,80 +110,96 @@ mod database_tests {
 
     #[tokio::test]
     async fn get_by_non_existing_id_test() {
-        let seed = seed_db().await;
+        let (in_use_context, _in_use, _, _, _) = seed_db().await;
 
-        let in_use = seed.in_use_context.get_by_id(1).await;
+        let in_use = in_use_context.get_by_id(1).await;
 
         assert!(in_use.unwrap().is_none())
     }
 
     #[tokio::test]
     async fn get_all_test() {
-        let seed = seed_db().await;
+        let (in_use_context, _in_use, session, model, _) = seed_db().await;
 
-        let mut in_uses: Vec<in_use::Model> =
-            create_in_use(2, seed.models[0].clone().id, seed.sessions[0].clone().id);
-        in_uses[1].model_id = seed.models[1].id;
-        in_uses[1].session_id = seed.sessions[1].id;
+        let in_uses = create_in_use(1, model.id, session.id);
 
         in_use::Entity::insert_many(to_active_models!(in_uses.clone()))
-            .exec(&seed.in_use_context.db_context.get_connection())
+            .exec(&in_use_context.db_context.get_connection())
             .await
             .unwrap();
 
-        let fetched_in_use = seed.in_use_context.get_all().await.unwrap();
+        let fetched_in_uses = in_use_context.get_all().await.unwrap();
 
-        assert_eq!(2, fetched_in_use.len())
+        assert_eq!(1, fetched_in_uses.len())
     }
 
     #[tokio::test]
     async fn get_all_empty_test() {
-        let seed = seed_db().await;
+        let (in_use_context, _, _, _, _) = seed_db().await;
 
-        let in_uses = seed.in_use_context.get_all().await.unwrap();
+        let in_uses = in_use_context.get_all().await.unwrap();
 
         assert_eq!(0, in_uses.len())
     }
 
     #[tokio::test]
-    async fn update_latest_activity_test() {
-        let seed = seed_db().await;
-
-        let in_uses: Vec<in_use::Model> =
-            create_in_use(1, seed.models[0].clone().id, seed.sessions[0].clone().id);
-        let in_use = in_uses[0].clone();
+    async fn update_test() {
+        let (in_use_context, in_use, _, _, _) = seed_db().await;
 
         in_use::Entity::insert(in_use.clone().into_active_model())
-            .exec(&seed.in_use_context.db_context.get_connection())
+            .exec(&in_use_context.db_context.get_connection())
+            .await
+            .unwrap();
+
+        let new_in_use = in_use::Model { ..in_use };
+
+        let updated_in_use = in_use_context.update(new_in_use.clone()).await.unwrap();
+
+        let fetched_in_use = in_use::Entity::find_by_id(updated_in_use.model_id)
+            .one(&in_use_context.db_context.get_connection())
+            .await
+            .unwrap()
+            .unwrap();
+
+        assert_eq!(new_in_use, updated_in_use);
+        assert_eq!(updated_in_use, fetched_in_use);
+    }
+
+    #[tokio::test]
+    async fn update_modifies_latest_activity_test() {
+        let (in_use_context, in_use, _, _, _) = seed_db().await;
+
+        in_use::Entity::insert(in_use.clone().into_active_model())
+            .exec(&in_use_context.db_context.get_connection())
             .await
             .unwrap();
 
         let update_in_use = in_use::Model {
-            latest_activity: Utc::now().naive_local(),
-            ..in_use.clone()
+            latest_activity: in_use.clone().latest_activity.add(Duration::seconds(1)),
+            ..in_use
         };
 
-        let updated_in_use = seed
-            .in_use_context
-            .update(update_in_use.clone())
-            .await
-            .unwrap();
+        let updated_in_use = in_use_context.update(update_in_use.clone()).await.unwrap();
 
         assert_eq!(update_in_use, updated_in_use);
         assert_ne!(in_use, updated_in_use);
     }
 
     #[tokio::test]
-    async fn update_non_existing_test() {
-        let seed = seed_db().await;
+    async fn update_does_not_modify_model_id_test() {
+        let (in_use_context, in_use, _, _, _) = seed_db().await;
 
-        let update_in_use = in_use::Model {
-            latest_activity: Utc::now().naive_local(),
-            model_id: 1,
-            session_id: 1,
+        in_use::Entity::insert(in_use.clone().into_active_model())
+            .exec(&in_use_context.db_context.get_connection())
+            .await
+            .unwrap();
+
+        let updated_in_use = in_use::Model {
+            model_id: in_use.model_id + 1,
+            ..in_use.clone()
         };
 
-        let updated_in_use = seed.in_use_context.update(update_in_use.clone()).await;
+        let updated_in_use = in_use_context.update(updated_in_use.clone()).await;
 
         assert!(matches!(
             updated_in_use.unwrap_err(),
@@ -214,82 +208,60 @@ mod database_tests {
     }
 
     #[tokio::test]
-    async fn update_model_id_should_fail_test() {
-        let seed = seed_db().await;
-
-        let in_uses: Vec<in_use::Model> =
-            create_in_use(1, seed.models[0].clone().id, seed.sessions[0].clone().id);
-        let in_use = in_uses[0].clone();
+    async fn update_does_not_modify_session_id_test() {
+        let (in_use_context, in_use, _, _, _) = seed_db().await;
 
         in_use::Entity::insert(in_use.clone().into_active_model())
-            .exec(&seed.in_use_context.db_context.get_connection())
+            .exec(&in_use_context.db_context.get_connection())
             .await
             .unwrap();
 
-        let update_in_use = in_use::Model {
-            model_id: 2,
+        let updated_in_use = in_use::Model {
+            session_id: in_use.session_id + 1,
             ..in_use.clone()
         };
 
-        let updated_in_use = seed.in_use_context.update(update_in_use.clone()).await;
+        let updated_in_use = in_use_context.update(updated_in_use.clone()).await.unwrap();
+        assert_eq!(in_use, updated_in_use);
+    }
+
+    #[tokio::test]
+    async fn update_non_existing_id_test() {
+        let (in_use_context, in_use, _, _, _) = seed_db().await;
+
+        let updated_in_use = in_use_context.update(in_use.clone()).await;
 
         assert!(matches!(
             updated_in_use.unwrap_err(),
             DbErr::RecordNotUpdated
         ));
-    }
-
-    #[tokio::test]
-    async fn update_session_id_should_fail_test() {
-        let seed = seed_db().await;
-
-        let in_uses: Vec<in_use::Model> =
-            create_in_use(1, seed.models[0].clone().id, seed.sessions[0].clone().id);
-        let in_use = in_uses[0].clone();
-
-        in_use::Entity::insert(in_use.clone().into_active_model())
-            .exec(&seed.in_use_context.db_context.get_connection())
-            .await
-            .unwrap();
-
-        let update_in_use = in_use::Model {
-            session_id: 2,
-            ..in_use.clone()
-        };
-
-        let updated_in_use = seed.in_use_context.update(update_in_use.clone()).await;
-        assert_eq!(updated_in_use.unwrap().session_id, 1);
     }
 
     #[tokio::test]
     async fn delete_test() {
-        let seed = seed_db().await;
-
-        let in_uses: Vec<in_use::Model> =
-            create_in_use(1, seed.models[0].clone().id, seed.sessions[0].clone().id);
-        let in_use = in_uses[0].clone();
+        let (in_use_context, in_use, _, _, _) = seed_db().await;
 
         in_use::Entity::insert(in_use.clone().into_active_model())
-            .exec(&seed.in_use_context.db_context.get_connection())
+            .exec(&in_use_context.db_context.get_connection())
             .await
             .unwrap();
 
-        let deleted_in_use = seed.in_use_context.delete(in_use.model_id).await.unwrap();
+        let deleted_in_use = in_use_context.delete(in_use.model_id).await.unwrap();
 
         let all_in_uses = in_use::Entity::find()
-            .all(&seed.in_use_context.db_context.get_connection())
+            .all(&in_use_context.db_context.get_connection())
             .await
             .unwrap();
 
         assert_eq!(in_use, deleted_in_use);
-        assert_eq!(0, all_in_uses.len())
+        assert!(all_in_uses.is_empty());
     }
 
     #[tokio::test]
     async fn delete_non_existing_id_test() {
-        let seed = seed_db().await;
+        let (in_use_context, _, _, _, _) = seed_db().await;
 
-        let deleted_in_use = seed.in_use_context.delete(1).await;
+        let deleted_in_use = in_use_context.delete(1).await;
 
         assert!(matches!(
             deleted_in_use.unwrap_err(),

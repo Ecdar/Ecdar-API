@@ -115,8 +115,8 @@ pub fn create_sessions(amount: i32, user_id: i32) -> Vec<session::Model> {
 }
 
 pub fn create_in_use(amount: i32, model_id: i32, session_id: i32) -> Vec<in_use::Model> {
-    create_entities(amount, |_| in_use::Model {
-        model_id,
+    create_entities(amount, |i| in_use::Model {
+        model_id: model_id + i,
         session_id,
         latest_activity: Default::default(),
     })
