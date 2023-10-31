@@ -14,6 +14,7 @@ use crate::entities::*;
 use std::env;
 use tonic::{Code, Request, Response, Status};
 
+use super::server::server::UpdateUserRequest;
 use super::{
     auth,
     server::server::{
@@ -75,6 +76,31 @@ impl EcdarApi for ConcreteEcdarApi {
         let token = auth::create_jwt(&user.id.to_string()).expect("Failed to create token");
 
         Ok(Response::new(CreateUserResponse { token }))
+    }
+
+    async fn update_user(
+        &self,
+        request: Request<UpdateUserRequest>,
+    ) -> Result<Response<()>, Status> {
+        let message = request.get_ref().clone();
+
+        let user = user::Model {
+            id: request
+                .metadata()
+                .get("uid")
+                .unwrap()
+                .to_str()
+                .unwrap()
+                .parse()
+                .unwrap(),
+            username: message.clone().username.unwrap(),
+            password: message.clone().password.unwrap(),
+            email: message.clone().email.unwrap(),
+        };
+
+        let update_user = UserContext::update(&self.user_context, user);
+
+        Ok(Response::new({}))
     }
 }
 
