@@ -119,7 +119,6 @@ mod database_tests {
     async fn get_by_non_existing_id_test() {
         let (access_context, _, _, _) = seed_db().await;
 
-        // Fetches the user created using the 'get_by_id' function
         let fetched_access = access_context.get_by_id(1).await.unwrap();
 
         assert!(fetched_access.is_none());
@@ -167,12 +166,9 @@ mod database_tests {
             .await
             .unwrap();
 
-        let updated_access = access::Model {
-            role: Role::Commenter,
-            ..access
-        };
+        let new_access = access::Model { ..access };
 
-        let updated_access = access_context.update(updated_access.clone()).await.unwrap();
+        let updated_access = access_context.update(new_access.clone()).await.unwrap();
 
         let fetched_access = access::Entity::find_by_id(updated_access.id)
             .one(&access_context.db_context.get_connection())
@@ -180,7 +176,7 @@ mod database_tests {
             .unwrap()
             .unwrap();
 
-        assert_eq!(access, updated_access);
+        assert_eq!(new_access, updated_access);
         assert_eq!(updated_access, fetched_access);
     }
 

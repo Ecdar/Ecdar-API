@@ -106,6 +106,23 @@ mod database_tests {
     }
 
     #[tokio::test]
+    async fn create_non_unique_token_test() {
+        let (session_context, _, _, user) = seed_db().await;
+
+        let mut sessions = create_sessions(2, user.id);
+
+        sessions[1].token = sessions[0].token;
+
+        let _created_session1 = session_context.create(sessions[0].clone()).await.unwrap();
+        let created_session2 = session_context.create(sessions[1].clone()).await;
+
+        assert!(matches!(
+            created_session2.unwrap_err().sql_err(),
+            Some(SqlErr::UniqueConstraintViolation(_))
+        ));
+    }
+
+    #[tokio::test]
     async fn get_by_id_test() {
         let (session_context, session, _, _) = seed_db().await;
 
