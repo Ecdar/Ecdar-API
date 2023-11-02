@@ -63,7 +63,6 @@ mod database_tests {
         let _created_user1 = user_context.create(users[0].clone()).await.unwrap();
         let created_user2 = user_context.create(users[1].clone()).await;
 
-        // Assert if the new_user, created_user, and fetched_user are the same
         assert!(matches!(
             created_user2.unwrap_err().sql_err(),
             Some(SqlErr::UniqueConstraintViolation(_))
