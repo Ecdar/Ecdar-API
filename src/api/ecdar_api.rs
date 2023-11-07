@@ -1,30 +1,32 @@
-use std::env;
-
-use tonic::{Code, Request, Response, Status};
-
-use crate::api::server::server::ecdar_api_auth_server::EcdarApiAuth;
-use crate::api::server::server::ecdar_api_server::EcdarApi;
-use crate::api::server::server::ecdar_backend_client::EcdarBackendClient;
-use crate::database::access_context::AccessContext;
-use crate::database::database_context::DatabaseContext;
-use crate::database::entity_context::EntityContextTrait;
-use crate::database::in_use_context::InUseContext;
-use crate::database::model_context::ModelContext;
-use crate::database::query_context::QueryContext;
-use crate::database::session_context::SessionContext;
-use crate::database::user_context::UserContext;
-use crate::entities::*;
-
 use self::helpers::helpers::{setup_db_with_entities, AnyEntity};
-
 use super::{
     auth,
     server::server::{
-        ecdar_backend_server::EcdarBackend, GetAuthTokenRequest, GetAuthTokenResponse,
-        QueryRequest, QueryResponse, SimulationStartRequest, SimulationStepRequest,
-        SimulationStepResponse, UserTokenResponse, DeleteUserRequest, CreateUserRequest, CreateUserResponse, UpdateUserRequest
+        ecdar_backend_server::EcdarBackend, CreateUserRequest, CreateUserResponse,
+        DeleteUserRequest, GetAuthTokenRequest, GetAuthTokenResponse, QueryRequest, QueryResponse,
+        SimulationStartRequest, SimulationStepRequest, SimulationStepResponse, UpdateUserRequest,
+        UserTokenResponse,
     },
 };
+use crate::api::server::server::{
+    ecdar_api_auth_server::EcdarApiAuth, ecdar_api_server::EcdarApi,
+    ecdar_backend_client::EcdarBackendClient,
+};
+use crate::database::{
+    access_context::AccessContext, database_context::DatabaseContext,
+    entity_context::EntityContextTrait, in_use_context::InUseContext, model_context::ModelContext,
+    query_context::QueryContext, session_context::SessionContext, user_context::UserContext,
+};
+use crate::entities::{
+    access::{Entity as AccessEntity, Model as Access},
+    in_use::{Entity as InUseEntity, Model as InUse},
+    model::{Entity as ModelEntity, Model},
+    query::{Entity as QueryEntity, Model as Query},
+    session::{Entity as SessionEntity, Model as Session},
+    user::{Entity as UserEntity, Model as User},
+};
+use std::env;
+use tonic::{Code, Request, Response, Status};
 
 #[path = "../tests/database/helpers.rs"]
 pub mod helpers;
@@ -63,7 +65,6 @@ impl ConcreteEcdarApi {
         ConcreteEcdarApi::new(Box::new(db_context)).await
     }
 }
-
 
 #[tonic::async_trait]
 impl EcdarApi for ConcreteEcdarApi {
@@ -109,7 +110,7 @@ impl EcdarApi for ConcreteEcdarApi {
                 return Err(Status::new(
                     Code::Internal,
                     "Could not get uid from request metadata",
-                ))
+                ));
             }
         };
 
@@ -153,7 +154,7 @@ impl EcdarApiAuth for ConcreteEcdarApi {
         request: Request<CreateUserRequest>,
     ) -> Result<Response<CreateUserResponse>, Status> {
         let message = request.into_inner().clone();
-        let mut user = user::Model {
+        let mut user = User {
             id: Default::default(),
             username: message.clone().username,
             password: message.clone().password,
@@ -213,14 +214,13 @@ impl EcdarBackend for ConcreteEcdarApi {
     }
 }
 
-
 #[cfg(test)]
 mod ecdar_api {
     use std::str::FromStr;
 
-    use tonic::{Request, metadata};
+    use tonic::{metadata, Request};
 
-    use crate::{api::server::server::ecdar_api_server::EcdarApi, entities::user::Model};
+    use crate::{api::server::server::ecdar_api_server::EcdarApi, entities::user::Model as User};
 
     #[tokio::test]
     async fn delete_user_nonexisting_user_returns_error() -> () {
@@ -231,10 +231,9 @@ mod ecdar_api {
         });
 
         // Insert token into request metadata
-        delete_request.metadata_mut().insert(
-            "uid",
-            metadata::MetadataValue::from_str("1").unwrap(),
-        );
+        delete_request
+            .metadata_mut()
+            .insert("uid", metadata::MetadataValue::from_str("1").unwrap());
 
         let delete_response = api.delete_user(delete_request).await;
 
@@ -245,7 +244,7 @@ mod ecdar_api {
     async fn delete_user_existing_user_returns_ok() -> () {
         let api = super::ConcreteEcdarApi::setup_in_memory_db().await;
 
-        let user = Model {
+        let user = User {
             id: 1,
             email: "anders21@student.aau.dk".to_string(),
             username: "anders".to_string(),
@@ -257,10 +256,9 @@ mod ecdar_api {
         });
 
         // Insert token into request metadata
-        delete_request.metadata_mut().insert(
-            "uid",
-            metadata::MetadataValue::from_str("1").unwrap(),
-        );
+        delete_request
+            .metadata_mut()
+            .insert("uid", metadata::MetadataValue::from_str("1").unwrap());
 
         let delete_response = api.delete_user(delete_request).await;
 
