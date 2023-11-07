@@ -1,7 +1,10 @@
+use std::env;
+
+use tonic::{Code, Request, Response, Status};
+
 use crate::api::server::server::ecdar_api_auth_server::EcdarApiAuth;
 use crate::api::server::server::ecdar_api_server::EcdarApi;
 use crate::api::server::server::ecdar_backend_client::EcdarBackendClient;
-use crate::api::server::server::{CreateUserRequest, CreateUserResponse};
 use crate::database::access_context::AccessContext;
 use crate::database::database_context::DatabaseContext;
 use crate::database::entity_context::EntityContextTrait;
@@ -11,17 +14,20 @@ use crate::database::query_context::QueryContext;
 use crate::database::session_context::SessionContext;
 use crate::database::user_context::UserContext;
 use crate::entities::*;
-use std::env;
-use tonic::{Code, Request, Response, Status};
+
+use self::helpers::helpers::{setup_db_with_entities, AnyEntity};
 
 use super::{
     auth,
     server::server::{
-        ecdar_backend_server::EcdarBackend, DeleteUserRequest, GetAuthTokenRequest,
-        GetAuthTokenResponse, QueryRequest, QueryResponse, SimulationStartRequest,
-        SimulationStepRequest, SimulationStepResponse, UpdateUserRequest, UserTokenResponse,
+        ecdar_backend_server::EcdarBackend, GetAuthTokenRequest, GetAuthTokenResponse,
+        QueryRequest, QueryResponse, SimulationStartRequest, SimulationStepRequest,
+        SimulationStepResponse, UserTokenResponse, DeleteUserRequest, CreateUserRequest, CreateUserResponse, UpdateUserRequest
     },
 };
+
+#[path = "../tests/database/helpers.rs"]
+pub mod helpers;
 
 #[derive(Debug)]
 pub struct ConcreteEcdarApi {
@@ -49,7 +55,15 @@ impl ConcreteEcdarApi {
             in_use_context: Box::new(InUseContext::new(db_context.clone())),
         }
     }
+
+    pub async fn setup_in_memory_db() -> Self {
+        let db_context = setup_db_with_entities(vec![AnyEntity::User, AnyEntity::Model]).await;
+
+        env::set_var("REVEAAL_ADDRESS", "");
+        ConcreteEcdarApi::new(Box::new(db_context)).await
+    }
 }
+
 
 #[tonic::async_trait]
 impl EcdarApi for ConcreteEcdarApi {
@@ -80,6 +94,10 @@ impl EcdarApi for ConcreteEcdarApi {
         todo!()
     }
 
+    /// Deletes a user from the database.
+    /// # Errors
+    /// Returns an error if the database context fails to delete the user or
+    /// if the uid could not be parsed from the request metadata.
     async fn delete_user(
         &self,
         request: Request<DeleteUserRequest>,
@@ -95,6 +113,7 @@ impl EcdarApi for ConcreteEcdarApi {
             }
         };
 
+        // Delete user from database
         match self.user_context.delete(uid.parse().unwrap()).await {
             Ok(_) => Ok(Response::new(())),
             Err(error) => Err(Status::new(Code::Internal, error.to_string())),
@@ -191,5 +210,60 @@ impl EcdarBackend for ConcreteEcdarApi {
             .await
             .unwrap();
         client.take_simulation_step(request).await
+    }
+}
+
+
+#[cfg(test)]
+mod ecdar_api {
+    use std::str::FromStr;
+
+    use tonic::{Request, metadata};
+
+    use crate::{api::server::server::ecdar_api_server::EcdarApi, entities::user::Model};
+
+    #[tokio::test]
+    async fn delete_user_nonexisting_user_returns_error() -> () {
+        let api = super::ConcreteEcdarApi::setup_in_memory_db().await;
+
+        let mut delete_request = Request::new(super::DeleteUserRequest {
+            token: "ben".to_owned(),
+        });
+
+        // Insert token into request metadata
+        delete_request.metadata_mut().insert(
+            "uid",
+            metadata::MetadataValue::from_str("1").unwrap(),
+        );
+
+        let delete_response = api.delete_user(delete_request).await;
+
+        assert!(delete_response.is_err());
+    }
+
+    #[tokio::test]
+    async fn delete_user_existing_user_returns_ok() -> () {
+        let api = super::ConcreteEcdarApi::setup_in_memory_db().await;
+
+        let user = Model {
+            id: 1,
+            email: "anders21@student.aau.dk".to_string(),
+            username: "anders".to_string(),
+            password: "123".to_string(),
+        };
+
+        let mut delete_request = Request::new(super::DeleteUserRequest {
+            token: "shut ur ass up".to_owned(),
+        });
+
+        // Insert token into request metadata
+        delete_request.metadata_mut().insert(
+            "uid",
+            metadata::MetadataValue::from_str("1").unwrap(),
+        );
+
+        let delete_response = api.delete_user(delete_request).await;
+
+        assert!(delete_response.is_err());
     }
 }
