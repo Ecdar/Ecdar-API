@@ -7,7 +7,7 @@ mod ecdar_api {
     use crate::api::server::server::{CreateUserRequest, DeleteUserRequest};
     use crate::database::entity_context::EntityContextTrait;
     use crate::{
-        api::server::server::ecdar_api_server::EcdarApi, entities::user::Entity as UserEntity,
+        api::server::server::ecdar_api_server::EcdarApi,
         entities::user::Model as User,
     };
     use std::str::FromStr;
@@ -16,14 +16,14 @@ mod ecdar_api {
     use crate::database::user_context::UserContextTrait;
 
     #[tokio::test]
-    async fn delete_user_nonexistent_user_returns_error() -> () {
+    async fn delete_user_nonexistent_user_returns_err() -> () {
         let api = ConcreteEcdarApi::setup_in_memory_db(vec![AnyEntity::User]).await;
 
         let mut delete_request = Request::new(DeleteUserRequest {
-            token: "ben".to_owned(),
+            token: "token".to_owned(),
         });
 
-        // Insert token into request metadata
+        // Insert uid into request metadata
         delete_request
             .metadata_mut()
             .insert("uid", metadata::MetadataValue::from_str("1").unwrap());
@@ -37,25 +37,29 @@ mod ecdar_api {
     async fn delete_user_existing_user_returns_ok() -> () {
         let api = ConcreteEcdarApi::setup_in_memory_db(vec![AnyEntity::User]).await;
 
-        let user = User {
-            id: 1,
-            email: "anders21@student.aau.dk".to_string(),
-            username: "anders".to_string(),
-            password: "123".to_string(),
-        };
+        let _ = api
+            .user_context
+            .create(User {
+                id: Default::default(),
+                email: "anders21@student.aau.dk".to_string(),
+                username: "anders".to_string(),
+                password: "123".to_string(),
+            })
+            .await
+            .unwrap();
 
         let mut delete_request = Request::new(DeleteUserRequest {
-            token: "shut ur ass up".to_owned(),
+            token: "token".to_owned(),
         });
 
-        // Insert token into request metadata
+        // Insert uid into request metadata
         delete_request
             .metadata_mut()
             .insert("uid", metadata::MetadataValue::from_str("1").unwrap());
 
         let delete_response = api.delete_user(delete_request).await;
 
-        assert!(delete_response.is_err());
+        assert!(delete_response.is_ok());
     }
 
     #[tokio::test]
