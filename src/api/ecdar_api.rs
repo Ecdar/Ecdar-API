@@ -19,7 +19,7 @@ use super::{
     server::server::{
         ecdar_backend_server::EcdarBackend, GetAuthTokenRequest, GetAuthTokenResponse,
         QueryRequest, QueryResponse, SimulationStartRequest, SimulationStepRequest,
-        SimulationStepResponse, UserTokenResponse, DeleteUserRequest, CreateUserRequest, CreateUserResponse
+        SimulationStepResponse, UserTokenResponse, DeleteUserRequest, CreateUserRequest, UpdateUserRequest
     },
 };
 
@@ -88,16 +88,9 @@ impl EcdarApi for ConcreteEcdarApi {
         todo!()
     }
 
-    async fn create_user(
-        &self,
-        _request: Request<CreateUserRequest>,
-    ) -> Result<Response<CreateUserResponse>, Status> {
-        todo!()
-    }
-
     async fn update_user(
         &self,
-        _request: Request<()>,
+        _request: Request<UpdateUserRequest>,
     ) -> Result<Response<()>, Status> {
         todo!()
     }
@@ -147,12 +140,24 @@ impl EcdarApiAuth for ConcreteEcdarApi {
         request: Request<GetAuthTokenRequest>,
     ) -> Result<Response<GetAuthTokenResponse>, Status> {
         let uid = "1234";
-        let token = auth::create_jwt(&uid);
-
-        match token {
-            Ok(token) => Ok(Response::new(GetAuthTokenResponse { token })),
-            Err(e) => Err(Status::new(Code::Internal, e.to_string())),
-        }
+        let access_token = match auth::create_access_token(&uid) {
+            Ok(token) => token,
+            Err(e) => return Err(Status::new(Code::Internal, e.to_string())),
+        };
+        let refresh_token = match auth::create_refresh_token(&uid) {
+            Ok(token) => token,
+            Err(e) => return Err(Status::new(Code::Internal, e.to_string())),
+        };
+        Ok(Response::new(GetAuthTokenResponse {
+            access_token,
+            refresh_token,
+        }))
+    }
+    async fn create_user(
+        &self,
+        _request: Request<CreateUserRequest>,
+    ) -> Result<Response<()>, Status> {
+        todo!()
     }
 }
 
