@@ -98,11 +98,31 @@ impl EntityContextTrait<User> for UserContext {
                 entity
             ))),
             Some(user) => {
+                // If the entity's fields are empty, the old values will be used
+                let email: String;
+                if entity.email.is_empty() {
+                    email = user.email.clone();
+                } else {
+                    email = entity.email.clone();
+                }
+                let username: String;
+                if entity.username.is_empty() {
+                    username = user.username.clone();
+                } else {
+                    username = entity.username.clone();
+                }
+                let password: String;
+                if entity.password.is_empty() {
+                    password = user.password.clone();
+                } else {
+                    password = entity.password.clone();
+                }
+
                 ActiveModel {
                     id: Unchanged(user.id), //TODO ved ikke om unchanged betyder det jeg tror det betyder
-                    email: Set(entity.email),
-                    username: Set(entity.username),
-                    password: Set(entity.password),
+                    email: Set(email),
+                    username: Set(username),
+                    password: Set(password),
                 }
                 .update(&self.db_context.get_connection())
                 .await
