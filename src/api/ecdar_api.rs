@@ -28,6 +28,8 @@ use crate::entities::{
 use sea_orm::SqlErr;
 use std::env;
 use tonic::{Code, Request, Response, Status};
+use regex::Regex;
+
 
 #[path = "../tests/database/helpers.rs"]
 pub mod helpers;
@@ -134,6 +136,15 @@ impl EcdarApi for ConcreteEcdarApi {
     }
 }
 
+fn is_valid_email(email: &str) -> bool {
+    Regex::new(r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$").unwrap().is_match(email)
+}
+
+fn is_valid_username(username: &str) -> bool {
+    Regex::new(r"^[a-zA-Z0-9_]{3,32}$").unwrap().is_match(username)
+}
+
+
 #[tonic::async_trait]
 impl EcdarApiAuth for ConcreteEcdarApi {
     async fn get_auth_token(
@@ -154,6 +165,15 @@ impl EcdarApiAuth for ConcreteEcdarApi {
         request: Request<CreateUserRequest>,
     ) -> Result<Response<()>, Status> {
         let message = request.into_inner().clone();
+
+        if !is_valid_username(message.clone().username.as_str()) {
+            return Err(Status::new(Code::InvalidArgument, "Invalid username"));
+        }
+
+        if !is_valid_email(message.clone().email.as_str()) {
+            return Err(Status::new(Code::InvalidArgument, "Invalid email"));
+        }
+
         let mut user = User {
             id: Default::default(),
             username: message.clone().username,
