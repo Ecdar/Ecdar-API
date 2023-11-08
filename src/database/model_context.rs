@@ -101,8 +101,8 @@ impl EntityContextTrait<Model> for ModelContext {
                     components_info: Set(entity.components_info),
                     owner_id: Unchanged(model.id),
                 }
-                    .update(&self.db_context.get_connection())
-                    .await
+                .update(&self.db_context.get_connection())
+                .await
             }
         };
         updated_model
