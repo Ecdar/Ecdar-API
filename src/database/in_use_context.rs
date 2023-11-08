@@ -111,4 +111,3 @@ impl EntityContextTrait<in_use::Model> for InUseContext {
 #[cfg(test)]
 #[path = "../tests/database/in_use_context.rs"]
 mod tests;
-
