@@ -44,7 +44,6 @@ mod database_tests {
             .unwrap()
             .unwrap();
 
-        // Assert if the fetched access is the same as the created access
         assert_eq!(query, created_query);
         assert_eq!(fetched_query, created_query);
     }

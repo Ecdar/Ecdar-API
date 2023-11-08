@@ -22,15 +22,18 @@ impl EntityContextTrait<user::Model> for UserContext {
     /// Used for creating a User entity
     /// # Example
     /// ```
-    /// let model : Model = {
-    ///     id: Default::default(),
+    /// let model : user::Model = {
+    ///     id: 1,
     ///     email: "anders@aau.dk".into(),
     ///     username: "Anders".into(),
     ///     password: "qwerty".into()
     /// }
     /// let context : UserContext = UserContext::new(...);
-    /// context.create(model);
+    /// let created_user = context.create(model.clone());
+    /// assert_eq!(model,created_user);
     /// ```
+    /// # Note
+    /// The id passed by `entity` will not be used, instead the database will provide an id which uniquely the entity
     async fn create(&self, entity: user::Model) -> Result<user::Model, DbErr> {
         let user = user::ActiveModel {
             id: Default::default(),
@@ -42,7 +45,9 @@ impl EntityContextTrait<user::Model> for UserContext {
         Ok(user)
     }
 
-    /// Returns a single user entity (uses primary key)
+    /// Returns a single user entity (uses primary key).
+    ///
+    /// If no user entity with the given id exists, a [Option::None] is returned.
     /// # Example
     /// ```
     /// let context : UserContext = UserContext::new(...);
@@ -55,7 +60,7 @@ impl EntityContextTrait<user::Model> for UserContext {
             .await
     }
 
-    /// Returns all the user entities
+    /// Returns all the user entities in this table.
     /// # Example
     /// ```
     /// let context : UserContext = UserContext::new(...);
@@ -69,6 +74,8 @@ impl EntityContextTrait<user::Model> for UserContext {
     }
 
     /// Updates and returns the given user entity
+    ///
+    /// Finds a User entity by id and updates that entity. If no entity was found, [DbErr::RecordNotFound] is returned
     /// # Example
     /// ```
     /// let context : UserContext = UserContext::new(...);
@@ -101,6 +108,7 @@ impl EntityContextTrait<user::Model> for UserContext {
 
     /// Returns and deletes a user entity by id
     ///
+    /// If no user entity with the given id exists, [DbErr::RecordNotFound] is returned
     /// # Example
     /// ```
     /// let context : UserContext = UserContext::new(...);
@@ -111,6 +119,7 @@ impl EntityContextTrait<user::Model> for UserContext {
     ///     username: "andersAnden",
     ///     password: user.password
     /// }
+    /// assert_eq!(context.get_by_id(user.id),None)
     async fn delete(&self, entity_id: i32) -> Result<user::Model, DbErr> {
         let user = self.get_by_id(entity_id).await?;
         match user {

@@ -285,7 +285,6 @@ mod database_tests {
 
     #[tokio::test]
     async fn delete_test() {
-        // Setting up database and user context
         let (model_context, model, _) = seed_db().await;
 
         model::Entity::insert(model.clone().into_active_model())

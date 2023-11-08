@@ -34,6 +34,8 @@ impl EntityContextTrait<session::Model> for SessionContext {
     ///     };
     /// let created_session = session_context.create(model).await.unwrap();
     /// ```
+    /// # Note
+    /// The fields `id`, `token` and `user_id` must be unique
     async fn create(&self, entity: session::Model) -> Result<session::Model, DbErr> {
         let session = session::ActiveModel {
             id: Default::default(),
@@ -42,11 +44,12 @@ impl EntityContextTrait<session::Model> for SessionContext {
             user_id: Set(entity.user_id),
         };
 
-        let session = session.insert(&self.db_context.get_connection()).await;
-        session
+        session.insert(&self.db_context.get_connection()).await
     }
 
     /// Returns a session by searching for its id.
+    ///
+    /// If no session entity with the given id exists, [Option::None] is returned
     /// # Example
     /// ```rust
     /// let session: Result<Option<Model>, DbErr> = session_context.get_by_id(id).await;

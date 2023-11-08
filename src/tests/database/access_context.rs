@@ -32,7 +32,7 @@ mod database_tests {
 
         (access_context, access, user, model)
     }
-    // Test the functionality of the 'create' function, which creates a access in the database
+
     #[tokio::test]
     async fn create_test() {
         let (access_context, access, _, _) = seed_db().await;
@@ -45,7 +45,6 @@ mod database_tests {
             .unwrap()
             .unwrap();
 
-        // Assert if the fetched access is the same as the created access
         assert_eq!(access, created_access);
         assert_eq!(fetched_access, created_access);
     }
@@ -54,7 +53,6 @@ mod database_tests {
     async fn create_check_unique_pair_model_id_user_id_test() {
         todo!()
         // SHOULD WORK BUT SQLITE DOES NOT ENFORCE PAIR-WISE UNIQUE CONSTRAINT
-        //     // Setting up a sqlite database in memory to test on
         //     let db_context =
         //         setup_db_with_entities(vec![AnyEntity::User, AnyEntity::Model, AnyEntity::Access])
         //             .await;
@@ -65,13 +63,11 @@ mod database_tests {
         //     let new_user = create_users(1)[0].to_owned();
         //     let new_model = create_models(1, new_user.id)[0].clone();
         //
-        //     // Creates a model of the access which will be created
         //     let new_accesses = create_accesses(3, new_user.id, new_model.id);
         //
-        //     // Creates the access in the database using the 'create' function
         //     user_context.create(new_user).await.unwrap();
         //     model_context.create(new_model).await.unwrap();
-        //     let _ = access_context.create(new_accesses[0].clone()).await.unwrap(); // should work
+        //     let _ = access_context.create(new_accesses[0].clone()).await.unwrap();
         //     let res = access_context.create(new_accesses[1].clone()).await.expect_err("This should not be Ok()");
     }
 
@@ -109,10 +105,8 @@ mod database_tests {
             .await
             .unwrap();
 
-        // Fetches the access created using the 'get_by_id' function
         let fetched_access = access_context.get_by_id(access.id).await.unwrap().unwrap();
 
-        // Assert if the fetched access is the same as the created access
         assert_eq!(access, fetched_access);
     }
 
@@ -129,10 +123,8 @@ mod database_tests {
     async fn get_all_test() {
         let (access_context, _, user, model) = seed_db().await;
 
-        // Creates a model of the access which will be created
         let new_accesses = create_accesses(3, user.id, model.id);
 
-        // Creates the access in the database using the 'create' function
         access::Entity::insert_many(to_active_models!(new_accesses.clone()))
             .exec(&access_context.db_context.get_connection())
             .await
