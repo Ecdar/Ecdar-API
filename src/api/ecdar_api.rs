@@ -25,6 +25,9 @@ use super::{
     },
 };
 
+#[path = "../tests/database/helpers.rs"]
+pub mod helpers;
+
 #[derive(Debug)]
 pub struct ConcreteEcdarApi {
     reveaal_address: String,
@@ -103,12 +106,28 @@ impl EcdarApi for ConcreteEcdarApi {
             }
         };
 
+        // Get new values from request message. Empty string means the value will remain unchanged in the database.
+        let new_username = match message.username {
+            Some(username) => username,
+            None => "".to_string(),
+        };
+
+        let new_password = match message.password {
+            Some(password) => password,
+            None => "".to_string(),
+        };
+
+        let new_email = match message.email {
+            Some(email) => email,
+            None => "".to_string(),
+        };
+
         // Record to be inserted in database
         let user = user::Model {
             id: uid.parse().unwrap(),
-            username: message.clone().username.unwrap(),
-            password: message.clone().password.unwrap(),
-            email: message.clone().email.unwrap(),
+            username: new_username.clone(),
+            password: new_password.clone(),
+            email: new_email.clone(),
         };
 
         // Update user in database
