@@ -185,6 +185,39 @@ mod database_tests {
         )
     }
 
+    #[tokio::test]
+    async fn update_single_field_test() -> () {
+        let user_context = test_setup().await;
+
+        let user = User {
+            id: 1,
+            email: "test@test".to_string(),
+            username: "test_user".to_string(),
+            password: "old_pass".to_string(),
+        };
+
+        user_context.create(user).await.unwrap();
+
+        let update_user = User {
+            id: 1,
+            email: "".to_string(),
+            username: "".to_string(),
+            password: "new_pass".to_string(),
+        };
+
+        let expected_user = User {
+            id: 1,
+            email: "test@test".to_string(),
+            username: "test_user".to_string(),
+            password: "new_pass".to_string(),
+        };
+
+        assert_eq!(
+            expected_user,
+            user_context.update(update_user.to_owned()).await.unwrap()
+        )
+    }
+
     ///test that where the unique email constraint is violated
     #[tokio::test]
     async fn update_fail() -> () {

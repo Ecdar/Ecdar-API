@@ -90,11 +90,56 @@ impl EcdarApi for ConcreteEcdarApi {
         todo!()
     }
 
+    /// Updates a user record in the database.
+    /// # Errors
+    /// Returns an error if the database context fails to update the user or
+    /// if the uid could not be parsed from the request metadata.
     async fn update_user(
         &self,
-        _request: Request<UpdateUserRequest>,
+        request: Request<UpdateUserRequest>,
     ) -> Result<Response<()>, Status> {
-        todo!()
+        let message = request.get_ref().clone();
+
+        // Get uid from request metadata
+        let uid = match request.metadata().get("uid").unwrap().to_str() {
+            Ok(uid) => uid,
+            Err(_) => {
+                return Err(Status::new(
+                    Code::Internal,
+                    "Could not get uid from request metadata",
+                ))
+            }
+        };
+
+        // Get new values from request message. Empty string means the value will remain unchanged in the database.
+        let new_username = match message.username {
+            Some(username) => username,
+            None => "".to_string(),
+        };
+
+        let new_password = match message.password {
+            Some(password) => password,
+            None => "".to_string(),
+        };
+
+        let new_email = match message.email {
+            Some(email) => email,
+            None => "".to_string(),
+        };
+
+        // Record to be inserted in database
+        let user = User {
+            id: uid.parse().unwrap(),
+            username: new_username.clone(),
+            password: new_password.clone(),
+            email: new_email.clone(),
+        };
+
+        // Update user in database
+        match self.user_context.update(user).await {
+            Ok(_) => Ok(Response::new(())),
+            Err(error) => Err(Status::new(Code::Internal, error.to_string())),
+        }
     }
 
     /// Deletes a user from the database.
@@ -112,7 +157,7 @@ impl EcdarApi for ConcreteEcdarApi {
                 return Err(Status::new(
                     Code::Internal,
                     "Could not get uid from request metadata",
-                ));
+                ))
             }
         };
 
