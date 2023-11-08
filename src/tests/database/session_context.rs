@@ -41,7 +41,6 @@ mod database_tests {
 
     #[tokio::test]
     async fn create_test() {
-        // Setting up a sqlite database in memory.
         let (session_context, mut session, _, _) = seed_db().await;
 
         let created_session = session_context.create(session.clone()).await.unwrap();
@@ -80,12 +79,10 @@ mod database_tests {
 
     #[tokio::test]
     async fn create_auto_increment_test() {
-        // Setting up database and session context
         let (session_context, _, user, _) = seed_db().await;
 
         let sessions = create_sessions(2, user.id);
 
-        // Creates the sessions in the database using the 'create' function
         let created_session1 = session_context.create(sessions[0].clone()).await.unwrap();
         let created_session2 = session_context.create(sessions[1].clone()).await.unwrap();
 
@@ -101,7 +98,6 @@ mod database_tests {
             .unwrap()
             .unwrap();
 
-        // Assert if the new_session, created_session, and fetched_session are the same
         assert_ne!(fetched_session1.id, fetched_session2.id);
         assert_ne!(created_session1.id, created_session2.id);
         assert_eq!(created_session1.id, fetched_session1.id);
@@ -192,7 +188,6 @@ mod database_tests {
             .await
             .unwrap();
 
-        //A session has nothing to update
         let new_session = session::Model { ..session };
 
         let updated_session = session_context.update(new_session.clone()).await.unwrap();
