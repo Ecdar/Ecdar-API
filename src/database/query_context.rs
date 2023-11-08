@@ -30,7 +30,7 @@ impl EntityContextTrait<query::Model> for QueryContext {
     ///     out_dated: true
     /// }
     /// let context : QueryContext = QueryContext::new(...);
-    /// context.create(model);
+    /// assert_eq!(model,context.create(model.clone()));
     /// ```
     async fn create(&self, entity: query::Model) -> Result<query::Model, DbErr> {
         let query = query::ActiveModel {
@@ -104,7 +104,21 @@ impl EntityContextTrait<query::Model> for QueryContext {
         .await
     }
 
-    /// Delete a query entity by id
+    /// Returns and deletes a user entity by id
+    ///
+    /// If no user entity with the given id exists, [DbErr::RecordNotFound] is returned
+    /// # Example
+    /// ```
+    /// let context : QueryContext = UserContext::new(...);
+    /// let query = context.get_by_id(1).unwrap();
+    /// let query = Model {
+    ///     id: query.id,
+    ///     string: query.string,
+    ///     model_id: query.model_id,
+    ///     result: query.result,
+    ///     out_dated: false
+    /// }
+    /// assert_eq!(context.get_by_id(query.id),None)
     async fn delete(&self, entity_id: i32) -> Result<query::Model, DbErr> {
         let query = self.get_by_id(entity_id).await?;
         match query {
