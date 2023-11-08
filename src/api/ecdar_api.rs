@@ -42,6 +42,15 @@ pub struct ConcreteEcdarApi {
     in_use_context: Box<InUseContext>,
 }
 
+fn get_uid_from_request<T>(request: &Request<T>) -> Result<i32, Status> {
+    let uid = match request.metadata().get("uid").unwrap().to_str() {
+        Ok(uid) => uid,
+        Err(_) => return Err(Status::new(Code::Internal, "Could not get uid from request metadata")),
+    };
+
+    Ok(uid.parse().unwrap())
+}
+
 impl ConcreteEcdarApi {
     pub async fn new(db_context: Box<DatabaseContext>) -> Self {
         ConcreteEcdarApi {
@@ -97,15 +106,7 @@ impl EcdarApi for ConcreteEcdarApi {
         let message = request.get_ref().clone();
 
         // Get uid from request metadata
-        let uid = match request.metadata().get("uid").unwrap().to_str() {
-            Ok(uid) => uid,
-            Err(_) => {
-                return Err(Status::new(
-                    Code::Internal,
-                    "Could not get uid from request metadata",
-                ));
-            }
-        };
+        let uid = get_uid_from_request(&request)?;
 
         // Get new values from request message. Empty string means the value will remain unchanged in the database.
         let new_username = match message.username {
@@ -125,7 +126,7 @@ impl EcdarApi for ConcreteEcdarApi {
 
         // Record to be inserted in database
         let user = User {
-            id: uid.parse().unwrap(),
+            id: uid,
             username: new_username.clone(),
             password: new_password.clone(),
             email: new_email.clone(),
@@ -147,18 +148,10 @@ impl EcdarApi for ConcreteEcdarApi {
         request: Request<DeleteUserRequest>,
     ) -> Result<Response<()>, Status> {
         // Get uid from request metadata
-        let uid = match request.metadata().get("uid").unwrap().to_str() {
-            Ok(uid) => uid,
-            Err(_) => {
-                return Err(Status::new(
-                    Code::Internal,
-                    "Could not get uid from request metadata",
-                ));
-            }
-        };
+        let uid = get_uid_from_request(&request)?;
 
         // Delete user from database
-        match self.user_context.delete(uid.parse().unwrap()).await {
+        match self.user_context.delete(uid).await {
             Ok(_) => Ok(Response::new(())),
             Err(error) => Err(Status::new(Code::Internal, error.to_string())),
         }
