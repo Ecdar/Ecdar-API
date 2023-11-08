@@ -230,14 +230,11 @@ impl EcdarApiAuth for ConcreteEcdarApi {
             Ok(_) => Ok(Response::new(())),
             Err(e) => match e.sql_err() {
                 Some(SqlErr::UniqueConstraintViolation(e)) => {
-                    let mut error_msg = "";
-                    if e.contains("email") {
-                        error_msg = "A user with that email already exists";
-                    } else if e.contains("username") {
-                        error_msg = "A user with that username already exists";
-                    } else {
-                        error_msg = "User already exists";
-                    }
+                    let error_msg = match e.to_lowercase() {
+                        _ if e.contains("username") => "A user with that username already exists",
+                        _ if e.contains("email") => "A user with that email already exists",
+                        _ => "User already exists",
+                    };
                     Err(Status::new(Code::AlreadyExists, error_msg))
                 }
                 _ => Err(Status::new(Code::Internal, "Could not create user")),
