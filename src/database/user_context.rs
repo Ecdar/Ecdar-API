@@ -2,18 +2,48 @@ use crate::database::database_context::DatabaseContextTrait;
 use crate::database::entity_context::EntityContextTrait;
 use crate::entities::prelude::User as UserEntity;
 use crate::entities::user::{ActiveModel, Model as User};
+use crate::entities::user::Column as UserColumn;
 use sea_orm::prelude::async_trait::async_trait;
 use sea_orm::ActiveValue::{Set, Unchanged};
-use sea_orm::{ActiveModelTrait, DbErr, EntityTrait, RuntimeErr};
+use sea_orm::{ActiveModelTrait, DbErr, EntityTrait, RuntimeErr, QueryFilter};
+use sea_orm::ColumnTrait;
 
 #[derive(Debug)]
 pub struct UserContext {
     db_context: Box<dyn DatabaseContextTrait>,
 }
 
-pub trait UserContextTrait: EntityContextTrait<User> {}
+#[async_trait]
+pub trait UserContextTrait: EntityContextTrait<User> {
+    async fn get_user_by_credentials(
+        &self,
+        email: String,
+        username: String,
+        password: String,
+    ) -> Result<Option<User>, DbErr>;
+}
 
-impl UserContextTrait for UserContext {}
+#[async_trait]
+impl UserContextTrait for UserContext {
+    async fn get_user_by_credentials(
+        &self,
+        email: String,
+        username: String,
+        password: String,
+    ) -> Result<Option<User>, DbErr> {
+        let user: Option<User> = UserEntity::find()
+            .filter(
+                UserColumn::Email
+                    .eq(email)
+                    .or(UserColumn::Username.eq(username))
+                    .and(UserColumn::Password.eq(password))
+            )
+            .one(&self.db_context.get_connection())
+            .await?;
+        Ok(user)
+    }
+}
+
 
 #[async_trait]
 impl EntityContextTrait<User> for UserContext {

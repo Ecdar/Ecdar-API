@@ -2,7 +2,7 @@ use std::env;
 
 use tonic::{Code, Request, Response, Status};
 
-use crate::api::server::server::ecdar_api_auth_server::EcdarApiAuth;
+use crate::{api::server::server::ecdar_api_auth_server::EcdarApiAuth, database::user_context::UserContextTrait};
 use crate::api::server::server::ecdar_api_server::EcdarApi;
 use crate::api::server::server::ecdar_backend_client::EcdarBackendClient;
 use crate::database::access_context::AccessContext;
@@ -19,7 +19,7 @@ use super::{
     server::server::{
         ecdar_backend_server::EcdarBackend, GetAuthTokenRequest, GetAuthTokenResponse,
         QueryRequest, QueryResponse, SimulationStartRequest, SimulationStepRequest,
-        SimulationStepResponse, UserTokenResponse, DeleteUserRequest, CreateUserRequest, UpdateUserRequest
+        SimulationStepResponse, UserTokenResponse, DeleteUserRequest, CreateUserRequest, UpdateUserRequest, get_auth_token_request::{AuthOption, user_credentials}
     },
 };
 
@@ -139,7 +139,47 @@ impl EcdarApiAuth for ConcreteEcdarApi {
         &self,
         request: Request<GetAuthTokenRequest>,
     ) -> Result<Response<GetAuthTokenResponse>, Status> {
-        let uid = "1234";
+
+        let message = request.get_ref().clone();
+        let uid: String;
+        let mut username = "".to_string();
+        let mut email = "".to_string();
+        let mut password = "".to_string();
+        match message.auth_option {
+            Some(auth_option) => match auth_option {
+                AuthOption::RefreshToken(refresh_token) => {
+                    let refresh_token = refresh_token;
+                    println!("Refresh token: {}", refresh_token);
+                }
+                AuthOption::UserCredentials(user_credentials) => {
+                    match user_credentials.user {
+                        Some(user) => match user {
+                            user_credentials::User::Username(_username) => {
+                                username = _username;
+                            }
+                            user_credentials::User::Email(_email) => {
+                                email = _email;
+                            }
+                        },
+                        None => Err(Status::new(Code::Internal, "No user provided"))?,
+                    } 
+                    password = user_credentials.password;
+                }
+            },
+            None => Err(Status::new(Code::Internal, "No auth option provided"))?,
+        }
+        println!("Username: {}", username);
+        println!("Email: {}", email);
+        println!("Password: {}", password);
+
+        uid = match self.user_context.get_user_by_credentials(email, username, password).await {
+            Ok(user) => match user {
+                Some(user) => user.id.to_string(),
+                None => Err(Status::new(Code::Internal, "No user found"))?,
+            },
+            Err(error) => Err(Status::new(Code::Internal, error.to_string()))?,
+        };
+
         let access_token = match auth::create_access_token(&uid) {
             Ok(token) => token,
             Err(e) => return Err(Status::new(Code::Internal, e.to_string())),
