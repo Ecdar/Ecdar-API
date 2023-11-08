@@ -105,9 +105,10 @@ impl EntityContextTrait<model::Model> for ModelContext {
 
     /// Returns and deletes a single model entity
     /// # Example
+    /// Assuming that `id` is a variable containing the id of the entity to be deleted.
     /// ```rust
     /// let model_context: ModelContext = ModelContext::new(...);
-    /// let model = model_context.delete().unwrap();
+    /// let model = model_context.delete(id).unwrap();
     /// ```
     async fn delete(&self, entity_id: i32) -> Result<model::Model, DbErr> {
         let model = self.get_by_id(entity_id).await?;
