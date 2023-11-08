@@ -82,12 +82,17 @@ impl EcdarApi for ConcreteEcdarApi {
         todo!()
     }
 
+    /// Updates a user record in the database.
+    /// # Errors
+    /// Returns an error if the database context fails to update the user or
+    /// if the uid could not be parsed from the request metadata.
     async fn update_user(
         &self,
         request: Request<UpdateUserRequest>,
     ) -> Result<Response<()>, Status> {
         let message = request.get_ref().clone();
 
+        // Get uid from request metadata
         let uid = match request.metadata().get("uid").unwrap().to_str() {
             Ok(uid) => uid,
             Err(_) => {
@@ -98,6 +103,7 @@ impl EcdarApi for ConcreteEcdarApi {
             }
         };
 
+        // Record to be inserted in database
         let user = user::Model {
             id: uid.parse().unwrap(),
             username: message.clone().username.unwrap(),
@@ -105,6 +111,7 @@ impl EcdarApi for ConcreteEcdarApi {
             email: message.clone().email.unwrap(),
         };
 
+        // Update user in database
         match self.user_context.update(user).await {
             Ok(_) => Ok(Response::new(())),
             Err(error) => Err(Status::new(Code::Internal, error.to_string())),
