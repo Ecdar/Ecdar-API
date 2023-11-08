@@ -4,6 +4,7 @@ pub mod helpers;
 #[cfg(test)]
 mod database_tests {
     use crate::database::user_context::tests::helpers::helpers::*;
+    use crate::database::user_context::UserContextTrait;
     use crate::{
         database::{
             database_context::DatabaseContext, entity_context::EntityContextTrait,
@@ -15,7 +16,6 @@ mod database_tests {
         entity::prelude::*, sea_query::TableCreateStatement, Database, DatabaseBackend,
         DatabaseConnection, Schema,
     };
-    use crate::database::user_context::UserContextTrait;
 
     async fn setup_schema(db: &DatabaseConnection) {
         // Setup Schema helper
@@ -131,7 +131,9 @@ mod database_tests {
         let created_user = user_context.create(new_user).await?;
 
         // Fetches the user created using the 'get_by_username' function
-        let fetched_user = user_context.get_by_username(created_user.username.clone()).await?;
+        let fetched_user = user_context
+            .get_by_username(created_user.username.clone())
+            .await?;
 
         // Assert if the fetched user is the same as the created user
         assert_eq!(fetched_user.unwrap().username, created_user.username);

@@ -26,9 +26,10 @@ pub trait UserContextTrait: EntityContextTrait<User> {
 #[async_trait]
 impl UserContextTrait for UserContext {
     async fn get_by_username(&self, username: String) -> Result<Option<User>, DbErr> {
-        UserEntity::find().filter(
-            crate::entities::user::Column::Username.eq(username)
-        ).one(&self.db_context.get_connection()).await
+        UserEntity::find()
+            .filter(crate::entities::user::Column::Username.eq(username))
+            .one(&self.db_context.get_connection())
+            .await
     }
 }
 
@@ -141,8 +142,8 @@ impl EntityContextTrait<User> for UserContext {
                     username: Set(username),
                     password: Set(password),
                 }
-                    .update(&self.db_context.get_connection())
-                    .await
+                .update(&self.db_context.get_connection())
+                .await
             }
         };
         return updated_user;

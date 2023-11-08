@@ -1,19 +1,16 @@
 #[cfg(test)]
 mod ecdar_api {
-    use std::ops::Deref;
     use crate::api::ecdar_api::helpers::helpers::AnyEntity;
     use crate::api::ecdar_api::ConcreteEcdarApi;
     use crate::api::server::server::ecdar_api_auth_server::EcdarApiAuth;
     use crate::api::server::server::{CreateUserRequest, DeleteUserRequest, UpdateUserRequest};
     use crate::database::entity_context::EntityContextTrait;
-    use crate::{
-        api::server::server::ecdar_api_server::EcdarApi,
-        entities::user::Model as User,
-    };
-    use std::str::FromStr;
-    use tonic::{metadata, Request};
-    use tonic::codegen::Body;
     use crate::database::user_context::UserContextTrait;
+    use crate::{api::server::server::ecdar_api_server::EcdarApi, entities::user::Model as User};
+    use std::ops::Deref;
+    use std::str::FromStr;
+    use tonic::codegen::Body;
+    use tonic::{metadata, Request};
 
     #[tokio::test]
     async fn delete_user_nonexistent_user_returns_err() -> () {
@@ -90,7 +87,12 @@ mod ecdar_api {
 
         let _ = api.create_user(create_user_request).await;
 
-        assert!(api.user_context.get_by_username(username).await.unwrap().is_some());
+        assert!(api
+            .user_context
+            .get_by_username(username)
+            .await
+            .unwrap()
+            .is_some());
     }
 
     #[tokio::test]
@@ -104,7 +106,8 @@ mod ecdar_api {
                 email: "existing@example.com".to_string(),
                 username: "newuser1".to_string(),
                 password: "123".to_string(),
-            }).await;
+            })
+            .await;
 
         let create_user_request = Request::new(CreateUserRequest {
             email: "existing@example.com".to_string(),
@@ -141,7 +144,8 @@ mod ecdar_api {
                 email: "valid@email.com".to_string(),
                 username: "existing".to_string(),
                 password: "123".to_string(),
-            }).await;
+            })
+            .await;
 
         let create_user_request = Request::new(CreateUserRequest {
             email: "valid@email2.com".to_string(),

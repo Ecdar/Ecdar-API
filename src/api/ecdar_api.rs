@@ -1,13 +1,9 @@
-use self::helpers::helpers::{setup_db_with_entities, AnyEntity};
-use super::{
-    auth,
-    server::server::{
-        ecdar_backend_server::EcdarBackend, CreateUserRequest, DeleteUserRequest,
-        GetAuthTokenRequest, GetAuthTokenResponse, QueryRequest, QueryResponse,
-        SimulationStartRequest, SimulationStepRequest, SimulationStepResponse, UpdateUserRequest,
-        UserTokenResponse,
-    },
-};
+use std::env;
+
+use regex::Regex;
+use sea_orm::SqlErr;
+use tonic::{Code, Request, Response, Status};
+
 use crate::api::server::server::{
     ecdar_api_auth_server::EcdarApiAuth, ecdar_api_server::EcdarApi,
     ecdar_backend_client::EcdarBackendClient,
@@ -17,19 +13,19 @@ use crate::database::{
     entity_context::EntityContextTrait, in_use_context::InUseContext, model_context::ModelContext,
     query_context::QueryContext, session_context::SessionContext, user_context::UserContext,
 };
-use crate::entities::{
-    access::{Entity as AccessEntity, Model as Access},
-    in_use::{Entity as InUseEntity, Model as InUse},
-    model::{Entity as ModelEntity, Model},
-    query::{Entity as QueryEntity, Model as Query},
-    session::{Entity as SessionEntity, Model as Session},
-    user::{Entity as UserEntity, Model as User},
-};
-use sea_orm::SqlErr;
-use std::env;
-use tonic::{Code, Request, Response, Status};
-use regex::Regex;
+use crate::entities::user::Model as User;
 
+use super::{
+    auth,
+    server::server::{
+        ecdar_backend_server::EcdarBackend, CreateUserRequest, DeleteUserRequest,
+        GetAuthTokenRequest, GetAuthTokenResponse, QueryRequest, QueryResponse,
+        SimulationStartRequest, SimulationStepRequest, SimulationStepResponse, UpdateUserRequest,
+        UserTokenResponse,
+    },
+};
+
+use self::helpers::helpers::{setup_db_with_entities, AnyEntity};
 
 #[path = "../tests/database/helpers.rs"]
 pub mod helpers;
@@ -107,7 +103,7 @@ impl EcdarApi for ConcreteEcdarApi {
                 return Err(Status::new(
                     Code::Internal,
                     "Could not get uid from request metadata",
-                ))
+                ));
             }
         };
 
@@ -157,7 +153,7 @@ impl EcdarApi for ConcreteEcdarApi {
                 return Err(Status::new(
                     Code::Internal,
                     "Could not get uid from request metadata",
-                ))
+                ));
             }
         };
 
@@ -182,13 +178,16 @@ impl EcdarApi for ConcreteEcdarApi {
 }
 
 fn is_valid_email(email: &str) -> bool {
-    Regex::new(r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$").unwrap().is_match(email)
+    Regex::new(r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$")
+        .unwrap()
+        .is_match(email)
 }
 
 fn is_valid_username(username: &str) -> bool {
-    Regex::new(r"^[a-zA-Z0-9_]{3,32}$").unwrap().is_match(username)
+    Regex::new(r"^[a-zA-Z0-9_]{3,32}$")
+        .unwrap()
+        .is_match(username)
 }
-
 
 #[tonic::async_trait]
 impl EcdarApiAuth for ConcreteEcdarApi {
