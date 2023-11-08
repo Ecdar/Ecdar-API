@@ -21,7 +21,7 @@ impl EntityContextTrait<access::Model> for AccessContext {
 
     /// Used for creating an access::Model entity
     /// # Example
-    /// ```
+    /// ```rust
     /// let access = access::Model {
     ///     id: Default::default(),
     ///     role: Role::Editor,
@@ -45,7 +45,7 @@ impl EntityContextTrait<access::Model> for AccessContext {
     /// Returns a single access entity (uses primary key)
     /// # Example
     /// The following example will return an access model that has the id of 1.
-    /// ```
+    /// ```rust
     /// let context : AccessContext = AccessContext::new(...);
     /// let access : access::Model = context.get_by_id(1).unwrap();
     /// ```
@@ -57,7 +57,7 @@ impl EntityContextTrait<access::Model> for AccessContext {
 
     /// Returns all the access entities
     /// # Example
-    /// ```
+    /// ```rust
     /// let context: AccessContext = AccessContext::new(...);
     /// let accesses: vec<access::Model> = context.get_all().unwrap();
     /// ```
@@ -69,7 +69,7 @@ impl EntityContextTrait<access::Model> for AccessContext {
 
     /// Updates and returns the given access entity
     /// # Example
-    /// ```
+    /// ```rust
     /// let context : AccessContext = AccessContext::new(...);
     /// let access = context.get_by_id(1).unwrap();
     /// let updated_access = access::Model {
@@ -115,3 +115,4 @@ impl EntityContextTrait<access::Model> for AccessContext {
 #[cfg(test)]
 #[path = "../tests/database/access_context.rs"]
 mod tests;
+
