@@ -20,7 +20,7 @@ impl EntityContextTrait<model::Model> for ModelContext {
 
     /// Used for creating a model::Model entity
     /// # Example
-    /// ```
+    /// ```rust
     /// let model = model::Model {
     ///     id: Default::default(),
     ///     name: "model::Model name".to_owned(),
@@ -43,7 +43,7 @@ impl EntityContextTrait<model::Model> for ModelContext {
 
     /// Returns a single model entity (Uses primary key)
     /// # Example
-    /// ```
+    /// ```rust
     /// let model_context: ModelContext = ModelContext::new(...);
     /// let model = model_context.get_by_id(1).unwrap();
     /// ```
@@ -55,7 +55,7 @@ impl EntityContextTrait<model::Model> for ModelContext {
 
     /// Returns a all model entities (Uses primary key)
     /// # Example
-    /// ```
+    /// ```rust
     /// let model_context: ModelContext = ModelContext::new(...);
     /// let model = model_context.get_all().unwrap();
     /// ```
@@ -67,7 +67,7 @@ impl EntityContextTrait<model::Model> for ModelContext {
 
     /// Updates a single model entity
     /// # Example
-    /// ```
+    /// ```rust
     /// let update_model = model::Model {
     ///     name: "new name",
     ///     ..original_model
@@ -105,7 +105,7 @@ impl EntityContextTrait<model::Model> for ModelContext {
 
     /// Returns and deletes a single model entity
     /// # Example
-    /// ```
+    /// ```rust
     /// let model_context: ModelContext = ModelContext::new(...);
     /// let model = model_context.delete().unwrap();
     /// ```
@@ -126,3 +126,4 @@ impl EntityContextTrait<model::Model> for ModelContext {
 #[cfg(test)]
 #[path = "../tests/database/model_context.rs"]
 mod tests;
+
