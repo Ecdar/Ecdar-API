@@ -4,16 +4,33 @@ use crate::entities::prelude::User as UserEntity;
 use crate::entities::user::{ActiveModel, Model as User};
 use sea_orm::prelude::async_trait::async_trait;
 use sea_orm::ActiveValue::{Set, Unchanged};
-use sea_orm::{ActiveModelTrait, DbErr, EntityTrait, RuntimeErr};
+use sea_orm::{ActiveModelTrait, ColumnTrait, DbErr, EntityTrait, QueryFilter, RuntimeErr};
 
 #[derive(Debug)]
 pub struct UserContext {
     db_context: Box<dyn DatabaseContextTrait>,
 }
 
-pub trait UserContextTrait: EntityContextTrait<User> {}
+#[async_trait]
+pub trait UserContextTrait: EntityContextTrait<User> {
+    /// Returns a single user entity (uses username)
+    /// # Example
+    /// ```
+    /// let context : UserContext = UserContext::new(...);
+    /// let model : Model = context.get_by_username("Anders".into()).unwrap();
+    /// assert_eq!(model.id,1);
+    /// ```
+    async fn get_by_username(&self, username: String) -> Result<Option<User>, DbErr>;
+}
 
-impl UserContextTrait for UserContext {}
+#[async_trait]
+impl UserContextTrait for UserContext {
+    async fn get_by_username(&self, username: String) -> Result<Option<User>, DbErr> {
+        UserEntity::find().filter(
+            crate::entities::user::Column::Username.eq(username)
+        ).one(&self.db_context.get_connection()).await
+    }
+}
 
 #[async_trait]
 impl EntityContextTrait<User> for UserContext {
@@ -104,8 +121,8 @@ impl EntityContextTrait<User> for UserContext {
                     username: Set(entity.username),
                     password: Set(entity.password),
                 }
-                .update(&self.db_context.get_connection())
-                .await
+                    .update(&self.db_context.get_connection())
+                    .await
             }
         };
         return updated_user;
@@ -138,6 +155,7 @@ impl EntityContextTrait<User> for UserContext {
         }
     }
 }
+
 #[cfg(test)]
 #[path = "../tests/database/user_context.rs"]
 mod tests;
