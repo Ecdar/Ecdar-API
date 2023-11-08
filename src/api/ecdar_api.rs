@@ -1,29 +1,33 @@
-use std::env;
-
-use tonic::{Code, Request, Response, Status};
-
-use crate::api::server::server::ecdar_api_auth_server::EcdarApiAuth;
-use crate::api::server::server::ecdar_api_server::EcdarApi;
-use crate::api::server::server::ecdar_backend_client::EcdarBackendClient;
-use crate::database::access_context::AccessContext;
-use crate::database::database_context::DatabaseContext;
-use crate::database::entity_context::EntityContextTrait;
-use crate::database::in_use_context::InUseContext;
-use crate::database::model_context::ModelContext;
-use crate::database::query_context::QueryContext;
-use crate::database::session_context::SessionContext;
-use crate::database::user_context::UserContext;
-use crate::entities::user;
-
-use super::server::server::UpdateUserRequest;
+use self::helpers::helpers::{setup_db_with_entities, AnyEntity};
 use super::{
     auth,
     server::server::{
-        ecdar_backend_server::EcdarBackend, CreateUserRequest, CreateUserResponse,
-        DeleteUserRequest, GetAuthTokenRequest, GetAuthTokenResponse, QueryRequest, QueryResponse,
-        SimulationStartRequest, SimulationStepRequest, SimulationStepResponse, UserTokenResponse,
+        ecdar_backend_server::EcdarBackend, CreateUserRequest, DeleteUserRequest,
+        GetAuthTokenRequest, GetAuthTokenResponse, QueryRequest, QueryResponse,
+        SimulationStartRequest, SimulationStepRequest, SimulationStepResponse, UpdateUserRequest,
+        UserTokenResponse,
     },
 };
+use crate::api::server::server::{
+    ecdar_api_auth_server::EcdarApiAuth, ecdar_api_server::EcdarApi,
+    ecdar_backend_client::EcdarBackendClient,
+};
+use crate::database::{
+    access_context::AccessContext, database_context::DatabaseContext,
+    entity_context::EntityContextTrait, in_use_context::InUseContext, model_context::ModelContext,
+    query_context::QueryContext, session_context::SessionContext, user_context::UserContext,
+};
+use crate::entities::{
+    access::{Entity as AccessEntity, Model as Access},
+    in_use::{Entity as InUseEntity, Model as InUse},
+    model::{Entity as ModelEntity, Model},
+    query::{Entity as QueryEntity, Model as Query},
+    session::{Entity as SessionEntity, Model as Session},
+    user::{Entity as UserEntity, Model as User},
+};
+use sea_orm::SqlErr;
+use std::env;
+use tonic::{Code, Request, Response, Status};
 
 #[path = "../tests/database/helpers.rs"]
 pub mod helpers;
@@ -54,6 +58,12 @@ impl ConcreteEcdarApi {
             in_use_context: Box::new(InUseContext::new(db_context.clone())),
         }
     }
+
+    pub async fn setup_in_memory_db(entities: Vec<AnyEntity>) -> Self {
+        let db_context = setup_db_with_entities(entities).await;
+        env::set_var("REVEAAL_ADDRESS", "");
+        ConcreteEcdarApi::new(Box::new(db_context)).await
+    }
 }
 
 #[tonic::async_trait]
@@ -75,13 +85,6 @@ impl EcdarApi for ConcreteEcdarApi {
     }
 
     async fn delete_model(&self, _request: Request<()>) -> Result<Response<()>, Status> {
-        todo!()
-    }
-
-    async fn create_user(
-        &self,
-        _request: Request<CreateUserRequest>,
-    ) -> Result<Response<CreateUserResponse>, Status> {
         todo!()
     }
 
@@ -123,7 +126,7 @@ impl EcdarApi for ConcreteEcdarApi {
         };
 
         // Record to be inserted in database
-        let user = user::Model {
+        let user = User {
             id: uid.parse().unwrap(),
             username: new_username.clone(),
             password: new_password.clone(),
@@ -137,6 +140,10 @@ impl EcdarApi for ConcreteEcdarApi {
         }
     }
 
+    /// Deletes a user from the database.
+    /// # Errors
+    /// Returns an error if the database context fails to delete the user or
+    /// if the uid could not be parsed from the request metadata.
     async fn delete_user(
         &self,
         request: Request<DeleteUserRequest>,
@@ -152,6 +159,7 @@ impl EcdarApi for ConcreteEcdarApi {
             }
         };
 
+        // Delete user from database
         match self.user_context.delete(uid.parse().unwrap()).await {
             Ok(_) => Ok(Response::new(())),
             Err(error) => Err(Status::new(Code::Internal, error.to_string())),
@@ -183,6 +191,37 @@ impl EcdarApiAuth for ConcreteEcdarApi {
         match token {
             Ok(token) => Ok(Response::new(GetAuthTokenResponse { token })),
             Err(e) => Err(Status::new(Code::Internal, e.to_string())),
+        }
+    }
+
+    async fn create_user(
+        &self,
+        request: Request<CreateUserRequest>,
+    ) -> Result<Response<()>, Status> {
+        let message = request.into_inner().clone();
+        let mut user = User {
+            id: Default::default(),
+            username: message.clone().username,
+            password: message.clone().password,
+            email: message.clone().email,
+        };
+
+        match self.user_context.create(user.clone()).await {
+            Ok(_) => Ok(Response::new(())),
+            Err(e) => match e.sql_err() {
+                Some(SqlErr::UniqueConstraintViolation(e)) => {
+                    let mut error_msg = "";
+                    if e.contains("email") {
+                        error_msg = "A user with that email already exists";
+                    } else if e.contains("username") {
+                        error_msg = "A user with that username already exists";
+                    } else {
+                        error_msg = "User already exists";
+                    }
+                    Err(Status::new(Code::AlreadyExists, error_msg))
+                }
+                _ => Err(Status::new(Code::Internal, "Could not create user")),
+            },
         }
     }
 }
@@ -230,3 +269,7 @@ impl EcdarBackend for ConcreteEcdarApi {
         client.take_simulation_step(request).await
     }
 }
+
+#[cfg(test)]
+#[path = "../tests/api/ecdar_api.rs"]
+mod tests;
