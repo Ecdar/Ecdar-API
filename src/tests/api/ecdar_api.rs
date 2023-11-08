@@ -211,7 +211,6 @@ mod ecdar_api {
 
         let update_user_response = api.update_user(update_user_request).await;
 
-        dbg!(&update_user_response);
         assert!(update_user_response.is_ok())
     }
 
@@ -232,7 +231,6 @@ mod ecdar_api {
 
         let update_user_response = api.update_user(update_user_request).await;
 
-        dbg!(&update_user_response);
         assert!(update_user_response.is_err())
     }
 
@@ -262,7 +260,6 @@ mod ecdar_api {
 
         let update_user_response = api.update_user(update_user_request).await;
 
-        dbg!(&update_user_response);
         assert!(update_user_response.is_ok())
     }
 }
