@@ -1,8 +1,5 @@
 #[cfg(test)]
 mod ecdar_api {
-    use std::env;
-    use std::str::FromStr;
-    use tonic::{metadata, Request};
     use crate::api::ecdar_api::helpers::helpers::AnyEntity;
     use crate::api::ecdar_api::ConcreteEcdarApi;
     use crate::api::server::server::ecdar_api_auth_server::EcdarApiAuth;
@@ -12,6 +9,8 @@ mod ecdar_api {
         api::server::server::ecdar_api_server::EcdarApi, entities::user::Entity as UserEntity,
         entities::user::Model as User,
     };
+    use std::str::FromStr;
+    use tonic::{metadata, Request};
 
     #[tokio::test]
     async fn delete_user_nonexistent_user_returns_error() -> () {
