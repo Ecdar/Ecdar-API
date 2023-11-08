@@ -56,7 +56,7 @@ mod ecdar_api {
     }
 
     #[tokio::test]
-    async fn create_user_returns_token() -> () {
+    async fn create_user_nonexistent_user_returns_ok() -> () {
         let api = ConcreteEcdarApi::setup_in_memory_db(vec![AnyEntity::User]).await;
 
         let create_user_request = Request::new(CreateUserRequest {
