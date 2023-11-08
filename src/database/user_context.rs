@@ -1,10 +1,13 @@
+use std::fmt::Debug;
+
+use sea_orm::prelude::async_trait::async_trait;
+use sea_orm::ActiveValue::{Set, Unchanged};
+use sea_orm::{ActiveModelTrait, ColumnTrait, DbErr, EntityTrait, QueryFilter, RuntimeErr};
+
 use crate::database::database_context::DatabaseContextTrait;
 use crate::database::entity_context::EntityContextTrait;
 use crate::entities::prelude::User as UserEntity;
 use crate::entities::user::{ActiveModel, Model as User};
-use sea_orm::prelude::async_trait::async_trait;
-use sea_orm::ActiveValue::{Set, Unchanged};
-use sea_orm::{ActiveModelTrait, ColumnTrait, DbErr, EntityTrait, QueryFilter, RuntimeErr};
 
 #[derive(Debug)]
 pub struct UserContext {
@@ -21,6 +24,12 @@ pub trait UserContextTrait: EntityContextTrait<User> {
     /// assert_eq!(model.id,1);
     /// ```
     async fn get_by_username(&self, username: String) -> Result<Option<User>, DbErr>;
+}
+
+impl Debug for dyn UserContextTrait + Send + Sync + 'static {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("ModelContextTrait").finish()
+    }
 }
 
 #[async_trait]

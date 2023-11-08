@@ -1,9 +1,12 @@
+use std::fmt::Debug;
+
+use async_trait::async_trait;
+use sea_orm::{ActiveModelTrait, DbErr, EntityTrait, RuntimeErr, Set, Unchanged};
+
 use crate::database::database_context::DatabaseContextTrait;
 use crate::entities::model::{ActiveModel, Model};
 use crate::entities::prelude::Model as ModelEntity;
 use crate::EntityContextTrait;
-use async_trait::async_trait;
-use sea_orm::{ActiveModelTrait, DbErr, EntityTrait, RuntimeErr, Set, Unchanged};
 
 #[derive(Debug)]
 pub struct ModelContext {
@@ -11,6 +14,12 @@ pub struct ModelContext {
 }
 
 pub trait ModelContextTrait: EntityContextTrait<Model> {}
+
+impl Debug for dyn ModelContextTrait + Send + Sync + 'static {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("ModelContextTrait").finish()
+    }
+}
 
 impl ModelContextTrait for ModelContext {}
 
@@ -92,8 +101,8 @@ impl EntityContextTrait<Model> for ModelContext {
                     components_info: Set(entity.components_info),
                     owner_id: Unchanged(model.id),
                 }
-                .update(&self.db_context.get_connection())
-                .await
+                    .update(&self.db_context.get_connection())
+                    .await
             }
         };
         updated_model

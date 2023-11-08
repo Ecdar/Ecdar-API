@@ -1,3 +1,5 @@
+use std::fmt::Debug;
+
 use sea_orm::prelude::async_trait::async_trait;
 use sea_orm::ActiveValue::{Set, Unchanged};
 use sea_orm::{ActiveModelTrait, DbErr, EntityTrait};
@@ -15,6 +17,12 @@ pub struct SessionContext {
 pub trait SessionContextTrait: EntityContextTrait<Session> {}
 
 impl SessionContextTrait for SessionContext {}
+
+impl Debug for dyn SessionContextTrait + Send + Sync + 'static {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("ModelContextTrait").finish()
+    }
+}
 
 #[async_trait]
 impl EntityContextTrait<Session> for SessionContext {
