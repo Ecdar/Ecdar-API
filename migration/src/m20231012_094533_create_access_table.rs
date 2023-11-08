@@ -29,7 +29,12 @@ impl MigrationTrait for Migration {
                     )
                     .col(ColumnDef::new(Access::ModelId).integer().not_null())
                     .col(ColumnDef::new(Access::UserId).integer().not_null())
-                    .index(Index::create().col(Access::ModelId).col(Access::UserId).unique())
+                    .index(
+                        Index::create()
+                            .col(Access::ModelId)
+                            .col(Access::UserId)
+                            .unique(),
+                    )
                     .foreign_key(
                         ForeignKey::create()
                             .from(Access::Table, Access::ModelId)

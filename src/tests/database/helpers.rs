@@ -2,18 +2,54 @@
 use crate::database::database_context::DatabaseContext;
 use crate::entities::sea_orm_active_enums::Role;
 use crate::entities::{access, in_use, model, query, session, user};
-use sea_orm::{ConnectionTrait, Database, DatabaseBackend, DatabaseConnection, Schema};
+use dotenv::dotenv;
+use migration::{Migrator, MigratorTrait};
+use sea_orm::{ConnectionTrait, Database, DatabaseBackend, DatabaseConnection, Schema, Statement};
+use std::env;
 use uuid::Uuid;
 
-pub async fn setup_db_with_entities(entities: Vec<AnyEntity>) -> Box<DatabaseContext> {
-    let connection = Database::connect("sqlite::memory:").await.unwrap();
-    let schema = Schema::new(DatabaseBackend::Sqlite);
-    for entity in entities.iter() {
-        entity.create_table_from(&connection, &schema).await;
+fn get_database_backend() -> DatabaseBackend {
+    dotenv().ok();
+
+    let url = env::var("TEST_DATABASE_URL").expect("TEST_DATABASE_URL must be set to run tests.");
+    if url.starts_with("sqlite") {
+        DatabaseBackend::Sqlite
+    } else if url.starts_with("postgresql") {
+        DatabaseBackend::Postgres
+    } else {
+        panic!("Unsupported database connection string.")
     }
-    Box::new(DatabaseContext {
-        db_connection: connection,
-    })
+}
+
+pub async fn setup_db_with_entities(entities: Vec<AnyEntity>) -> Box<DatabaseContext> {
+    let database_backend = get_database_backend();
+
+    let schema = Schema::new(database_backend);
+
+    match database_backend {
+        DatabaseBackend::Postgres => {
+            let conn_string = env::var("TEST_DATABASE_URL").unwrap();
+
+            let db_connection = Database::connect(conn_string).await.unwrap();
+
+            Migrator::fresh(&db_connection).await.unwrap();
+
+            Box::new(DatabaseContext { db_connection })
+        }
+        DatabaseBackend::Sqlite => {
+            let connection = Database::connect(env::var("TEST_DATABASE_URL").unwrap())
+                .await
+                .unwrap();
+
+            for entity in entities.iter() {
+                entity.create_table_from(&connection, &schema).await;
+            }
+            Box::new(DatabaseContext {
+                db_connection: connection,
+            })
+        }
+        _ => panic!("Database backend not supported"),
+    }
 }
 
 pub enum AnyEntity {

@@ -1,5 +1,8 @@
 #[cfg(test)]
 mod database_tests {
+    use crate::database::database_context::DatabaseContext;
+    use crate::database::model_context::ModelContext;
+    use crate::database::user_context::UserContext;
     use crate::tests::database::helpers::{
         create_accesses, create_models, create_users, setup_db_with_entities, AnyEntity,
     };
@@ -51,31 +54,55 @@ mod database_tests {
 
     #[tokio::test]
     async fn create_check_unique_pair_model_id_user_id_test() {
-        todo!()
-        // SHOULD WORK BUT SQLITE DOES NOT ENFORCE PAIR-WISE UNIQUE CONSTRAINT
-        //     let db_context =
-        //         setup_db_with_entities(vec![AnyEntity::User, AnyEntity::Model, AnyEntity::Access])
-        //             .await;
-        //     let user_context = UserContext::new(db_context.clone());
-        //     let model_context = ModelContext::new(db_context.clone());
-        //     let access_context = AccessContext::new(db_context.clone());
-        //
-        //     let new_user = create_users(1)[0].to_owned();
-        //     let new_model = create_models(1, new_user.id)[0].clone();
-        //
-        //     let new_accesses = create_accesses(3, new_user.id, new_model.id);
-        //
-        //     user_context.create(new_user).await.unwrap();
-        //     model_context.create(new_model).await.unwrap();
-        //     let _ = access_context.create(new_accesses[0].clone()).await.unwrap();
-        //     let res = access_context.create(new_accesses[1].clone()).await.expect_err("This should not be Ok()");
+        // Setting up a sqlite database in memory to test on
+        let db_context =
+            setup_db_with_entities(vec![AnyEntity::User, AnyEntity::Model, AnyEntity::Access])
+                .await;
+        let user_context = UserContext::new(db_context.clone());
+        let model_context = ModelContext::new(db_context.clone());
+        let access_context = AccessContext::new(db_context.clone());
+
+        let new_user = create_users(1)[0].to_owned();
+        let new_model = create_models(1, new_user.id)[0].clone();
+
+        // Creates a model of the access which will be created
+        let new_accesses = create_accesses(3, new_user.id, new_model.id);
+
+        // Creates the access in the database using the 'create' function
+        user_context.create(new_user).await.unwrap();
+        model_context.create(new_model).await.unwrap();
+        let _ = access_context
+            .create(new_accesses[0].clone())
+            .await
+            .unwrap(); // should work
+        let res = access_context
+            .create(new_accesses[1].clone())
+            .await
+            .expect_err("This should not be Ok()");
     }
 
     #[tokio::test]
     async fn create_auto_increment_test() {
-        let (access_context, access, _, _) = seed_db().await;
+        let (access_context, access, user, _) = seed_db().await;
+
+        let model = create_models(1, user.id)[0].clone();
+        let model = model::Model {
+            id: model.id + 1,
+            ..model
+        };
+
+        let created_model = model::Entity::insert(model.into_active_model())
+            .exec(&access_context.db_context.get_connection())
+            .await
+            .unwrap();
 
         let created_access1 = access_context.create(access.clone()).await.unwrap();
+
+        let access = access::Model {
+            model_id: created_model.last_insert_id,
+            ..access
+        };
+
         let created_access2 = access_context.create(access.clone()).await.unwrap();
 
         let fetched_access1 = access::Entity::find_by_id(created_access1.id)
@@ -123,14 +150,28 @@ mod database_tests {
     async fn get_all_test() {
         let (access_context, _, user, model) = seed_db().await;
 
-        let new_accesses = create_accesses(3, user.id, model.id);
+        let model = create_models(1, user.id)[0].clone();
+
+        let new_model = model::Entity::insert(
+            model::Model {
+                id: model.id + 1,
+                ..model
+            }
+            .into_active_model(),
+        )
+        .exec(&access_context.db_context.get_connection())
+        .await
+        .unwrap();
+
+        let mut new_accesses = create_accesses(2, user.id, model.id);
+        new_accesses[1].model_id = new_model.last_insert_id;
 
         access::Entity::insert_many(to_active_models!(new_accesses.clone()))
             .exec(&access_context.db_context.get_connection())
             .await
             .unwrap();
 
-        assert_eq!(access_context.get_all().await.unwrap().len(), 3);
+        assert_eq!(access_context.get_all().await.unwrap().len(), 2);
 
         let mut sorted: Vec<access::Model> = new_accesses.clone();
         sorted.sort_by_key(|k| k.id);
