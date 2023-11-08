@@ -2,8 +2,8 @@ use self::helpers::helpers::{setup_db_with_entities, AnyEntity};
 use super::{
     auth,
     server::server::{
-        ecdar_backend_server::EcdarBackend, CreateUserRequest, CreateUserResponse,
-        DeleteUserRequest, GetAuthTokenRequest, GetAuthTokenResponse, QueryRequest, QueryResponse,
+        ecdar_backend_server::EcdarBackend, CreateUserRequest, DeleteUserRequest,
+        GetAuthTokenRequest, GetAuthTokenResponse, QueryRequest, QueryResponse,
         SimulationStartRequest, SimulationStepRequest, SimulationStepResponse, UpdateUserRequest,
         UserTokenResponse,
     },
@@ -25,6 +25,7 @@ use crate::entities::{
     session::{Entity as SessionEntity, Model as Session},
     user::{Entity as UserEntity, Model as User},
 };
+use sea_orm::SqlErr;
 use std::env;
 use tonic::{Code, Request, Response, Status};
 
@@ -58,9 +59,8 @@ impl ConcreteEcdarApi {
         }
     }
 
-    pub async fn setup_in_memory_db() -> Self {
-        let db_context = setup_db_with_entities(vec![AnyEntity::User, AnyEntity::Model]).await;
-
+    pub async fn setup_in_memory_db(entities: Vec<AnyEntity>) -> Self {
+        let db_context = setup_db_with_entities(entities).await;
         env::set_var("REVEAAL_ADDRESS", "");
         ConcreteEcdarApi::new(Box::new(db_context)).await
     }
@@ -152,7 +152,7 @@ impl EcdarApiAuth for ConcreteEcdarApi {
     async fn create_user(
         &self,
         request: Request<CreateUserRequest>,
-    ) -> Result<Response<CreateUserResponse>, Status> {
+    ) -> Result<Response<()>, Status> {
         let message = request.into_inner().clone();
         let mut user = User {
             id: Default::default(),
@@ -160,13 +160,24 @@ impl EcdarApiAuth for ConcreteEcdarApi {
             password: message.clone().password,
             email: message.clone().email,
         };
-        user = self
-            .user_context
-            .create(user.clone())
-            .await
-            .expect("Failed to create user");
-        let token = auth::create_jwt(&user.id.to_string()).expect("Failed to create token");
-        Ok(Response::new(CreateUserResponse { token }))
+
+        match self.user_context.create(user.clone()).await {
+            Ok(_) => Ok(Response::new(())),
+            Err(e) => match e.sql_err() {
+                Some(SqlErr::UniqueConstraintViolation(e)) => {
+                    let mut error_msg = "";
+                    if e.contains("email") {
+                        error_msg = "A user with that email already exists";
+                    } else if e.contains("username") {
+                        error_msg = "A user with that username already exists";
+                    } else {
+                        error_msg = "User already exists";
+                    }
+                    Err(Status::new(Code::AlreadyExists, error_msg))
+                }
+                _ => Err(Status::new(Code::Internal, "Could not create user")),
+            },
+        }
     }
 }
 
