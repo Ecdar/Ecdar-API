@@ -2,15 +2,12 @@
 use crate::database::database_context::DatabaseContext;
 use crate::entities::sea_orm_active_enums::Role;
 use crate::entities::{access, in_use, model, query, session, user};
-use dotenv::dotenv;
 use migration::{Migrator, MigratorTrait};
-use sea_orm::{ConnectionTrait, Database, DatabaseBackend, DatabaseConnection, Schema, Statement};
+use sea_orm::{ConnectionTrait, Database, DatabaseBackend, DatabaseConnection, Schema};
 use std::env;
 use uuid::Uuid;
 
-fn get_database_backend() -> DatabaseBackend {
-    dotenv().ok();
-
+pub fn get_database_backend() -> DatabaseBackend {
     let url = env::var("TEST_DATABASE_URL").expect("TEST_DATABASE_URL must be set to run tests.");
     if url.starts_with("sqlite") {
         DatabaseBackend::Sqlite
