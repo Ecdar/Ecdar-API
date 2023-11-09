@@ -1,6 +1,5 @@
 #[cfg(test)]
 mod database_tests {
-    use crate::database::database_context::DatabaseContext;
     use crate::database::model_context::ModelContext;
     use crate::database::user_context::UserContext;
     use crate::tests::database::helpers::{
@@ -54,7 +53,6 @@ mod database_tests {
 
     #[tokio::test]
     async fn create_check_unique_pair_model_id_user_id_test() {
-        // Setting up a sqlite database in memory to test on
         let db_context =
             setup_db_with_entities(vec![AnyEntity::User, AnyEntity::Model, AnyEntity::Access])
                 .await;
@@ -65,10 +63,8 @@ mod database_tests {
         let new_user = create_users(1)[0].to_owned();
         let new_model = create_models(1, new_user.id)[0].clone();
 
-        // Creates a model of the access which will be created
         let new_accesses = create_accesses(3, new_user.id, new_model.id);
 
-        // Creates the access in the database using the 'create' function
         user_context.create(new_user).await.unwrap();
         model_context.create(new_model).await.unwrap();
         let _ = access_context
