@@ -2,6 +2,7 @@ use std::env;
 use std::sync::Arc;
 
 use crate::api::ecdar_api::helpers::helpers::{setup_db_with_entities, AnyEntity};
+use crate::api::server::server::get_auth_token_request::{AuthOption, user_credentials};
 use regex::Regex;
 use sea_orm::SqlErr;
 use tonic::{Code, Request, Response, Status};
@@ -212,57 +213,54 @@ impl EcdarApiAuth for ConcreteEcdarApi {
     ) -> Result<Response<GetAuthTokenResponse>, Status> {
 
         let message = request.get_ref().clone();
-        let uid: String;
         let mut username = "".to_string();
         let mut email = "".to_string();
-        let mut password = "".to_string();
-        // match message.auth_option {
-        //     Some(auth_option) => match auth_option {
-        //         AuthOption::RefreshToken(refresh_token) => {
-        //             let refresh_token = refresh_token;
-        //             println!("Refresh token: {}", refresh_token);
-        //         }
-        //         AuthOption::UserCredentials(user_credentials) => {
-        //             match user_credentials.user {
-        //                 Some(user) => match user {
-        //                     user_credentials::User::Username(_username) => {
-        //                         username = _username;
-        //                     }
-        //                     user_credentials::User::Email(_email) => {
-        //                         email = _email;
-        //                     }
-        //                 },
-        //                 None => Err(Status::new(Code::Internal, "No user provided"))?,
-        //             } 
-        //             password = user_credentials.password;
-        //         }
-        //     },
-        //     None => Err(Status::new(Code::Internal, "No auth option provided"))?,
-        // }
-        // println!("Username: {}", username);
-        // println!("Email: {}", email);
-        // println!("Password: {}", password);
+        let uid = match message.auth_option {
+            Some(auth_option) => match auth_option {
+                AuthOption::RefreshToken(refresh_token) => {
+                    let refresh_token = refresh_token;
+                    println!("Refresh token: {}", refresh_token);
+                    let uid = get_uid_from_request(&request).unwrap().to_string();
+                    uid
+                }
+                AuthOption::UserCredentials(user_credentials) => {
+                    if let Some(user) = user_credentials.user {
+                        match user {
+                            user_credentials::User::Username(username) => {
+                                match self.user_context.get_by_username(username).await {
+                                    Ok(Some(user)) => user.id.to_string(),
+                                    Ok(None) => Err(Status::new(Code::Internal, "No user found"))?,
+                                    Err(err) => Err(Status::new(Code::Internal, err.to_string()))?,
+                                }
+                            }
+                            user_credentials::User::Email(email) => {
+                                match self.user_context.get_by_email(email).await {
+                                    Ok(Some(user)) => user.id.to_string(),
+                                    Ok(None) => Err(Status::new(Code::Internal, "No user found"))?,
+                                    Err(err) => Err(Status::new(Code::Internal, err.to_string()))?,
+                                }
+                            }
+                        }
+                   } else {
+                    Err(Status::new(Code::Internal, "No user provided"))?
+                   }
+                }
+            },
+            None => Err(Status::new(Code::Internal, "No auth option provided"))?,
+        };
 
-        // uid = match self.user_context.get_user_by_credentials(email, username, password).await {
-        //     Ok(user) => match user {
-        //         Some(user) => user.id.to_string(),
-        //         None => Err(Status::new(Code::Internal, "No user found"))?,
-        //     },
-        //     Err(error) => Err(Status::new(Code::Internal, error.to_string()))?,
-        // };
-
-        // let access_token = match auth::create_access_token(&uid) {
-        //     Ok(token) => token,
-        //     Err(e) => return Err(Status::new(Code::Internal, e.to_string())),
-        // };
-        // let refresh_token = match auth::create_refresh_token(&uid) {
-        //     Ok(token) => token,
-        //     Err(e) => return Err(Status::new(Code::Internal, e.to_string())),
-        // };
-        // Ok(Response::new(GetAuthTokenResponse {
-        //     access_token,
-        //     refresh_token,
-        // }))
+        let access_token = match auth::create_access_token(&uid) {
+            Ok(token) => token,
+            Err(e) => return Err(Status::new(Code::Internal, e.to_string())),
+        };
+            let refresh_token = match auth::create_refresh_token(&uid) {
+                Ok(token) => token,
+                Err(e) => return Err(Status::new(Code::Internal, e.to_string())),
+            };
+            Ok(Response::new(GetAuthTokenResponse {
+                access_token,
+                refresh_token,
+            }))
     }
     async fn create_user(
         &self,
