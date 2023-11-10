@@ -80,7 +80,10 @@ mod database_tests {
             .await
             .unwrap();
 
-        assert_eq!(fetched_session.unwrap().access_token, created_session.access_token);
+        assert_eq!(
+            fetched_session.unwrap().access_token,
+            created_session.access_token
+        );
     }
 
     #[tokio::test]
