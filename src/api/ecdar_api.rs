@@ -220,7 +220,9 @@ impl EcdarApiAuth for ConcreteEcdarApi {
         let uid = match message.auth_option {
             Some(auth_option) => match auth_option {
                 AuthOption::RefreshToken(refresh_token) => {
-                    get_uid_from_request(&request).unwrap().to_string()
+                    auth::validate_token(&refresh_token.as_str(), true)?
+                        .claims
+                        .sub
                 }
                 AuthOption::UserCredentials(user_credentials) => {
                     if let Some(user) = user_credentials.user {
@@ -261,6 +263,7 @@ impl EcdarApiAuth for ConcreteEcdarApi {
             refresh_token,
         }))
     }
+
     async fn create_user(
         &self,
         request: Request<CreateUserRequest>,
