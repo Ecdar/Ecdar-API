@@ -213,15 +213,10 @@ impl EcdarApiAuth for ConcreteEcdarApi {
     ) -> Result<Response<GetAuthTokenResponse>, Status> {
 
         let message = request.get_ref().clone();
-        let mut username = "".to_string();
-        let mut email = "".to_string();
         let uid = match message.auth_option {
             Some(auth_option) => match auth_option {
                 AuthOption::RefreshToken(refresh_token) => {
-                    let refresh_token = refresh_token;
-                    println!("Refresh token: {}", refresh_token);
-                    let uid = get_uid_from_request(&request).unwrap().to_string();
-                    uid
+                    get_uid_from_request(&request).unwrap().to_string()
                 }
                 AuthOption::UserCredentials(user_credentials) => {
                     if let Some(user) = user_credentials.user {
@@ -253,14 +248,14 @@ impl EcdarApiAuth for ConcreteEcdarApi {
             Ok(token) => token,
             Err(e) => return Err(Status::new(Code::Internal, e.to_string())),
         };
-            let refresh_token = match auth::create_refresh_token(&uid) {
-                Ok(token) => token,
-                Err(e) => return Err(Status::new(Code::Internal, e.to_string())),
-            };
-            Ok(Response::new(GetAuthTokenResponse {
-                access_token,
-                refresh_token,
-            }))
+        let refresh_token = match auth::create_refresh_token(&uid) {
+            Ok(token) => token,
+            Err(e) => return Err(Status::new(Code::Internal, e.to_string())),
+        };
+        Ok(Response::new(GetAuthTokenResponse {
+            access_token,
+            refresh_token,
+        }))
     }
     async fn create_user(
         &self,
