@@ -1,136 +1,207 @@
 use std::env;
+use std::sync::Arc;
 
+use crate::api::ecdar_api::helpers::helpers::{setup_db_with_entities, AnyEntity};
+use regex::Regex;
+use sea_orm::SqlErr;
 use tonic::{Code, Request, Response, Status};
 
-use crate::{api::server::server::ecdar_api_auth_server::EcdarApiAuth, database::user_context::UserContextTrait};
-use crate::api::server::server::ecdar_api_server::EcdarApi;
-use crate::api::server::server::ecdar_backend_client::EcdarBackendClient;
-use crate::database::access_context::AccessContext;
-use crate::database::database_context::DatabaseContext;
-use crate::database::entity_context::EntityContextTrait;
-use crate::database::in_use_context::InUseContext;
-use crate::database::model_context::ModelContext;
-use crate::database::query_context::QueryContext;
-use crate::database::session_context::SessionContext;
-use crate::database::user_context::UserContext;
+use crate::api::server::server::{
+    ecdar_api_auth_server::EcdarApiAuth, ecdar_api_server::EcdarApi,
+    ecdar_backend_client::EcdarBackendClient,
+};
+use crate::database::access_context::AccessContextTrait;
+use crate::database::database_context::DatabaseContextTrait;
+use crate::database::in_use_context::InUseContextTrait;
+use crate::database::model_context::ModelContextTrait;
+use crate::database::query_context::QueryContextTrait;
+use crate::database::session_context::SessionContextTrait;
+use crate::database::user_context::UserContextTrait;
+use crate::database::{
+    access_context::AccessContext, entity_context::EntityContextTrait,
+    in_use_context::InUseContext, model_context::ModelContext, query_context::QueryContext,
+    session_context::SessionContext, user_context::UserContext,
+};
+use crate::entities::user::Model as User;
 
 use super::{
     auth,
     server::server::{
-        ecdar_backend_server::EcdarBackend, GetAuthTokenRequest, GetAuthTokenResponse,
-        QueryRequest, QueryResponse, SimulationStartRequest, SimulationStepRequest,
-        SimulationStepResponse, UserTokenResponse, DeleteUserRequest, CreateUserRequest, UpdateUserRequest, get_auth_token_request::{AuthOption, user_credentials}
+        ecdar_backend_server::EcdarBackend, CreateUserRequest, DeleteUserRequest,
+        GetAuthTokenRequest, GetAuthTokenResponse, QueryRequest, QueryResponse,
+        SimulationStartRequest, SimulationStepRequest, SimulationStepResponse, UpdateUserRequest,
+        UserTokenResponse,
     },
 };
 
-#[derive(Debug)]
+#[path = "../tests/database/helpers.rs"]
+pub mod helpers;
+
+#[derive(Debug, Clone)]
 pub struct ConcreteEcdarApi {
     reveaal_address: String,
-    db_context: Box<DatabaseContext>,
-    model_context: Box<ModelContext>,
-    user_context: Box<UserContext>,
-    access_context: Box<AccessContext>,
-    query_context: Box<QueryContext>,
-    session_context: Box<SessionContext>,
-    in_use_context: Box<InUseContext>,
+    model_context: Arc<dyn ModelContextTrait + Send + Sync>,
+    user_context: Arc<dyn UserContextTrait + Send + Sync>,
+    access_context: Arc<dyn AccessContextTrait + Send + Sync>,
+    query_context: Arc<dyn QueryContextTrait + Send + Sync>,
+    session_context: Arc<dyn SessionContextTrait + Send + Sync>,
+    in_use_context: Arc<dyn InUseContextTrait + Send + Sync>,
+}
+
+fn get_uid_from_request<T>(request: &Request<T>) -> Result<i32, Status> {
+    let uid = match request.metadata().get("uid").unwrap().to_str() {
+        Ok(uid) => uid,
+        Err(_) => return Err(Status::new(Code::Internal, "Could not get uid from request metadata")),
+    };
+
+    Ok(uid.parse().unwrap())
 }
 
 impl ConcreteEcdarApi {
-    pub async fn new(db_context: Box<DatabaseContext>) -> Self {
+    pub async fn new(
+        model_context: Arc<dyn ModelContextTrait + Send + Sync>,
+        user_context: Arc<dyn UserContextTrait + Send + Sync>,
+        access_context: Arc<dyn AccessContextTrait + Send + Sync>,
+        query_context: Arc<dyn QueryContextTrait + Send + Sync>,
+        session_context: Arc<dyn SessionContextTrait + Send + Sync>,
+        in_use_context: Arc<dyn InUseContextTrait + Send + Sync>,
+    ) -> Self
+    where
+        Self: Sized,
+    {
         ConcreteEcdarApi {
             reveaal_address: env::var("REVEAAL_ADDRESS")
                 .expect("Expected REVEAAL_ADDRESS to be set."),
-            db_context: db_context.clone(),
-            model_context: Box::new(ModelContext::new(db_context.clone())),
-            user_context: Box::new(UserContext::new(db_context.clone())),
-            access_context: Box::new(AccessContext::new(db_context.clone())),
-            query_context: Box::new(QueryContext::new(db_context.clone())),
-            session_context: Box::new(SessionContext::new(db_context.clone())),
-            in_use_context: Box::new(InUseContext::new(db_context.clone())),
+            model_context,
+            user_context,
+            access_context,
+            query_context,
+            session_context,
+            in_use_context,
         }
+    }
+    pub async fn setup_in_memory_db(entities: Vec<AnyEntity>) -> Self {
+        let db_context = Box::new(setup_db_with_entities(entities).await);
+        env::set_var("REVEAAL_ADDRESS", "");
+        ConcreteEcdarApi::new(
+            Arc::new(ModelContext::new(db_context.clone())),
+            Arc::new(UserContext::new(db_context.clone())),
+            Arc::new(AccessContext::new(db_context.clone())),
+            Arc::new(QueryContext::new(db_context.clone())),
+            Arc::new(SessionContext::new(db_context.clone())),
+            Arc::new(InUseContext::new(db_context.clone())),
+        )
+        .await
     }
 }
 
 #[tonic::async_trait]
 impl EcdarApi for ConcreteEcdarApi {
-    async fn list_models_info(
-        &self,
-        _request: Request<()>,
-    ) -> Result<Response<()>, Status> {
+    async fn list_models_info(&self, _request: Request<()>) -> Result<Response<()>, Status> {
         todo!()
     }
 
-    async fn get_model(
-        &self,
-        _request: Request<()>,
-    ) -> Result<Response<()>, Status> {
+    async fn get_model(&self, _request: Request<()>) -> Result<Response<()>, Status> {
         todo!()
     }
 
-    async fn create_model(
-        &self,
-        _request: Request<()>,
-    ) -> Result<Response<()>, Status> {
+    async fn create_model(&self, _request: Request<()>) -> Result<Response<()>, Status> {
         todo!()
     }
 
-    async fn update_model(
-        &self,
-        _request: Request<()>,
-    ) -> Result<Response<()>, Status> {
+    async fn update_model(&self, _request: Request<()>) -> Result<Response<()>, Status> {
         todo!()
     }
 
-    async fn delete_model(
-        &self,
-        _request: Request<()>,
-    ) -> Result<Response<()>, Status> {
+    async fn delete_model(&self, _request: Request<()>) -> Result<Response<()>, Status> {
         todo!()
     }
 
+    /// Updates a user record in the database.
+    /// # Errors
+    /// Returns an error if the database context fails to update the user or
+    /// if the uid could not be parsed from the request metadata.
     async fn update_user(
         &self,
-        _request: Request<UpdateUserRequest>,
+        request: Request<UpdateUserRequest>,
     ) -> Result<Response<()>, Status> {
-        todo!()
-    }
+        let message = request.get_ref().clone();
 
-    async fn delete_user(
-        &self,
-        request: Request<DeleteUserRequest>,
-    ) -> Result<Response<()>, Status> {
         // Get uid from request metadata
-        let uid = match request.metadata().get("uid").unwrap().to_str() {
-            Ok(uid) => uid,
-            Err(_) => return Err(Status::new(Code::Internal, "Could not get uid from request metadata")),
+        let uid = get_uid_from_request(&request)?;
+
+        // Get new values from request message. Empty string means the value will remain unchanged in the database.
+        let new_username = match message.username {
+            Some(username) => username,
+            None => "".to_string(),
         };
 
-        match self.user_context.delete(uid.parse().unwrap()).await {
+        let new_password = match message.password {
+            Some(password) => password,
+            None => "".to_string(),
+        };
+
+        let new_email = match message.email {
+            Some(email) => email,
+            None => "".to_string(),
+        };
+
+        // Record to be inserted in database
+        let user = User {
+            id: uid,
+            username: new_username.clone(),
+            password: new_password.clone(),
+            email: new_email.clone(),
+        };
+
+        // Update user in database
+        match self.user_context.update(user).await {
             Ok(_) => Ok(Response::new(())),
             Err(error) => Err(Status::new(Code::Internal, error.to_string())),
         }
     }
 
-    async fn create_access(
+    /// Deletes a user from the database.
+    /// # Errors
+    /// Returns an error if the database context fails to delete the user or
+    /// if the uid could not be parsed from the request metadata.
+    async fn delete_user(
         &self,
-        _request: Request<()>,
+        request: Request<DeleteUserRequest>,
     ) -> Result<Response<()>, Status> {
+        // Get uid from request metadata
+        let uid = get_uid_from_request(&request)?;
+
+        // Delete user from database
+        match self.user_context.delete(uid).await {
+            Ok(_) => Ok(Response::new(())),
+            Err(error) => Err(Status::new(Code::Internal, error.to_string())),
+        }
+    }
+
+    async fn create_access(&self, _request: Request<()>) -> Result<Response<()>, Status> {
         todo!()
     }
 
-    async fn update_access(
-        &self,
-        _request: Request<()>,
-    ) -> Result<Response<()>, Status> {
+    async fn update_access(&self, _request: Request<()>) -> Result<Response<()>, Status> {
         todo!()
     }
 
-    async fn delete_access(
-        &self,
-        _request: Request<()>,
-    ) -> Result<Response<()>, Status> {
+    async fn delete_access(&self, _request: Request<()>) -> Result<Response<()>, Status> {
         todo!()
     }
+}
+
+fn is_valid_email(email: &str) -> bool {
+    Regex::new(r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$")
+        .unwrap()
+        .is_match(email)
+}
+
+fn is_valid_username(username: &str) -> bool {
+    Regex::new(r"^[a-zA-Z0-9_]{3,32}$")
+        .unwrap()
+        .is_match(username)
 }
 
 #[tonic::async_trait]
@@ -145,59 +216,89 @@ impl EcdarApiAuth for ConcreteEcdarApi {
         let mut username = "".to_string();
         let mut email = "".to_string();
         let mut password = "".to_string();
-        match message.auth_option {
-            Some(auth_option) => match auth_option {
-                AuthOption::RefreshToken(refresh_token) => {
-                    let refresh_token = refresh_token;
-                    println!("Refresh token: {}", refresh_token);
-                }
-                AuthOption::UserCredentials(user_credentials) => {
-                    match user_credentials.user {
-                        Some(user) => match user {
-                            user_credentials::User::Username(_username) => {
-                                username = _username;
-                            }
-                            user_credentials::User::Email(_email) => {
-                                email = _email;
-                            }
-                        },
-                        None => Err(Status::new(Code::Internal, "No user provided"))?,
-                    } 
-                    password = user_credentials.password;
-                }
-            },
-            None => Err(Status::new(Code::Internal, "No auth option provided"))?,
-        }
-        println!("Username: {}", username);
-        println!("Email: {}", email);
-        println!("Password: {}", password);
+        // match message.auth_option {
+        //     Some(auth_option) => match auth_option {
+        //         AuthOption::RefreshToken(refresh_token) => {
+        //             let refresh_token = refresh_token;
+        //             println!("Refresh token: {}", refresh_token);
+        //         }
+        //         AuthOption::UserCredentials(user_credentials) => {
+        //             match user_credentials.user {
+        //                 Some(user) => match user {
+        //                     user_credentials::User::Username(_username) => {
+        //                         username = _username;
+        //                     }
+        //                     user_credentials::User::Email(_email) => {
+        //                         email = _email;
+        //                     }
+        //                 },
+        //                 None => Err(Status::new(Code::Internal, "No user provided"))?,
+        //             } 
+        //             password = user_credentials.password;
+        //         }
+        //     },
+        //     None => Err(Status::new(Code::Internal, "No auth option provided"))?,
+        // }
+        // println!("Username: {}", username);
+        // println!("Email: {}", email);
+        // println!("Password: {}", password);
 
-        uid = match self.user_context.get_user_by_credentials(email, username, password).await {
-            Ok(user) => match user {
-                Some(user) => user.id.to_string(),
-                None => Err(Status::new(Code::Internal, "No user found"))?,
-            },
-            Err(error) => Err(Status::new(Code::Internal, error.to_string()))?,
-        };
+        // uid = match self.user_context.get_user_by_credentials(email, username, password).await {
+        //     Ok(user) => match user {
+        //         Some(user) => user.id.to_string(),
+        //         None => Err(Status::new(Code::Internal, "No user found"))?,
+        //     },
+        //     Err(error) => Err(Status::new(Code::Internal, error.to_string()))?,
+        // };
 
-        let access_token = match auth::create_access_token(&uid) {
-            Ok(token) => token,
-            Err(e) => return Err(Status::new(Code::Internal, e.to_string())),
-        };
-        let refresh_token = match auth::create_refresh_token(&uid) {
-            Ok(token) => token,
-            Err(e) => return Err(Status::new(Code::Internal, e.to_string())),
-        };
-        Ok(Response::new(GetAuthTokenResponse {
-            access_token,
-            refresh_token,
-        }))
+        // let access_token = match auth::create_access_token(&uid) {
+        //     Ok(token) => token,
+        //     Err(e) => return Err(Status::new(Code::Internal, e.to_string())),
+        // };
+        // let refresh_token = match auth::create_refresh_token(&uid) {
+        //     Ok(token) => token,
+        //     Err(e) => return Err(Status::new(Code::Internal, e.to_string())),
+        // };
+        // Ok(Response::new(GetAuthTokenResponse {
+        //     access_token,
+        //     refresh_token,
+        // }))
     }
     async fn create_user(
         &self,
-        _request: Request<CreateUserRequest>,
+        request: Request<CreateUserRequest>,
     ) -> Result<Response<()>, Status> {
-        todo!()
+        let message = request.into_inner().clone();
+
+        if !is_valid_username(message.clone().username.as_str()) {
+            return Err(Status::new(Code::InvalidArgument, "Invalid username"));
+        }
+
+        if !is_valid_email(message.clone().email.as_str()) {
+            return Err(Status::new(Code::InvalidArgument, "Invalid email"));
+        }
+
+        let user = User {
+            id: Default::default(),
+            username: message.clone().username,
+            password: message.clone().password,
+            email: message.clone().email,
+        };
+
+        match self.user_context.create(user).await {
+            Ok(_) => Ok(Response::new(())),
+            Err(e) => match e.sql_err() {
+                Some(SqlErr::UniqueConstraintViolation(e)) => {
+                    let error_msg = match e.to_lowercase() {
+                        _ if e.contains("username") => "A user with that username already exists",
+                        _ if e.contains("email") => "A user with that email already exists",
+                        _ => "User already exists",
+                    };
+                    Err(Status::new(Code::AlreadyExists, error_msg))
+                }
+                _ => Err(Status::new(Code::Internal, "Could not create user")),
+            },
+        }
     }
 }
 
@@ -244,3 +345,7 @@ impl EcdarBackend for ConcreteEcdarApi {
         client.take_simulation_step(request).await
     }
 }
+
+#[cfg(test)]
+#[path = "../tests/api/ecdar_api.rs"]
+mod tests;

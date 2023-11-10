@@ -1,8 +1,8 @@
-use sea_orm::{Database, DatabaseConnection, DbErr};
-
-use sea_orm::prelude::async_trait::async_trait;
 use std::env;
 use std::fmt::Debug;
+
+use sea_orm::prelude::async_trait::async_trait;
+use sea_orm::{Database, DatabaseConnection, DbErr};
 
 #[derive(Clone, Debug)]
 pub struct DatabaseContext {

@@ -1,10 +1,13 @@
+use std::fmt::Debug;
+
+use sea_orm::prelude::async_trait::async_trait;
+use sea_orm::ActiveValue::{Set, Unchanged};
+use sea_orm::{ActiveModelTrait, DbErr, EntityTrait, RuntimeErr};
+
 use crate::database::database_context::DatabaseContextTrait;
 use crate::database::entity_context::EntityContextTrait;
 use crate::entities::prelude::Query as QueryEntity;
 use crate::entities::query::{ActiveModel, Model as Query};
-use sea_orm::prelude::async_trait::async_trait;
-use sea_orm::ActiveValue::{Set, Unchanged};
-use sea_orm::{ActiveModelTrait, DbErr, EntityTrait, RuntimeErr};
 
 #[derive(Debug)]
 pub struct QueryContext {
@@ -14,6 +17,12 @@ pub struct QueryContext {
 pub trait QueryContextTrait: EntityContextTrait<Query> {}
 
 impl QueryContextTrait for QueryContext {}
+
+impl Debug for dyn QueryContextTrait + Send + Sync + 'static {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("ModelContextTrait").finish()
+    }
+}
 
 #[async_trait]
 impl EntityContextTrait<Query> for QueryContext {

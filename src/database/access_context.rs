@@ -1,10 +1,13 @@
+use std::fmt::Debug;
+
+use sea_orm::prelude::async_trait::async_trait;
+use sea_orm::ActiveValue::{Set, Unchanged};
+use sea_orm::{ActiveModelTrait, DbErr, EntityTrait, RuntimeErr};
+
 use crate::database::database_context::DatabaseContextTrait;
 use crate::database::entity_context::EntityContextTrait;
 use crate::entities::access::{ActiveModel, Model as Access};
 use crate::entities::prelude::Access as AccessEntity;
-use sea_orm::prelude::async_trait::async_trait;
-use sea_orm::ActiveValue::{Set, Unchanged};
-use sea_orm::{ActiveModelTrait, DbErr, EntityTrait, RuntimeErr};
 
 #[derive(Debug)]
 pub struct AccessContext {
@@ -14,6 +17,12 @@ pub struct AccessContext {
 pub trait AccessContextTrait: EntityContextTrait<Access> {}
 
 impl AccessContextTrait for AccessContext {}
+
+impl Debug for dyn AccessContextTrait + Send + Sync + 'static {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("ModelContextTrait").finish()
+    }
+}
 
 #[async_trait]
 impl EntityContextTrait<Access> for AccessContext {
@@ -119,6 +128,7 @@ impl EntityContextTrait<Access> for AccessContext {
         }
     }
 }
+
 #[cfg(test)]
 #[path = "../tests/database/access_context.rs"]
 mod tests;

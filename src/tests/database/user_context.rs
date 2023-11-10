@@ -4,6 +4,7 @@ pub mod helpers;
 #[cfg(test)]
 mod database_tests {
     use crate::database::user_context::tests::helpers::helpers::*;
+    use crate::database::user_context::UserContextTrait;
     use crate::{
         database::{
             database_context::DatabaseContext, entity_context::EntityContextTrait,
@@ -34,6 +35,7 @@ mod database_tests {
         };
         UserContext::new(Box::new(db_context))
     }
+
     fn two_template_users() -> Vec<User> {
         vec![
             User {
@@ -50,6 +52,7 @@ mod database_tests {
             },
         ]
     }
+
     // Test the functionality of the 'create' function, which creates a user in the database
     #[tokio::test]
     async fn create_test() -> Result<(), DbErr> {
@@ -107,6 +110,37 @@ mod database_tests {
 
         Ok(())
     }
+
+    #[tokio::test]
+    async fn get_by_username() -> Result<(), DbErr> {
+        // Setting up a sqlite database in memory to test on
+        let db_connection = Database::connect("sqlite::memory:").await.unwrap();
+        setup_schema(&db_connection).await;
+        let db_context = Box::new(DatabaseContext { db_connection });
+        let user_context = UserContext::new(db_context);
+
+        // Creates a model of the user which will be created
+        let new_user = User {
+            id: 1,
+            email: "anders21@student.aau.dk".to_owned(),
+            username: "andemad".to_owned(),
+            password: "rask".to_owned(),
+        };
+
+        // Creates the user in the database using the 'create' function
+        let created_user = user_context.create(new_user).await?;
+
+        // Fetches the user created using the 'get_by_username' function
+        let fetched_user = user_context
+            .get_by_username(created_user.username.clone())
+            .await?;
+
+        // Assert if the fetched user is the same as the created user
+        assert_eq!(fetched_user.unwrap().username, created_user.username);
+
+        Ok(())
+    }
+
     #[tokio::test]
     async fn get_all_test() -> () {
         let user_context = test_setup().await;
@@ -153,6 +187,39 @@ mod database_tests {
         )
     }
 
+    #[tokio::test]
+    async fn update_single_field_test() -> () {
+        let user_context = test_setup().await;
+
+        let user = User {
+            id: 1,
+            email: "test@test".to_string(),
+            username: "test_user".to_string(),
+            password: "old_pass".to_string(),
+        };
+
+        user_context.create(user).await.unwrap();
+
+        let update_user = User {
+            id: 1,
+            email: "".to_string(),
+            username: "".to_string(),
+            password: "new_pass".to_string(),
+        };
+
+        let expected_user = User {
+            id: 1,
+            email: "test@test".to_string(),
+            username: "test_user".to_string(),
+            password: "new_pass".to_string(),
+        };
+
+        assert_eq!(
+            expected_user,
+            user_context.update(update_user.to_owned()).await.unwrap()
+        )
+    }
+
     ///test that where the unique email constraint is violated
     #[tokio::test]
     async fn update_fail() -> () {
@@ -177,6 +244,7 @@ mod database_tests {
             }
         }
     }
+
     #[tokio::test]
     async fn delete_test() -> () {
         let user_context = test_setup().await;
@@ -187,6 +255,7 @@ mod database_tests {
         }
         assert_eq!(users[0], user_context.delete(users[0].id).await.unwrap())
     }
+
     #[tokio::test]
     async fn delete_test_fail() -> () {
         let user_context = test_setup().await;
@@ -205,6 +274,7 @@ mod database_tests {
             }
         }
     }
+
     // TODO den skal slettes senere
     #[tokio::test]
     async fn create_test_test() -> () {

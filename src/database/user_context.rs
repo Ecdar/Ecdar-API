@@ -1,12 +1,15 @@
+use std::fmt::Debug;
+
+use sea_orm::prelude::async_trait::async_trait;
+use sea_orm::ActiveValue::{Set, Unchanged};
+use sea_orm::{ActiveModelTrait, ColumnTrait, DbErr, EntityTrait, QueryFilter, RuntimeErr};
+
 use crate::database::database_context::DatabaseContextTrait;
 use crate::database::entity_context::EntityContextTrait;
 use crate::entities::prelude::User as UserEntity;
 use crate::entities::user::{ActiveModel, Model as User};
 use crate::entities::user::Column as UserColumn;
-use sea_orm::prelude::async_trait::async_trait;
-use sea_orm::ActiveValue::{Set, Unchanged};
-use sea_orm::{ActiveModelTrait, DbErr, EntityTrait, RuntimeErr, QueryFilter};
-use sea_orm::ColumnTrait;
+
 
 #[derive(Debug)]
 pub struct UserContext {
@@ -15,35 +18,31 @@ pub struct UserContext {
 
 #[async_trait]
 pub trait UserContextTrait: EntityContextTrait<User> {
-    async fn get_user_by_credentials(
-        &self,
-        email: String,
-        username: String,
-        password: String,
-    ) -> Result<Option<User>, DbErr>;
+    /// Returns a single user entity (uses username)
+    /// # Example
+    /// ```
+    /// let context : UserContext = UserContext::new(...);
+    /// let model : Model = context.get_by_username("Anders".into()).unwrap();
+    /// assert_eq!(model.id,1);
+    /// ```
+    async fn get_by_username(&self, username: String) -> Result<Option<User>, DbErr>;
+}
+
+impl Debug for dyn UserContextTrait + Send + Sync + 'static {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("ModelContextTrait").finish()
+    }
 }
 
 #[async_trait]
 impl UserContextTrait for UserContext {
-    async fn get_user_by_credentials(
-        &self,
-        email: String,
-        username: String,
-        password: String,
-    ) -> Result<Option<User>, DbErr> {
-        let user: Option<User> = UserEntity::find()
-            .filter(
-                UserColumn::Email
-                    .eq(email)
-                    .or(UserColumn::Username.eq(username))
-                    .and(UserColumn::Password.eq(password))
-            )
+    async fn get_by_username(&self, username: String) -> Result<Option<User>, DbErr> {
+        UserEntity::find()
+            .filter(UserColumn::Username.eq(username))
             .one(&self.db_context.get_connection())
-            .await?;
-        Ok(user)
+            .await
     }
 }
-
 
 #[async_trait]
 impl EntityContextTrait<User> for UserContext {
@@ -128,11 +127,31 @@ impl EntityContextTrait<User> for UserContext {
                 entity
             ))),
             Some(user) => {
+                // If the entity's fields are empty, the old values will be used
+                let email: String;
+                if entity.email.is_empty() {
+                    email = user.email.clone();
+                } else {
+                    email = entity.email.clone();
+                }
+                let username: String;
+                if entity.username.is_empty() {
+                    username = user.username.clone();
+                } else {
+                    username = entity.username.clone();
+                }
+                let password: String;
+                if entity.password.is_empty() {
+                    password = user.password.clone();
+                } else {
+                    password = entity.password.clone();
+                }
+
                 ActiveModel {
                     id: Unchanged(user.id), //TODO ved ikke om unchanged betyder det jeg tror det betyder
-                    email: Set(entity.email),
-                    username: Set(entity.username),
-                    password: Set(entity.password),
+                    email: Set(email),
+                    username: Set(username),
+                    password: Set(password),
                 }
                 .update(&self.db_context.get_connection())
                 .await
@@ -168,6 +187,7 @@ impl EntityContextTrait<User> for UserContext {
         }
     }
 }
+
 #[cfg(test)]
 #[path = "../tests/database/user_context.rs"]
 mod tests;
