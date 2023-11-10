@@ -33,7 +33,7 @@ pub mod helpers {
 
     impl AnyEntity {
         async fn create_table_from(&self, connection: &DatabaseConnection, schema: &Schema) {
-            let mut stmt: TableCreateStatement;
+            let stmt: TableCreateStatement;
             match self {
                 AnyEntity::User => {
                     stmt = schema.create_table_from_entity(UserEntity);

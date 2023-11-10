@@ -55,10 +55,10 @@ impl EntityContextTrait<InUse> for InUseContext {
     async fn update(&self, entity: InUse) -> Result<InUse, DbErr> {
         let res = &self.get_by_id(entity.model_id).await?;
         let updated_in_use: Result<InUse, DbErr> = match res {
-            None => Err(DbErr::RecordNotFound(String::from(format!(
+            None => Err(DbErr::RecordNotFound(format!(
                 "Could not find entity {:?}",
                 entity
-            )))),
+            ))),
             Some(in_use) => {
                 ActiveModel {
                     model_id: Unchanged(in_use.model_id),

@@ -94,10 +94,10 @@ impl EntityContextTrait<Access> for AccessContext {
     async fn update(&self, entity: Access) -> Result<Access, DbErr> {
         let res = &self.get_by_id(entity.id).await?;
         let updated_access: Result<Access, DbErr> = match res {
-            None => Err(DbErr::RecordNotFound(String::from(format!(
+            None => Err(DbErr::RecordNotFound(format!(
                 "Could not find entity {:?}",
                 entity
-            )))),
+            ))),
             Some(access) => {
                 ActiveModel {
                     id: Unchanged(access.id), //TODO ved ikke om unchanged betyder det jeg tror det betyder

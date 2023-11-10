@@ -90,10 +90,10 @@ impl EntityContextTrait<Model> for ModelContext {
     async fn update(&self, entity: Model) -> Result<Model, DbErr> {
         let res = &self.get_by_id(entity.id).await?;
         let updated_model: Result<Model, DbErr> = match res {
-            None => Err(DbErr::RecordNotFound(String::from(format!(
+            None => Err(DbErr::RecordNotFound(format!(
                 "Could not find entity {:?}",
                 entity
-            )))),
+            ))),
             Some(model) => {
                 ActiveModel {
                     id: Unchanged(model.id),

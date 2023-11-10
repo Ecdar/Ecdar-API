@@ -48,7 +48,7 @@ pub fn token_validation(mut req: Request<()>) -> Result<Request<()>, Status> {
 
     validation.validate_exp = true;
     let token_data = match decode::<Claims>(
-        &token.unwrap().trim_start_matches("Bearer "),
+        token.unwrap().trim_start_matches("Bearer "),
         &DecodingKey::from_secret(secret.as_bytes()),
         &validation,
     ) {

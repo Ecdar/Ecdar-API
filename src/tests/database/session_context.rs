@@ -104,10 +104,7 @@ mod database_tests {
     async fn get_by_id_not_found_test() {
         let (session_context, _user_id) = setup_session_context().await;
 
-        let test = match session_context.get_by_id(1).await.unwrap() {
-            None => true,
-            Some(_) => false,
-        };
+        let test = session_context.get_by_id(1).await.unwrap().is_none();
 
         assert!(test);
     }

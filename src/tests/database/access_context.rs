@@ -88,7 +88,7 @@ mod database_tests {
         let db_connection = Database::connect("sqlite::memory:").await.unwrap();
         setup_schema(&db_connection).await;
         let db_context = Box::new(DatabaseContext {
-            db_connection: db_connection,
+            db_connection,
         });
         let user_context = UserContext::new(db_context.clone());
         let model_context = ModelContext::new(db_context.clone());

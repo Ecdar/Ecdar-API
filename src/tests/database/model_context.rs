@@ -4,7 +4,7 @@ mod database_tests {
         database::{
             database_context::DatabaseContext,
             entity_context::EntityContextTrait,
-            model_context::{self, ModelContext},
+            model_context::{ModelContext},
             user_context::UserContext,
         },
         entities::model::{Entity as ModelEntity, Model as ModelModel},
@@ -51,7 +51,7 @@ mod database_tests {
             owner_id: 1,
         };
 
-        let created_user = user_context.create(new_user).await?;
+        let _created_user = user_context.create(new_user).await?;
         let created_model = model_context.create(new_model.clone()).await?;
 
         let fetched_model = ModelEntity::find_by_id(created_model.id)
@@ -89,7 +89,7 @@ mod database_tests {
             owner_id: 1,
         };
 
-        let created_user = user_context.create(new_user).await?;
+        let _created_user = user_context.create(new_user).await?;
         let created_model = model_context.create(new_model.clone()).await?;
 
         let fetched_model = model_context.get_by_id(created_model.id).await?.unwrap();
@@ -131,9 +131,9 @@ mod database_tests {
             owner_id: 1,
         };
 
-        let created_user = user_context.create(new_user).await?;
-        let created_model = model_context.create(new_model).await?;
-        let created_model2 = model_context.create(new_model2).await?;
+        let _created_user = user_context.create(new_user).await?;
+        let _created_model = model_context.create(new_model).await?;
+        let _created_model2 = model_context.create(new_model2).await?;
 
         let fetched_all_models = model_context.get_all().await.unwrap().len();
 
@@ -167,12 +167,12 @@ mod database_tests {
         };
 
         // Updated model
-        let altered_model = ModelModel {
+        let _altered_model = ModelModel {
             name: "Shit Machine".to_owned(),
             ..original_model.clone()
         };
 
-        let created_user = user_context.create(new_user).await?;
+        let _created_user = user_context.create(new_user).await?;
         let created_model = model_context.create(original_model.clone()).await?;
 
         let altered_model = model_context.update(original_model).await.unwrap();
@@ -207,7 +207,7 @@ mod database_tests {
             owner_id: 1,
         };
 
-        let created_user = user_context.create(new_user).await?;
+        let _created_user = user_context.create(new_user).await?;
         let created_model = model_context.create(new_model.clone()).await?;
 
         let deleted_model = model_context.delete(created_model.id).await.unwrap();

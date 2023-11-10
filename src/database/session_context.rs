@@ -51,8 +51,8 @@ impl EntityContextTrait<Session> for SessionContext {
             user_id: Set(entity.user_id),
         };
 
-        let session = session.insert(&self.db_context.get_connection()).await;
-        session
+        
+        session.insert(&self.db_context.get_connection()).await
     }
 
     /// Returns a session by searching for its id.
@@ -104,10 +104,10 @@ impl EntityContextTrait<Session> for SessionContext {
     async fn update(&self, entity: Session) -> Result<Session, DbErr> {
         let res = &self.get_by_id(entity.id).await?;
         let updated_session: Result<Session, DbErr> = match res {
-            None => Err(DbErr::RecordNotFound(String::from(format!(
+            None => Err(DbErr::RecordNotFound(format!(
                 "Could not find entity {:?}",
                 entity
-            )))),
+            ))),
             Some(session) => {
                 ActiveModel {
                     id: Unchanged(session.id),

@@ -213,10 +213,10 @@ fn is_valid_username(username: &str) -> bool {
 impl EcdarApiAuth for ConcreteEcdarApi {
     async fn get_auth_token(
         &self,
-        request: Request<GetAuthTokenRequest>,
+        _request: Request<GetAuthTokenRequest>,
     ) -> Result<Response<GetAuthTokenResponse>, Status> {
         let uid = "1234";
-        let token = auth::create_jwt(&uid);
+        let token = auth::create_jwt(uid);
 
         match token {
             Ok(token) => Ok(Response::new(GetAuthTokenResponse { token })),
