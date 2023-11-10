@@ -63,7 +63,6 @@ impl ConcreteEcdarApi {
         ConcreteEcdarApi {
             reveaal_address: env::var("REVEAAL_ADDRESS")
                 .expect("Expected REVEAAL_ADDRESS to be set."),
-            // db_context,
             model_context,
             user_context,
             access_context,
@@ -241,14 +240,14 @@ impl EcdarApiAuth for ConcreteEcdarApi {
             return Err(Status::new(Code::InvalidArgument, "Invalid email"));
         }
 
-        let mut user = User {
+        let user = User {
             id: Default::default(),
             username: message.clone().username,
             password: message.clone().password,
             email: message.clone().email,
         };
 
-        match self.user_context.create(user.clone()).await {
+        match self.user_context.create(user).await {
             Ok(_) => Ok(Response::new(())),
             Err(e) => match e.sql_err() {
                 Some(SqlErr::UniqueConstraintViolation(e)) => {
