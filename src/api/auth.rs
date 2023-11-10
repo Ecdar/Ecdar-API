@@ -14,11 +14,35 @@ pub struct Claims {
     exp: usize,
 }
 
-pub fn create_jwt(uid: &str) -> Result<String, Error> {
-    let secret = env::var("HS512_SECRET").expect("Expected HS512_SECRET to be set.");
+pub fn create_access_token(uid: &str) -> Result<String, Error> {
+    let secret = env::var("ACCESS_TOKEN_HS512_SECRET")
+        .expect("Expected ACCESS_TOKEN_HS512_SECRET to be set.");
 
     let expiration = Utc::now()
         .checked_add_signed(chrono::Duration::minutes(20))
+        .expect("valid timestamp")
+        .timestamp();
+
+    let claims = Claims {
+        sub: uid.to_owned(),
+        exp: expiration as usize,
+    };
+
+    let header = Header::new(Algorithm::HS512);
+    encode(
+        &header,
+        &claims,
+        &EncodingKey::from_secret(secret.as_bytes()),
+    )
+    .map_err(|_| ErrorKind::InvalidToken.into())
+}
+
+pub fn create_refresh_token(uid: &str) -> Result<String, Error> {
+    let secret = env::var("REFRESH_TOKEN_HS512_SECRET")
+        .expect("Expected REFRESH_TOKEN_HS512_SECRET to be set.");
+
+    let expiration = Utc::now()
+        .checked_add_signed(chrono::Duration::days(90))
         .expect("valid timestamp")
         .timestamp();
 

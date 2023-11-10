@@ -2,6 +2,7 @@ use std::env;
 use std::sync::Arc;
 
 use crate::api::ecdar_api::helpers::helpers::{setup_db_with_entities, AnyEntity};
+use crate::api::server::server::get_auth_token_request::{user_credentials, AuthOption};
 use regex::Regex;
 use sea_orm::SqlErr;
 use tonic::{Code, Request, Response, Status};
@@ -213,17 +214,53 @@ fn is_valid_username(username: &str) -> bool {
 impl EcdarApiAuth for ConcreteEcdarApi {
     async fn get_auth_token(
         &self,
-        _request: Request<GetAuthTokenRequest>,
+        request: Request<GetAuthTokenRequest>,
     ) -> Result<Response<GetAuthTokenResponse>, Status> {
-        let uid = "1234";
-        let token = auth::create_jwt(uid);
+        let message = request.get_ref().clone();
+        let uid = match message.auth_option {
+            Some(auth_option) => match auth_option {
+                AuthOption::RefreshToken(refresh_token) => {
+                    get_uid_from_request(&request).unwrap().to_string()
+                }
+                AuthOption::UserCredentials(user_credentials) => {
+                    if let Some(user) = user_credentials.user {
+                        match user {
+                            user_credentials::User::Username(username) => {
+                                match self.user_context.get_by_username(username).await {
+                                    Ok(Some(user)) => user.id.to_string(),
+                                    Ok(None) => Err(Status::new(Code::Internal, "No user found"))?,
+                                    Err(err) => Err(Status::new(Code::Internal, err.to_string()))?,
+                                }
+                            }
+                            user_credentials::User::Email(email) => {
+                                match self.user_context.get_by_email(email).await {
+                                    Ok(Some(user)) => user.id.to_string(),
+                                    Ok(None) => Err(Status::new(Code::Internal, "No user found"))?,
+                                    Err(err) => Err(Status::new(Code::Internal, err.to_string()))?,
+                                }
+                            }
+                        }
+                    } else {
+                        Err(Status::new(Code::Internal, "No user provided"))?
+                    }
+                }
+            },
+            None => Err(Status::new(Code::Internal, "No auth option provided"))?,
+        };
 
-        match token {
-            Ok(token) => Ok(Response::new(GetAuthTokenResponse { token })),
-            Err(e) => Err(Status::new(Code::Internal, e.to_string())),
-        }
+        let access_token = match auth::create_access_token(&uid) {
+            Ok(token) => token,
+            Err(e) => return Err(Status::new(Code::Internal, e.to_string())),
+        };
+        let refresh_token = match auth::create_refresh_token(&uid) {
+            Ok(token) => token,
+            Err(e) => return Err(Status::new(Code::Internal, e.to_string())),
+        };
+        Ok(Response::new(GetAuthTokenResponse {
+            access_token,
+            refresh_token,
+        }))
     }
-
     async fn create_user(
         &self,
         request: Request<CreateUserRequest>,

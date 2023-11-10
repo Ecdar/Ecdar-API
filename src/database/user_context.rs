@@ -7,6 +7,7 @@ use sea_orm::{ActiveModelTrait, ColumnTrait, DbErr, EntityTrait, QueryFilter, Ru
 use crate::database::database_context::DatabaseContextTrait;
 use crate::database::entity_context::EntityContextTrait;
 use crate::entities::prelude::User as UserEntity;
+use crate::entities::user::Column as UserColumn;
 use crate::entities::user::{ActiveModel, Model as User};
 
 #[derive(Debug)]
@@ -24,6 +25,7 @@ pub trait UserContextTrait: EntityContextTrait<User> {
     /// assert_eq!(model.id,1);
     /// ```
     async fn get_by_username(&self, username: String) -> Result<Option<User>, DbErr>;
+    async fn get_by_email(&self, email: String) -> Result<Option<User>, DbErr>;
 }
 
 impl Debug for dyn UserContextTrait + Send + Sync + 'static {
@@ -36,7 +38,13 @@ impl Debug for dyn UserContextTrait + Send + Sync + 'static {
 impl UserContextTrait for UserContext {
     async fn get_by_username(&self, username: String) -> Result<Option<User>, DbErr> {
         UserEntity::find()
-            .filter(crate::entities::user::Column::Username.eq(username))
+            .filter(UserColumn::Username.eq(username))
+            .one(&self.db_context.get_connection())
+            .await
+    }
+    async fn get_by_email(&self, email: String) -> Result<Option<User>, DbErr> {
+        UserEntity::find()
+            .filter(UserColumn::Email.eq(email))
             .one(&self.db_context.get_connection())
             .await
     }
