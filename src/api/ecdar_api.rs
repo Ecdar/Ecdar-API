@@ -2,7 +2,7 @@ use std::env;
 use std::sync::Arc;
 
 use crate::api::ecdar_api::helpers::helpers::{setup_db_with_entities, AnyEntity};
-use crate::api::server::server::get_auth_token_request::{AuthOption, user_credentials};
+use crate::api::server::server::get_auth_token_request::{user_credentials, AuthOption};
 use regex::Regex;
 use sea_orm::SqlErr;
 use tonic::{Code, Request, Response, Status};
@@ -216,7 +216,6 @@ impl EcdarApiAuth for ConcreteEcdarApi {
         &self,
         request: Request<GetAuthTokenRequest>,
     ) -> Result<Response<GetAuthTokenResponse>, Status> {
-
         let message = request.get_ref().clone();
         let uid = match message.auth_option {
             Some(auth_option) => match auth_option {
@@ -241,9 +240,9 @@ impl EcdarApiAuth for ConcreteEcdarApi {
                                 }
                             }
                         }
-                   } else {
-                    Err(Status::new(Code::Internal, "No user provided"))?
-                   }
+                    } else {
+                        Err(Status::new(Code::Internal, "No user provided"))?
+                    }
                 }
             },
             None => Err(Status::new(Code::Internal, "No auth option provided"))?,

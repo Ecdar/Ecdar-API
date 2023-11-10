@@ -7,9 +7,8 @@ use sea_orm::{ActiveModelTrait, ColumnTrait, DbErr, EntityTrait, QueryFilter, Ru
 use crate::database::database_context::DatabaseContextTrait;
 use crate::database::entity_context::EntityContextTrait;
 use crate::entities::prelude::User as UserEntity;
-use crate::entities::user::{ActiveModel, Model as User};
 use crate::entities::user::Column as UserColumn;
-
+use crate::entities::user::{ActiveModel, Model as User};
 
 #[derive(Debug)]
 pub struct UserContext {

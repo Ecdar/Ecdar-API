@@ -15,7 +15,8 @@ pub struct Claims {
 }
 
 pub fn create_access_token(uid: &str) -> Result<String, Error> {
-    let secret = env::var("ACCESS_TOKEN_HS512_SECRET").expect("Expected ACCESS_TOKEN_HS512_SECRET to be set.");
+    let secret = env::var("ACCESS_TOKEN_HS512_SECRET")
+        .expect("Expected ACCESS_TOKEN_HS512_SECRET to be set.");
 
     let expiration = Utc::now()
         .checked_add_signed(chrono::Duration::minutes(20))
@@ -37,7 +38,8 @@ pub fn create_access_token(uid: &str) -> Result<String, Error> {
 }
 
 pub fn create_refresh_token(uid: &str) -> Result<String, Error> {
-    let secret = env::var("REFRESH_TOKEN_HS512_SECRET").expect("Expected REFRESH_TOKEN_HS512_SECRET to be set.");
+    let secret = env::var("REFRESH_TOKEN_HS512_SECRET")
+        .expect("Expected REFRESH_TOKEN_HS512_SECRET to be set.");
 
     let expiration = Utc::now()
         .checked_add_signed(chrono::Duration::days(90))
