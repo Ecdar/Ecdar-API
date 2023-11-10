@@ -1,45 +1,30 @@
 #![cfg(test)]
-use crate::database::database_context::DatabaseContext;
+
+use crate::database::database_context::{
+    DatabaseContextTrait, PostgresDatabaseContext, SQLiteDatabaseContext,
+};
 use crate::entities::sea_orm_active_enums::Role;
 use crate::entities::{access, in_use, model, query, session, user};
-use sea_orm::{ConnectionTrait, Database, DatabaseBackend, DatabaseConnection, Schema};
+use dotenv::dotenv;
+use sea_orm::{ConnectionTrait, DatabaseConnection, Schema};
+use std::env;
 use uuid::Uuid;
 
-pub async fn setup_db_with_entities(entities: Vec<AnyEntity>) -> Box<DatabaseContext> {
-    let connection = Database::connect("sqlite::memory:").await.unwrap();
-    let schema = Schema::new(DatabaseBackend::Sqlite);
-    for entity in entities.iter() {
-        entity.create_table_from(&connection, &schema).await;
-    }
-    Box::new(DatabaseContext {
-        db_connection: connection,
-    })
-}
+pub async fn get_reset_database_context() -> Box<dyn DatabaseContextTrait> {
+    dotenv().ok();
 
-pub enum AnyEntity {
-    User,
-    Model,
-    Access,
-    Session,
-    InUse,
-    Query,
-}
+    let url = env::var("TEST_DATABASE_URL").expect("TEST_DATABASE_URL must be set to run tests.");
 
-impl AnyEntity {
-    async fn create_table_from(&self, connection: &DatabaseConnection, schema: &Schema) {
-        let stmt = match self {
-            AnyEntity::User => schema.create_table_from_entity(user::Entity),
-            AnyEntity::Model => schema.create_table_from_entity(model::Entity),
-            AnyEntity::Access => schema.create_table_from_entity(access::Entity),
-            AnyEntity::Session => schema.create_table_from_entity(session::Entity),
-            AnyEntity::InUse => schema.create_table_from_entity(in_use::Entity),
-            AnyEntity::Query => schema.create_table_from_entity(query::Entity),
-        };
-        connection
-            .execute(connection.get_database_backend().build(&stmt))
-            .await
-            .unwrap();
-    }
+    let db_context: Box<dyn DatabaseContextTrait> = match url.split_at(url.find(":").unwrap()).0 {
+        "sqlite" => Box::new(SQLiteDatabaseContext::new().await.unwrap()),
+        "postgresql" => Box::new(PostgresDatabaseContext::new().await.unwrap()),
+        _ => {
+            panic!("Tests do not support the database protocol")
+        }
+    };
+
+    db_context
+    // db_context.reset().await.unwrap()
 }
 
 ///

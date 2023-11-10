@@ -13,15 +13,9 @@ mod database_tests {
     use std::matches;
 
     async fn seed_db() -> (UserContext, user::Model) {
-        let db_context = setup_db_with_entities(vec![
-            AnyEntity::User,
-            AnyEntity::Session,
-            AnyEntity::Model,
-            AnyEntity::Access,
-        ])
-        .await;
+        let db_context = get_reset_database_context().await;
 
-        let user_context = UserContext::new(db_context.clone());
+        let user_context = UserContext::new(db_context);
 
         let user = create_users(1)[0].clone();
 
