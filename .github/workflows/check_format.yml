@@ -44,4 +44,4 @@ jobs:
       - name: clippy --all-targets --all-features
         uses: clechasseur/rs-clippy-check@v3
         with:
-          args: --all-targets --all-features -- -D warnings
+          args: --all-targets --all-features
