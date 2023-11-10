@@ -46,8 +46,9 @@ impl EntityContextTrait<Session> for SessionContext {
     async fn create(&self, entity: Session) -> Result<Session, DbErr> {
         let session = ActiveModel {
             id: Default::default(),
-            token: Set(entity.token),
-            created_at: Set(entity.created_at),
+            refresh_token: Set(entity.refresh_token),
+            access_token: Set(entity.access_token),
+            updated_at: Set(entity.updated_at),
             user_id: Set(entity.user_id),
         };
 
@@ -110,8 +111,9 @@ impl EntityContextTrait<Session> for SessionContext {
             Some(session) => {
                 ActiveModel {
                     id: Unchanged(session.id),
-                    token: Set(entity.token),
-                    created_at: Set(entity.created_at),
+                    refresh_token: Set(entity.refresh_token),
+                    access_token: Set(entity.access_token),
+                    updated_at: Set(entity.updated_at),
                     user_id: Unchanged(session.user_id), //TODO Should it be allowed to change the user_id of a session?
                 }
                 .update(&self.db_context.get_connection())

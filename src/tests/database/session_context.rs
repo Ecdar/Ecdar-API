@@ -67,8 +67,9 @@ mod database_tests {
 
         let new_session = Model {
             id: 1,
-            token: Uuid::parse_str("4473240f-2acb-422f-bd1a-5214554ed0e0").unwrap(),
-            created_at: Local::now().naive_utc(),
+            refresh_token: Uuid::parse_str("4473240f-2acb-422f-bd1a-5214554ed0e0").unwrap(),
+            access_token: Uuid::parse_str("4473240f-2acb-422f-bd1a-5214554ed0e0").unwrap(),
+            updated_at: Local::now().naive_utc(),
             user_id,
         };
 
@@ -79,7 +80,7 @@ mod database_tests {
             .await
             .unwrap();
 
-        assert_eq!(fetched_session.unwrap().token, created_session.token);
+        assert_eq!(fetched_session.unwrap().access_token, created_session.access_token);
     }
 
     #[tokio::test]
@@ -88,8 +89,9 @@ mod database_tests {
 
         let new_session = Model {
             id: 1,
-            token: Uuid::parse_str("4473240f-2acb-422f-bd1a-5214554ed0e0").unwrap(),
-            created_at: Local::now().naive_utc(),
+            refresh_token: Uuid::parse_str("4473240f-2acb-422f-bd1a-5214554ed0e0").unwrap(),
+            access_token: Uuid::parse_str("4473240f-2acb-422f-bd1a-5214554ed0e0").unwrap(),
+            updated_at: Local::now().naive_utc(),
             user_id,
         };
 
@@ -97,7 +99,7 @@ mod database_tests {
 
         let fetched_session = session_context.get_by_id(1).await.unwrap().unwrap();
 
-        assert_eq!(fetched_session.token, created_session.token);
+        assert_eq!(fetched_session.access_token, created_session.access_token);
     }
 
     #[tokio::test]
@@ -116,15 +118,17 @@ mod database_tests {
         // Create the sessions structs
         let session1 = Model {
             id: 1,
-            token: Uuid::parse_str("4473240f-2acb-422f-bd1a-5214554ed0e0").unwrap(),
-            created_at: Local::now().naive_utc(),
+            refresh_token: Uuid::parse_str("4473240f-2acb-422f-bd1a-5214554ed0e0").unwrap(),
+            access_token: Uuid::parse_str("4473240f-2acb-422f-bd1a-5214554ed0e0").unwrap(),
+            updated_at: Local::now().naive_utc(),
             user_id,
         };
 
         let session2 = Model {
             id: 2,
-            token: Uuid::parse_str("75ecdf25-538c-4fe0-872d-525570c96b91").unwrap(),
-            created_at: Local::now().naive_utc(),
+            refresh_token: Uuid::parse_str("4473240f-2acb-422f-bd1a-5214554ed0e1").unwrap(),
+            access_token: Uuid::parse_str("75ecdf25-538c-4fe0-872d-525570c96b91").unwrap(),
+            updated_at: Local::now().naive_utc(),
             user_id,
         };
 
@@ -152,15 +156,17 @@ mod database_tests {
 
         let original_session = Model {
             id: 1,
-            token: Uuid::parse_str("5c5e9172-9dff-4f35-afde-029a6f99652c").unwrap(),
-            created_at: Local::now().naive_utc(),
+            refresh_token: Uuid::parse_str("4473240f-2acb-422f-bd1a-5214554ed0e0").unwrap(),
+            access_token: Uuid::parse_str("5c5e9172-9dff-4f35-afde-029a6f99652c").unwrap(),
+            updated_at: Local::now().naive_utc(),
             user_id,
         };
 
         let original_session = session_context.create(original_session).await.unwrap();
 
         let altered_session = Model {
-            token: Uuid::parse_str("ddd9b7a3-98ff-43b0-b5b5-aa2abaea9d96").unwrap(),
+            refresh_token: Uuid::parse_str("4473240f-2acb-422f-bd1a-5214554ed0e1").unwrap(),
+            access_token: Uuid::parse_str("ddd9b7a3-98ff-43b0-b5b5-aa2abaea9d96").unwrap(),
             ..original_session
         };
 
@@ -172,7 +178,7 @@ mod database_tests {
             .unwrap()
             .unwrap();
 
-        assert_eq!(altered_session.token, fetched_session.token);
+        assert_eq!(altered_session.access_token, fetched_session.access_token);
     }
 
     #[tokio::test]
@@ -181,8 +187,9 @@ mod database_tests {
 
         let original_session = Model {
             id: 1,
-            token: Uuid::parse_str("5c5e9172-9dff-4f35-afde-029a6f99652c").unwrap(),
-            created_at: Local::now().naive_utc(),
+            refresh_token: Uuid::parse_str("4473240f-2acb-422f-bd1a-5214554ed0e1").unwrap(),
+            access_token: Uuid::parse_str("5c5e9172-9dff-4f35-afde-029a6f99652c").unwrap(),
+            updated_at: Local::now().naive_utc(),
             user_id,
         };
 
@@ -197,8 +204,9 @@ mod database_tests {
 
         let original_session = Model {
             id: 1,
-            token: Uuid::parse_str("5c5e9172-9dff-4f35-afde-029a6f99652c").unwrap(),
-            created_at: Local::now().naive_utc(),
+            refresh_token: Uuid::parse_str("4473240f-2acb-422f-bd1a-5214554ed0e1").unwrap(),
+            access_token: Uuid::parse_str("5c5e9172-9dff-4f35-afde-029a6f99652c").unwrap(),
+            updated_at: Local::now().naive_utc(),
             user_id,
         };
 
@@ -220,8 +228,9 @@ mod database_tests {
 
         let original_session = Model {
             id: 1,
-            token: Uuid::parse_str("5c5e9172-9dff-4f35-afde-029a6f99652c").unwrap(),
-            created_at: Local::now().naive_utc(),
+            refresh_token: Uuid::parse_str("4473240f-2acb-422f-bd1a-5214554ed0e1").unwrap(),
+            access_token: Uuid::parse_str("5c5e9172-9dff-4f35-afde-029a6f99652c").unwrap(),
+            updated_at: Local::now().naive_utc(),
             user_id,
         };
 
@@ -229,7 +238,7 @@ mod database_tests {
 
         let deleted_session = session_context.delete(session.id).await.unwrap();
 
-        assert_eq!(session.token, deleted_session.token);
+        assert_eq!(session.access_token, deleted_session.access_token);
     }
 
     #[tokio::test]
