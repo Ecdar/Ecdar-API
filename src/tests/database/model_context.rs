@@ -2,10 +2,8 @@
 mod database_tests {
     use crate::{
         database::{
-            database_context::DatabaseContext,
-            entity_context::EntityContextTrait,
-            model_context::{ModelContext},
-            user_context::UserContext,
+            database_context::DatabaseContext, entity_context::EntityContextTrait,
+            model_context::ModelContext, user_context::UserContext,
         },
         entities::model::{Entity as ModelEntity, Model as ModelModel},
         entities::user::{Entity as UserEntity, Model as UserModel},

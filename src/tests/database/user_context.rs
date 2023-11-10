@@ -239,8 +239,7 @@ mod database_tests {
             Ok(_) => {
                 panic!("should not happen")
             }
-            Err(_err) => {
-            }
+            Err(_err) => {}
         }
     }
 
@@ -268,8 +267,7 @@ mod database_tests {
             Ok(_) => {
                 panic!("should not happen")
             }
-            Err(_err) => {
-            }
+            Err(_err) => {}
         }
     }
 

@@ -7,9 +7,9 @@ mod ecdar_api {
     use crate::database::entity_context::EntityContextTrait;
     use crate::database::user_context::UserContextTrait;
     use crate::{api::server::server::ecdar_api_server::EcdarApi, entities::user::Model as User};
-    
+
     use std::str::FromStr;
-    
+
     use tonic::{metadata, Request};
 
     #[tokio::test]

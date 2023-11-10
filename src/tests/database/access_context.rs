@@ -87,9 +87,7 @@ mod database_tests {
         // Setting up a sqlite database in memory to test on
         let db_connection = Database::connect("sqlite::memory:").await.unwrap();
         setup_schema(&db_connection).await;
-        let db_context = Box::new(DatabaseContext {
-            db_connection,
-        });
+        let db_context = Box::new(DatabaseContext { db_connection });
         let user_context = UserContext::new(db_context.clone());
         let model_context = ModelContext::new(db_context.clone());
         let access_context = AccessContext::new(db_context.clone());

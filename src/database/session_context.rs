@@ -51,7 +51,6 @@ impl EntityContextTrait<Session> for SessionContext {
             user_id: Set(entity.user_id),
         };
 
-        
         session.insert(&self.db_context.get_connection()).await
     }
 
