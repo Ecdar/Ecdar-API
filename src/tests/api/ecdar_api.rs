@@ -7,13 +7,13 @@ mod ecdar_api {
     use crate::database::entity_context::EntityContextTrait;
     use crate::database::user_context::UserContextTrait;
     use crate::{api::server::server::ecdar_api_server::EcdarApi, entities::user::Model as User};
-    use std::ops::Deref;
+
     use std::str::FromStr;
-    use tonic::codegen::Body;
+
     use tonic::{metadata, Request};
 
     #[tokio::test]
-    async fn delete_user_nonexistent_user_returns_err() -> () {
+    async fn delete_user_nonexistent_user_returns_err() {
         let api = ConcreteEcdarApi::setup_in_memory_db(vec![AnyEntity::User]).await;
 
         let mut delete_request = Request::new(DeleteUserRequest {
@@ -31,7 +31,7 @@ mod ecdar_api {
     }
 
     #[tokio::test]
-    async fn delete_user_existing_user_returns_ok() -> () {
+    async fn delete_user_existing_user_returns_ok() {
         let api = ConcreteEcdarApi::setup_in_memory_db(vec![AnyEntity::User]).await;
 
         let _ = api
@@ -186,7 +186,7 @@ mod ecdar_api {
     }
 
     #[tokio::test]
-    async fn update_user_returns_ok() -> () {
+    async fn update_user_returns_ok() {
         let api = ConcreteEcdarApi::setup_in_memory_db(vec![AnyEntity::User]).await;
 
         let user = User {
@@ -215,7 +215,7 @@ mod ecdar_api {
     }
 
     #[tokio::test]
-    async fn update_user_non_existant_user_returns_err() -> () {
+    async fn update_user_non_existant_user_returns_err() {
         let api = ConcreteEcdarApi::setup_in_memory_db(vec![AnyEntity::User]).await;
 
         let mut update_user_request = Request::new(UpdateUserRequest {
@@ -235,7 +235,7 @@ mod ecdar_api {
     }
 
     #[tokio::test]
-    async fn update_user_single_field_returns_ok() -> () {
+    async fn update_user_single_field_returns_ok() {
         let api = ConcreteEcdarApi::setup_in_memory_db(vec![AnyEntity::User]).await;
 
         let user = User {

@@ -8,14 +8,14 @@ use crate::api::ecdar_api::ConcreteEcdarApi;
 use crate::api::server::server::ecdar_api_auth_server::EcdarApiAuthServer;
 use crate::api::server::server::ecdar_api_server::EcdarApiServer;
 use crate::api::server::server::ecdar_backend_server::EcdarBackendServer;
-use crate::database::access_context::{AccessContext, AccessContextTrait};
-use crate::database::database_context::{DatabaseContext, DatabaseContextTrait};
+use crate::database::access_context::AccessContextTrait;
+use crate::database::database_context::DatabaseContextTrait;
 use crate::database::entity_context::EntityContextTrait;
-use crate::database::in_use_context::{InUseContext, InUseContextTrait};
-use crate::database::model_context::{ModelContext, ModelContextTrait};
-use crate::database::query_context::{QueryContext, QueryContextTrait};
-use crate::database::session_context::{SessionContext, SessionContextTrait};
-use crate::database::user_context::{UserContext, UserContextTrait};
+use crate::database::in_use_context::InUseContextTrait;
+use crate::database::model_context::ModelContextTrait;
+use crate::database::query_context::QueryContextTrait;
+use crate::database::session_context::SessionContextTrait;
+use crate::database::user_context::UserContextTrait;
 
 pub mod server {
     tonic::include_proto!("ecdar_proto_buf");

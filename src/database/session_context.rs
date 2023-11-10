@@ -46,13 +46,13 @@ impl EntityContextTrait<Session> for SessionContext {
     async fn create(&self, entity: Session) -> Result<Session, DbErr> {
         let session = ActiveModel {
             id: Default::default(),
-            token: Set(entity.token),
-            created_at: Set(entity.created_at),
+            refresh_token: Set(entity.refresh_token),
+            access_token: Set(entity.access_token),
+            updated_at: Set(entity.updated_at),
             user_id: Set(entity.user_id),
         };
 
-        let session = session.insert(&self.db_context.get_connection()).await;
-        session
+        session.insert(&self.db_context.get_connection()).await
     }
 
     /// Returns a session by searching for its id.
@@ -104,15 +104,16 @@ impl EntityContextTrait<Session> for SessionContext {
     async fn update(&self, entity: Session) -> Result<Session, DbErr> {
         let res = &self.get_by_id(entity.id).await?;
         let updated_session: Result<Session, DbErr> = match res {
-            None => Err(DbErr::RecordNotFound(String::from(format!(
+            None => Err(DbErr::RecordNotFound(format!(
                 "Could not find entity {:?}",
                 entity
-            )))),
+            ))),
             Some(session) => {
                 ActiveModel {
                     id: Unchanged(session.id),
-                    token: Set(entity.token),
-                    created_at: Set(entity.created_at),
+                    refresh_token: Set(entity.refresh_token),
+                    access_token: Set(entity.access_token),
+                    updated_at: Set(entity.updated_at),
                     user_id: Unchanged(session.user_id), //TODO Should it be allowed to change the user_id of a session?
                 }
                 .update(&self.db_context.get_connection())

@@ -142,7 +142,7 @@ mod database_tests {
     }
 
     #[tokio::test]
-    async fn get_all_test() -> () {
+    async fn get_all_test() {
         let user_context = test_setup().await;
 
         let mut users_vec: Vec<User> = vec![
@@ -167,7 +167,7 @@ mod database_tests {
     }
 
     #[tokio::test]
-    async fn update_test() -> () {
+    async fn update_test() {
         let user_context = test_setup().await;
 
         let user = User {
@@ -188,7 +188,7 @@ mod database_tests {
     }
 
     #[tokio::test]
-    async fn update_single_field_test() -> () {
+    async fn update_single_field_test() {
         let user_context = test_setup().await;
 
         let user = User {
@@ -222,7 +222,7 @@ mod database_tests {
 
     ///test that where the unique email constraint is violated
     #[tokio::test]
-    async fn update_fail() -> () {
+    async fn update_fail() {
         let user_context = test_setup().await;
         let mut users = two_template_users();
 
@@ -239,14 +239,12 @@ mod database_tests {
             Ok(_) => {
                 panic!("should not happen")
             }
-            Err(_err) => {
-                return;
-            }
+            Err(_err) => {}
         }
     }
 
     #[tokio::test]
-    async fn delete_test() -> () {
+    async fn delete_test() {
         let user_context = test_setup().await;
         let mut users = two_template_users();
 
@@ -257,7 +255,7 @@ mod database_tests {
     }
 
     #[tokio::test]
-    async fn delete_test_fail() -> () {
+    async fn delete_test_fail() {
         let user_context = test_setup().await;
         let mut users = two_template_users();
 
@@ -269,15 +267,13 @@ mod database_tests {
             Ok(_) => {
                 panic!("should not happen")
             }
-            Err(_err) => {
-                return;
-            }
+            Err(_err) => {}
         }
     }
 
     // TODO den skal slettes senere
     #[tokio::test]
-    async fn create_test_test() -> () {
+    async fn create_test_test() {
         let context = setup_db_with_entities(vec![AnyEntity::User, AnyEntity::Model]).await;
         let user_context = UserContext::new(Box::new(context));
         let users = two_template_users();
