@@ -51,7 +51,12 @@ pub struct ConcreteEcdarApi {
 fn get_uid_from_request<T>(request: &Request<T>) -> Result<i32, Status> {
     let uid = match request.metadata().get("uid").unwrap().to_str() {
         Ok(uid) => uid,
-        Err(_) => return Err(Status::new(Code::Internal, "Could not get uid from request metadata")),
+        Err(_) => {
+            return Err(Status::new(
+                Code::Internal,
+                "Could not get uid from request metadata",
+            ))
+        }
     };
 
     Ok(uid.parse().unwrap())
