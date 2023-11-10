@@ -1,9 +1,12 @@
+use std::fmt::Debug;
+
+use async_trait::async_trait;
+use sea_orm::{ActiveModelTrait, DbErr, EntityTrait, RuntimeErr, Set, Unchanged};
+
 use crate::database::database_context::DatabaseContextTrait;
 use crate::entities::in_use::{ActiveModel, Model as InUse};
 use crate::entities::prelude::InUse as InUseEntity;
 use crate::EntityContextTrait;
-use async_trait::async_trait;
-use sea_orm::{ActiveModelTrait, DbErr, EntityTrait, RuntimeErr, Set, Unchanged};
 
 #[derive(Debug)]
 pub struct InUseContext {
@@ -13,6 +16,12 @@ pub struct InUseContext {
 pub trait InUseContextTrait: EntityContextTrait<InUse> {}
 
 impl InUseContextTrait for InUseContext {}
+
+impl Debug for dyn InUseContextTrait + Send + Sync + 'static {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("ModelContextTrait").finish()
+    }
+}
 
 #[async_trait]
 impl EntityContextTrait<InUse> for InUseContext {

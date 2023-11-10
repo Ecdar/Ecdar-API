@@ -1,5 +1,7 @@
 use std::env;
+use std::sync::Arc;
 
+use crate::api::ecdar_api::helpers::helpers::{setup_db_with_entities, AnyEntity};
 use regex::Regex;
 use sea_orm::SqlErr;
 use tonic::{Code, Request, Response, Status};
@@ -8,10 +10,17 @@ use crate::api::server::server::{
     ecdar_api_auth_server::EcdarApiAuth, ecdar_api_server::EcdarApi,
     ecdar_backend_client::EcdarBackendClient,
 };
+use crate::database::access_context::AccessContextTrait;
+use crate::database::database_context::DatabaseContextTrait;
+use crate::database::in_use_context::InUseContextTrait;
+use crate::database::model_context::ModelContextTrait;
+use crate::database::query_context::QueryContextTrait;
+use crate::database::session_context::SessionContextTrait;
+use crate::database::user_context::UserContextTrait;
 use crate::database::{
-    access_context::AccessContext, database_context::DatabaseContext,
-    entity_context::EntityContextTrait, in_use_context::InUseContext, model_context::ModelContext,
-    query_context::QueryContext, session_context::SessionContext, user_context::UserContext,
+    access_context::AccessContext, entity_context::EntityContextTrait,
+    in_use_context::InUseContext, model_context::ModelContext, query_context::QueryContext,
+    session_context::SessionContext, user_context::UserContext,
 };
 use crate::entities::user::Model as User;
 
@@ -25,21 +34,18 @@ use super::{
     },
 };
 
-use self::helpers::helpers::{setup_db_with_entities, AnyEntity};
-
 #[path = "../tests/database/helpers.rs"]
 pub mod helpers;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct ConcreteEcdarApi {
     reveaal_address: String,
-    db_context: Box<DatabaseContext>,
-    model_context: Box<ModelContext>,
-    user_context: Box<UserContext>,
-    access_context: Box<AccessContext>,
-    query_context: Box<QueryContext>,
-    session_context: Box<SessionContext>,
-    in_use_context: Box<InUseContext>,
+    model_context: Arc<dyn ModelContextTrait + Send + Sync>,
+    user_context: Arc<dyn UserContextTrait + Send + Sync>,
+    access_context: Arc<dyn AccessContextTrait + Send + Sync>,
+    query_context: Arc<dyn QueryContextTrait + Send + Sync>,
+    session_context: Arc<dyn SessionContextTrait + Send + Sync>,
+    in_use_context: Arc<dyn InUseContextTrait + Send + Sync>,
 }
 
 fn get_uid_from_request<T>(request: &Request<T>) -> Result<i32, Status> {
@@ -52,24 +58,40 @@ fn get_uid_from_request<T>(request: &Request<T>) -> Result<i32, Status> {
 }
 
 impl ConcreteEcdarApi {
-    pub async fn new(db_context: Box<DatabaseContext>) -> Self {
+    pub async fn new(
+        model_context: Arc<dyn ModelContextTrait + Send + Sync>,
+        user_context: Arc<dyn UserContextTrait + Send + Sync>,
+        access_context: Arc<dyn AccessContextTrait + Send + Sync>,
+        query_context: Arc<dyn QueryContextTrait + Send + Sync>,
+        session_context: Arc<dyn SessionContextTrait + Send + Sync>,
+        in_use_context: Arc<dyn InUseContextTrait + Send + Sync>,
+    ) -> Self
+    where
+        Self: Sized,
+    {
         ConcreteEcdarApi {
             reveaal_address: env::var("REVEAAL_ADDRESS")
                 .expect("Expected REVEAAL_ADDRESS to be set."),
-            db_context: db_context.clone(),
-            model_context: Box::new(ModelContext::new(db_context.clone())),
-            user_context: Box::new(UserContext::new(db_context.clone())),
-            access_context: Box::new(AccessContext::new(db_context.clone())),
-            query_context: Box::new(QueryContext::new(db_context.clone())),
-            session_context: Box::new(SessionContext::new(db_context.clone())),
-            in_use_context: Box::new(InUseContext::new(db_context.clone())),
+            model_context,
+            user_context,
+            access_context,
+            query_context,
+            session_context,
+            in_use_context,
         }
     }
-
     pub async fn setup_in_memory_db(entities: Vec<AnyEntity>) -> Self {
-        let db_context = setup_db_with_entities(entities).await;
+        let db_context = Box::new(setup_db_with_entities(entities).await);
         env::set_var("REVEAAL_ADDRESS", "");
-        ConcreteEcdarApi::new(Box::new(db_context)).await
+        ConcreteEcdarApi::new(
+            Arc::new(ModelContext::new(db_context.clone())),
+            Arc::new(UserContext::new(db_context.clone())),
+            Arc::new(AccessContext::new(db_context.clone())),
+            Arc::new(QueryContext::new(db_context.clone())),
+            Arc::new(SessionContext::new(db_context.clone())),
+            Arc::new(InUseContext::new(db_context.clone())),
+        )
+        .await
     }
 }
 
@@ -211,14 +233,14 @@ impl EcdarApiAuth for ConcreteEcdarApi {
             return Err(Status::new(Code::InvalidArgument, "Invalid email"));
         }
 
-        let mut user = User {
+        let user = User {
             id: Default::default(),
             username: message.clone().username,
             password: message.clone().password,
             email: message.clone().email,
         };
 
-        match self.user_context.create(user.clone()).await {
+        match self.user_context.create(user).await {
             Ok(_) => Ok(Response::new(())),
             Err(e) => match e.sql_err() {
                 Some(SqlErr::UniqueConstraintViolation(e)) => {
