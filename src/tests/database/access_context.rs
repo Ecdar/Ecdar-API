@@ -62,6 +62,20 @@ mod database_tests {
     }
 
     #[tokio::test]
+    async fn create_invalid_role_test() {
+        let (access_context, mut access, _, _) = seed_db().await;
+
+        access.role = "abc".into();
+
+        let created_access = access_context.create(access.clone()).await;
+
+        assert!(matches!(
+            created_access.unwrap_err().sql_err(),
+            Some(SqlErr::ForeignKeyConstraintViolation(_))
+        ));
+    }
+
+    #[tokio::test]
     async fn create_auto_increment_test() {
         let (access_context, _, user, model_1) = seed_db().await;
 
@@ -263,6 +277,25 @@ mod database_tests {
         let res = access_context.update(updated_access.clone()).await.unwrap();
 
         assert_eq!(access, res);
+    }
+
+    #[tokio::test]
+    async fn update_invalid_role_test() {
+        let (access_context, mut access, _, _) = seed_db().await;
+
+        access::Entity::insert(access.clone().into_active_model())
+            .exec(&access_context.db_context.get_connection())
+            .await
+            .unwrap();
+
+        access.role = "abc".into();
+
+        let updated_access = access_context.update(access.clone()).await;
+
+        assert!(matches!(
+            updated_access.unwrap_err().sql_err(),
+            Some(SqlErr::ForeignKeyConstraintViolation(_))
+        ));
     }
 
     #[tokio::test]
