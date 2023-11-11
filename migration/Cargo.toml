@@ -19,4 +19,5 @@ features = [
   # e.g.
   "runtime-async-std-native-tls",  # `ASYNC_RUNTIME` feature
   "sqlx-postgres",         # `DATABASE_DRIVER` feature
+  "sqlx-sqlite"
 ]
