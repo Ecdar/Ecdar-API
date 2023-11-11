@@ -9,47 +9,42 @@ impl MigrationTrait for Migration {
         manager
             .create_table(
                 Table::create()
-                    .table(RoleEnum::Table)
+                    .table(Role::Table)
                     .if_not_exists()
                     .col(
-                        ColumnDef::new(RoleEnum::Id)
+                        ColumnDef::new(Role::Id)
                             .integer()
                             .not_null()
                             .auto_increment()
                             .primary_key(),
                     )
-                    .col(
-                        ColumnDef::new(RoleEnum::Name)
-                            .string()
-                            .unique_key()
-                            .not_null(),
-                    )
+                    .col(ColumnDef::new(Role::Name).string().unique_key().not_null())
                     .to_owned(),
             )
-            .await;
+            .await?;
 
         let insert = Query::insert()
-            .into_table(RoleEnum::Table)
-            .columns([RoleEnum::Name])
+            .into_table(Role::Table)
+            .columns([Role::Name])
             .values_panic(["Editor".into()])
             .values_panic(["Reader".into()])
-            .values_panic(["Comenter".into()])
+            .values_panic(["Commenter".into()])
             .to_owned();
 
-        manager.exec_stmt(insert).await;
+        manager.exec_stmt(insert).await?;
 
         Ok(())
     }
 
     async fn down(&self, manager: &SchemaManager) -> Result<(), DbErr> {
         manager
-            .drop_table(Table::drop().table(RoleEnum::Table).to_owned())
+            .drop_table(Table::drop().table(Role::Table).to_owned())
             .await
     }
 }
 
 #[derive(DeriveIden)]
-enum RoleEnum {
+pub enum Role {
     Table,
     Id,
     Name,

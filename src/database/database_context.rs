@@ -1,7 +1,6 @@
-use crate::entities::{access, in_use, model, query, session, user};
 use migration::{Migrator, MigratorTrait};
 use sea_orm::prelude::async_trait::async_trait;
-use sea_orm::{ConnectionTrait, Database, DatabaseBackend, DatabaseConnection, DbErr, Schema};
+use sea_orm::{Database, DatabaseConnection, DbErr};
 use std::env;
 
 #[derive(Clone)]
@@ -19,9 +18,7 @@ pub trait DatabaseContextTrait: Send + Sync {
     async fn new() -> Result<Self, DbErr>
     where
         Self: Sized;
-    async fn reset(&self) -> Result<Self, DbErr>
-    where
-        Self: Sized;
+    async fn reset(&self) -> Result<Box<dyn DatabaseContextTrait>, DbErr>;
     fn get_connection(&self) -> DatabaseConnection;
     fn get_url(&self) -> String {
         env::var("DATABASE_URL").expect("Expected DATABASE_URL to be set.")
@@ -30,26 +27,18 @@ pub trait DatabaseContextTrait: Send + Sync {
 
 #[async_trait]
 impl DatabaseContextTrait for PostgresDatabaseContext {
-    async fn new() -> Result<PostgresDatabaseContext, DbErr>
-    where
-        Self: Sized,
-    {
+    async fn new() -> Result<PostgresDatabaseContext, DbErr> {
         let database_url = env::var("DATABASE_URL").expect("Expected DATABASE_URL to be set.");
         let db = Database::connect(database_url.clone()).await?;
         Ok(PostgresDatabaseContext { db_connection: db })
     }
 
-    async fn reset(&self) -> Result<Self, DbErr>
-    where
-        Self: Sized,
-    {
-        let connection = Database::connect("sqlite::memory:").await.unwrap();
+    async fn reset(&self) -> Result<Box<dyn DatabaseContextTrait>, DbErr> {
+        Migrator::fresh(&self.db_connection).await.unwrap();
 
-        Migrator::up(&connection, None).await.unwrap();
-
-        Ok(PostgresDatabaseContext {
-            db_connection: connection,
-        })
+        Ok(Box::new(PostgresDatabaseContext {
+            db_connection: self.get_connection(),
+        }))
     }
 
     fn get_connection(&self) -> DatabaseConnection {
@@ -69,11 +58,8 @@ impl DatabaseContextTrait for SQLiteDatabaseContext {
         })
     }
 
-    async fn reset(&self) -> Result<Self, DbErr>
-    where
-        Self: Sized,
-    {
-        SQLiteDatabaseContext::new().await
+    async fn reset(&self) -> Result<Box<dyn DatabaseContextTrait>, DbErr> {
+        Ok(Box::new(SQLiteDatabaseContext::new().await.unwrap()))
     }
 
     fn get_connection(&self) -> DatabaseConnection {

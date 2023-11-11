@@ -3,10 +3,8 @@
 use crate::database::database_context::{
     DatabaseContextTrait, PostgresDatabaseContext, SQLiteDatabaseContext,
 };
-use crate::entities::sea_orm_active_enums::Role;
 use crate::entities::{access, in_use, model, query, session, user};
 use dotenv::dotenv;
-use sea_orm::{ConnectionTrait, DatabaseConnection, Schema};
 use std::env;
 use uuid::Uuid;
 
@@ -23,8 +21,7 @@ pub async fn get_reset_database_context() -> Box<dyn DatabaseContextTrait> {
         }
     };
 
-    db_context
-    // db_context.reset().await.unwrap()
+    db_context.reset().await.unwrap()
 }
 
 ///
@@ -79,9 +76,9 @@ pub fn create_models(amount: i32, user_id: i32) -> Vec<model::Model> {
 pub fn create_accesses(amount: i32, user_id: i32, model_id: i32) -> Vec<access::Model> {
     create_entities(amount, |i| access::Model {
         id: i + 1,
-        role: Role::Commenter,
-        model_id,
-        user_id,
+        role: "Reader".into(),
+        model_id: model_id + i,
+        user_id: user_id + i,
     })
 }
 

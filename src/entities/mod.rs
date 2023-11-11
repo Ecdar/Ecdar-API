@@ -6,6 +6,6 @@ pub mod access;
 pub mod in_use;
 pub mod model;
 pub mod query;
-pub mod sea_orm_active_enums;
+pub mod role;
 pub mod session;
 pub mod user;

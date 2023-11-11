@@ -4,5 +4,6 @@ pub use super::access::Entity as Access;
 pub use super::in_use::Entity as InUse;
 pub use super::model::Entity as Model;
 pub use super::query::Entity as Query;
+pub use super::role::Entity as Role;
 pub use super::session::Entity as Session;
 pub use super::user::Entity as User;
