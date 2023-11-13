@@ -1,22 +1,40 @@
 use std::fmt::Debug;
 
+use sea_orm::prelude::Uuid;
 use sea_orm::prelude::async_trait::async_trait;
 use sea_orm::ActiveValue::{Set, Unchanged};
-use sea_orm::{ActiveModelTrait, DbErr, EntityTrait};
+use sea_orm::{ActiveModelTrait, DbErr, EntityTrait, QueryFilter, ColumnTrait};
 
 use crate::database::database_context::DatabaseContextTrait;
 use crate::database::entity_context::EntityContextTrait;
 use crate::entities::prelude::Session as SessionEntity;
 use crate::entities::session::{ActiveModel, Model as Session};
+use crate::entities::session::Column as SessionColumn;
 
 #[derive(Debug)]
 pub struct SessionContext {
     db_context: Box<dyn DatabaseContextTrait>,
 }
 
-pub trait SessionContextTrait: EntityContextTrait<Session> {}
+#[async_trait]
+pub trait SessionContextTrait: EntityContextTrait<Session> {
+    async fn get_by_refresh_token(&self, refresh_token: Uuid) -> Result<Option<Session>, DbErr>;
+}
 
-impl SessionContextTrait for SessionContext {}
+#[async_trait]
+impl SessionContextTrait for SessionContext {
+    /// Returns a session by searching for its refresh_token.
+    /// # Example
+    /// ```rust
+    /// let session: Result<Option<Model>, DbErr> = session_context.get_by_refresh_token(refresh_token).await;
+    /// ```
+    async fn get_by_refresh_token(&self, refresh_token: Uuid) -> Result<Option<Session>, DbErr> {
+        SessionEntity::find()
+            .filter(SessionColumn::RefreshToken.eq(refresh_token))
+            .one(&self.db_context.get_connection())
+            .await
+    }
+}
 
 #[async_trait]
 impl EntityContextTrait<Session> for SessionContext {
