@@ -41,12 +41,12 @@ pub mod helpers;
 #[derive(Debug, Clone)]
 pub struct ConcreteEcdarApi {
     reveaal_address: String,
-    model_context: Arc<dyn ModelContextTrait + Send + Sync>,
-    user_context: Arc<dyn UserContextTrait + Send + Sync>,
-    access_context: Arc<dyn AccessContextTrait + Send + Sync>,
-    query_context: Arc<dyn QueryContextTrait + Send + Sync>,
-    session_context: Arc<dyn SessionContextTrait + Send + Sync>,
-    in_use_context: Arc<dyn InUseContextTrait + Send + Sync>,
+    model_context: Arc<dyn ModelContextTrait>,
+    user_context: Arc<dyn UserContextTrait>,
+    access_context: Arc<dyn AccessContextTrait>,
+    query_context: Arc<dyn QueryContextTrait>,
+    session_context: Arc<dyn SessionContextTrait>,
+    in_use_context: Arc<dyn InUseContextTrait>,
 }
 
 fn get_uid_from_request<T>(request: &Request<T>) -> Result<i32, Status> {
@@ -56,7 +56,7 @@ fn get_uid_from_request<T>(request: &Request<T>) -> Result<i32, Status> {
             return Err(Status::new(
                 Code::Internal,
                 "Could not get uid from request metadata",
-            ))
+            ));
         }
     };
 
@@ -65,16 +65,13 @@ fn get_uid_from_request<T>(request: &Request<T>) -> Result<i32, Status> {
 
 impl ConcreteEcdarApi {
     pub async fn new(
-        model_context: Arc<dyn ModelContextTrait + Send + Sync>,
-        user_context: Arc<dyn UserContextTrait + Send + Sync>,
-        access_context: Arc<dyn AccessContextTrait + Send + Sync>,
-        query_context: Arc<dyn QueryContextTrait + Send + Sync>,
-        session_context: Arc<dyn SessionContextTrait + Send + Sync>,
-        in_use_context: Arc<dyn InUseContextTrait + Send + Sync>,
-    ) -> Self
-    where
-        Self: Sized,
-    {
+        model_context: Arc<dyn ModelContextTrait>,
+        user_context: Arc<dyn UserContextTrait>,
+        access_context: Arc<dyn AccessContextTrait>,
+        query_context: Arc<dyn QueryContextTrait>,
+        session_context: Arc<dyn SessionContextTrait>,
+        in_use_context: Arc<dyn InUseContextTrait>,
+    ) -> Self {
         ConcreteEcdarApi {
             reveaal_address: env::var("REVEAAL_ADDRESS")
                 .expect("Expected REVEAAL_ADDRESS to be set."),
@@ -219,7 +216,7 @@ impl EcdarApiAuth for ConcreteEcdarApi {
         let message = request.get_ref().clone();
         let uid = match message.auth_option {
             Some(auth_option) => match auth_option {
-                AuthOption::RefreshToken(refresh_token) => {
+                AuthOption::RefreshToken(_refresh_token) => {
                     get_uid_from_request(&request).unwrap().to_string()
                 }
                 AuthOption::UserCredentials(user_credentials) => {

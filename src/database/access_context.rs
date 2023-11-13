@@ -18,12 +18,6 @@ pub trait AccessContextTrait: EntityContextTrait<Access> {}
 
 impl AccessContextTrait for AccessContext {}
 
-impl Debug for dyn AccessContextTrait + Send + Sync + 'static {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("ModelContextTrait").finish()
-    }
-}
-
 #[async_trait]
 impl EntityContextTrait<Access> for AccessContext {
     fn new(db_context: Box<dyn DatabaseContextTrait>) -> AccessContext {
