@@ -211,11 +211,11 @@ impl EcdarApiAuth for ConcreteEcdarApi {
     ) -> Result<Response<GetAuthTokenResponse>, Status> {
         let message = request.get_ref().clone();
         let uid: String;
-        let temp: User;
+        let user_from_db: User;
 
         if let Some(user_credentials) = message.user_credentials {
             if let Some(user) = user_credentials.user {
-                temp = match user {
+                user_from_db = match user {
                     user_credentials::User::Username(username) => {
                         match self.user_context.get_by_username(username).await {
                             Ok(Some(user)) => user,
@@ -242,9 +242,9 @@ impl EcdarApiAuth for ConcreteEcdarApi {
                     }
                 };
 
-                uid = temp.id.to_string();
+                uid = user_from_db.id.to_string();
 
-                if user_credentials.password != temp.password {
+                if user_credentials.password != user_from_db.password {
                     return Err(Status::new(Code::Unauthenticated, "Wrong password"));
                 }
             } else {
