@@ -4,9 +4,10 @@ use crate::entities::access;
 use sea_orm::prelude::async_trait::async_trait;
 use sea_orm::ActiveValue::{Set, Unchanged};
 use sea_orm::{ActiveModelTrait, DbErr, EntityTrait};
+use std::sync::Arc;
 
 pub struct AccessContext {
-    db_context: Box<dyn DatabaseContextTrait>,
+    db_context: Arc<dyn DatabaseContextTrait>,
 }
 
 pub trait AccessContextTrait: EntityContextTrait<access::Model> {}
@@ -15,7 +16,7 @@ impl AccessContextTrait for AccessContext {}
 
 #[async_trait]
 impl EntityContextTrait<access::Model> for AccessContext {
-    fn new(db_context: Box<dyn DatabaseContextTrait>) -> AccessContext {
+    fn new(db_context: Arc<dyn DatabaseContextTrait>) -> AccessContext {
         AccessContext { db_context }
     }
 

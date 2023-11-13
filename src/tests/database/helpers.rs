@@ -5,20 +5,20 @@ use crate::database::database_context::{
 };
 use crate::entities::{access, in_use, model, query, session, user};
 use dotenv::dotenv;
+use sea_orm::{ConnectionTrait, Database, DbBackend};
 use std::env;
+use std::sync::Arc;
 use uuid::Uuid;
 
-pub async fn get_reset_database_context() -> Box<dyn DatabaseContextTrait> {
+pub async fn get_reset_database_context() -> Arc<dyn DatabaseContextTrait> {
     dotenv().ok();
 
     let url = env::var("TEST_DATABASE_URL").expect("TEST_DATABASE_URL must be set to run tests.");
-
-    let db_context: Box<dyn DatabaseContextTrait> = match url.split_at(url.find(":").unwrap()).0 {
-        "sqlite" => Box::new(SQLiteDatabaseContext::new().await.unwrap()),
-        "postgresql" => Box::new(PostgresDatabaseContext::new().await.unwrap()),
-        _ => {
-            panic!("Tests do not support the database protocol")
-        }
+    let db = Database::connect(&url).await.unwrap();
+    let db_context: Arc<dyn DatabaseContextTrait> = match db.get_database_backend() {
+        DbBackend::Sqlite => Arc::new(SQLiteDatabaseContext::new(&url).await.unwrap()),
+        DbBackend::Postgres => Arc::new(PostgresDatabaseContext::new(&url).await.unwrap()),
+        _ => panic!("Database protocol not supported"),
     };
 
     db_context.reset().await.unwrap()

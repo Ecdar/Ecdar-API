@@ -4,9 +4,10 @@ use crate::entities::user;
 use sea_orm::prelude::async_trait::async_trait;
 use sea_orm::ActiveValue::{Set, Unchanged};
 use sea_orm::{ActiveModelTrait, DbErr, EntityTrait};
+use std::sync::Arc;
 
 pub struct UserContext {
-    db_context: Box<dyn DatabaseContextTrait>,
+    db_context: Arc<dyn DatabaseContextTrait>,
 }
 
 pub trait UserContextTrait: EntityContextTrait<user::Model> {}
@@ -15,7 +16,7 @@ impl UserContextTrait for UserContext {}
 
 #[async_trait]
 impl EntityContextTrait<user::Model> for UserContext {
-    fn new(db_context: Box<dyn DatabaseContextTrait>) -> UserContext {
+    fn new(db_context: Arc<dyn DatabaseContextTrait>) -> UserContext {
         UserContext { db_context }
     }
 

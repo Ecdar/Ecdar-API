@@ -4,9 +4,10 @@ use crate::entities::query;
 use sea_orm::prelude::async_trait::async_trait;
 use sea_orm::ActiveValue::{Set, Unchanged};
 use sea_orm::{ActiveModelTrait, DbErr, EntityTrait};
+use std::sync::Arc;
 
 pub struct QueryContext {
-    db_context: Box<dyn DatabaseContextTrait>,
+    db_context: Arc<dyn DatabaseContextTrait>,
 }
 
 pub trait QueryContextTrait: EntityContextTrait<query::Model> {}
@@ -15,7 +16,7 @@ impl QueryContextTrait for QueryContext {}
 
 #[async_trait]
 impl EntityContextTrait<query::Model> for QueryContext {
-    fn new(db_context: Box<dyn DatabaseContextTrait>) -> QueryContext {
+    fn new(db_context: Arc<dyn DatabaseContextTrait>) -> QueryContext {
         QueryContext { db_context }
     }
 

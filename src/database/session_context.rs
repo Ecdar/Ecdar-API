@@ -2,13 +2,14 @@ use chrono::Utc;
 use sea_orm::prelude::async_trait::async_trait;
 use sea_orm::ActiveValue::{Set, Unchanged};
 use sea_orm::{ActiveModelTrait, DbErr, EntityTrait};
+use std::sync::Arc;
 
 use crate::database::database_context::DatabaseContextTrait;
 use crate::database::entity_context::EntityContextTrait;
 use crate::entities::session;
 
 pub struct SessionContext {
-    db_context: Box<dyn DatabaseContextTrait>,
+    db_context: Arc<dyn DatabaseContextTrait>,
 }
 
 pub trait SessionContextTrait: EntityContextTrait<session::Model> {}
@@ -18,7 +19,7 @@ impl SessionContextTrait for SessionContext {}
 #[async_trait]
 impl EntityContextTrait<session::Model> for SessionContext {
     /// Creates a new `SessionContext` for interacting with the database.
-    fn new(db_context: Box<dyn DatabaseContextTrait>) -> Self {
+    fn new(db_context: Arc<dyn DatabaseContextTrait>) -> Self {
         SessionContext { db_context }
     }
     /// Creates a new session in the database based on the provided model.
