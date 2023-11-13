@@ -1,6 +1,5 @@
 use std::fmt::Debug;
 
-use sea_orm::prelude::Uuid;
 use sea_orm::prelude::async_trait::async_trait;
 use sea_orm::ActiveValue::{Set, Unchanged};
 use sea_orm::{ActiveModelTrait, DbErr, EntityTrait, QueryFilter, ColumnTrait};
@@ -18,7 +17,7 @@ pub struct SessionContext {
 
 #[async_trait]
 pub trait SessionContextTrait: EntityContextTrait<Session> {
-    async fn get_by_refresh_token(&self, refresh_token: Uuid) -> Result<Option<Session>, DbErr>;
+    async fn get_by_refresh_token(&self, refresh_token: String) -> Result<Option<Session>, DbErr>;
 }
 
 #[async_trait]
@@ -28,7 +27,7 @@ impl SessionContextTrait for SessionContext {
     /// ```rust
     /// let session: Result<Option<Model>, DbErr> = session_context.get_by_refresh_token(refresh_token).await;
     /// ```
-    async fn get_by_refresh_token(&self, refresh_token: Uuid) -> Result<Option<Session>, DbErr> {
+    async fn get_by_refresh_token(&self, refresh_token: String) -> Result<Option<Session>, DbErr> {
         SessionEntity::find()
             .filter(SessionColumn::RefreshToken.eq(refresh_token))
             .one(&self.db_context.get_connection())

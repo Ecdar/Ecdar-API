@@ -5,9 +5,10 @@ use crate::api::ecdar_api::helpers::helpers::{setup_db_with_entities, AnyEntity}
 use crate::api::server::server::get_auth_token_request::user_credentials;
 use crate::entities::access;
 use crate::entities::session::Model;
+use chrono::Local;
 use regex::Regex;
 use sea_orm::SqlErr;
-use sea_orm::prelude::Uuid;
+use sea_orm::prelude::{Uuid, TimeTime};
 use tonic::{Code, Request, Response, Status};
 
 use crate::api::server::server::{
@@ -28,6 +29,7 @@ use crate::database::{
 };
 use crate::entities::user::Model as User;
 
+use super::auth::get_token_from_request;
 use super::{
     auth,
     server::server::{
@@ -63,6 +65,18 @@ fn get_uid_from_request<T>(request: &Request<T>) -> Result<i32, Status> {
     };
 
     Ok(uid.parse().unwrap())
+}
+
+fn is_valid_email(email: &str) -> bool {
+    Regex::new(r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$")
+        .unwrap()
+        .is_match(email)
+}
+
+fn is_valid_username(username: &str) -> bool {
+    Regex::new(r"^[a-zA-Z0-9_]{3,32}$")
+        .unwrap()
+        .is_match(username)
 }
 
 impl ConcreteEcdarApi {
@@ -194,16 +208,44 @@ impl EcdarApi for ConcreteEcdarApi {
     }
 }
 
-fn is_valid_email(email: &str) -> bool {
-    Regex::new(r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$")
-        .unwrap()
-        .is_match(email)
-}
+async fn handle_session(
+    session_context: Arc<dyn SessionContextTrait>, 
+    request: &Request<GetAuthTokenRequest>,
+    is_new_session: bool,
+    access_token: String,
+    refresh_token: String,
+    uid: String, 
+) -> Result<(), Status> {
+    if is_new_session {
+        session_context.create(Model {
+            id: Default::default(),
+            access_token: access_token.clone(),
+            refresh_token: refresh_token.clone(),
+            updated_at: Local::now().naive_local(),
+            user_id: uid.parse().unwrap(),
+        }).await.unwrap();
+    } else {
+        let mut session = match session_context.get_by_refresh_token(auth::get_token_from_request(request)?).await {
+            Ok(Some(session)) => session,
+            Ok(None) => {
+                return Err(Status::new(
+                    Code::Unauthenticated,
+                    "No session found with given refresh token",
+                ))
+            }
+            Err(err) => return Err(Status::new(Code::Internal, err.to_string())),
+        };
 
-fn is_valid_username(username: &str) -> bool {
-    Regex::new(r"^[a-zA-Z0-9_]{3,32}$")
-        .unwrap()
-        .is_match(username)
+        session.access_token = access_token.clone();
+        session.refresh_token = refresh_token.clone();
+        session.updated_at = Local::now().naive_local();
+
+        match session_context.update(session).await {
+            Ok(_) => (),
+            Err(err) => return Err(Status::new(Code::Internal, err.to_string())),
+        };
+    }
+        Ok(())
 }
 
 #[tonic::async_trait]
@@ -275,36 +317,15 @@ impl EcdarApiAuth for ConcreteEcdarApi {
             Ok(token) => token.to_owned(),
             Err(e) => return Err(Status::new(Code::Internal, e.to_string())),
         };
-
-        if is_new_session {
-            self.session_context.create(Model {
-                id: Default::default(),
-                access_token: Uuid::parse_str(&access_token).unwrap(),
-                refresh_token: Uuid::parse_str(&refresh_token).unwrap(),
-                updated_at: Default::default(),
-                user_id: uid.parse().unwrap(),
-            }).await.unwrap();
-        } else {
-            let mut session = match self.session_context.get_by_refresh_token(Uuid::parse_str(&refresh_token).unwrap()).await {
-                Ok(Some(session)) => session,
-                Ok(None) => {
-                    return Err(Status::new(
-                        Code::Internal,
-                        "No session found with given refresh token",
-                    ))
-                }
-                Err(err) => return Err(Status::new(Code::Internal, err.to_string())),
-            };
-
-            session.access_token = Uuid::parse_str(&access_token).unwrap();
-            session.refresh_token = Uuid::parse_str(&refresh_token).unwrap();
-            session.updated_at = Default::default();
-
-            match self.session_context.update(session).await {
-                Ok(_) => (),
-                Err(err) => return Err(Status::new(Code::Internal, err.to_string())),
-            };
-        }
+        
+        handle_session(
+            self.session_context.clone(), 
+            &request, 
+            is_new_session, 
+            access_token.clone(), 
+            refresh_token.clone(), 
+            uid
+        ).await?;
 
         Ok(Response::new(GetAuthTokenResponse {
             access_token,
