@@ -1,4 +1,4 @@
-use std::fmt::{Debug, Formatter};
+use std::fmt::{Debug};
 
 use sea_orm::prelude::async_trait::async_trait;
 use sea_orm::DbErr;

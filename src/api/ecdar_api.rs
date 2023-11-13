@@ -219,7 +219,7 @@ impl EcdarApiAuth for ConcreteEcdarApi {
         let message = request.get_ref().clone();
         let uid = match message.auth_option {
             Some(auth_option) => match auth_option {
-                AuthOption::RefreshToken(refresh_token) => {
+                AuthOption::RefreshToken(_refresh_token) => {
                     get_uid_from_request(&request).unwrap().to_string()
                 }
                 AuthOption::UserCredentials(user_credentials) => {
