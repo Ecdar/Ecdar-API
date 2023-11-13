@@ -71,10 +71,7 @@ impl ConcreteEcdarApi {
         query_context: Arc<dyn QueryContextTrait>,
         session_context: Arc<dyn SessionContextTrait>,
         in_use_context: Arc<dyn InUseContextTrait>,
-    ) -> Self
-    where
-        Self: Sized,
-    {
+    ) -> Self {
         ConcreteEcdarApi {
             reveaal_address: env::var("REVEAAL_ADDRESS")
                 .expect("Expected REVEAAL_ADDRESS to be set."),
