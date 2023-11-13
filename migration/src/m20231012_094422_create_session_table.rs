@@ -22,13 +22,13 @@ impl MigrationTrait for Migration {
                     )
                     .col(
                         ColumnDef::new(Session::RefreshToken)
-                            .uuid()
+                            .string()
                             .not_null()
                             .unique_key(),
                     )
                     .col(
                         ColumnDef::new(Session::AccessToken)
-                            .uuid()
+                            .string()
                             .not_null()
                             .unique_key(),
                     )
