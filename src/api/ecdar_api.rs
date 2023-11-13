@@ -215,7 +215,7 @@ impl EcdarApiAuth for ConcreteEcdarApi {
         let message = request.get_ref().clone();
         let uid: String;
         let temp: User;
-        
+
         if let Some(user_credentials) = message.user_credentials {
             if let Some(user) = user_credentials.user {
                 temp = match user {
@@ -244,9 +244,9 @@ impl EcdarApiAuth for ConcreteEcdarApi {
                         }
                     }
                 };
-                
+
                 uid = temp.id.to_string();
-                
+
                 if user_credentials.password != temp.password {
                     return Err(Status::new(Code::Unauthenticated, "Wrong password"));
                 }
