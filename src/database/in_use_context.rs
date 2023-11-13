@@ -17,12 +17,6 @@ pub trait InUseContextTrait: EntityContextTrait<InUse> {}
 
 impl InUseContextTrait for InUseContext {}
 
-impl Debug for dyn InUseContextTrait + Send + Sync + 'static {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("ModelContextTrait").finish()
-    }
-}
-
 #[async_trait]
 impl EntityContextTrait<InUse> for InUseContext {
     fn new(db_context: Box<dyn DatabaseContextTrait>) -> InUseContext {

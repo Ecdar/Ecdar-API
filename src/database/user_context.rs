@@ -28,12 +28,6 @@ pub trait UserContextTrait: EntityContextTrait<User> {
     async fn get_by_email(&self, email: String) -> Result<Option<User>, DbErr>;
 }
 
-impl Debug for dyn UserContextTrait + Send + Sync + 'static {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("ModelContextTrait").finish()
-    }
-}
-
 #[async_trait]
 impl UserContextTrait for UserContext {
     async fn get_by_username(&self, username: String) -> Result<Option<User>, DbErr> {

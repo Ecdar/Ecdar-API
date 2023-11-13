@@ -18,12 +18,6 @@ pub trait SessionContextTrait: EntityContextTrait<Session> {}
 
 impl SessionContextTrait for SessionContext {}
 
-impl Debug for dyn SessionContextTrait + Send + Sync + 'static {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("ModelContextTrait").finish()
-    }
-}
-
 #[async_trait]
 impl EntityContextTrait<Session> for SessionContext {
     /// Creates a new `SessionContext` for interacting with the database.

@@ -9,16 +9,16 @@ pub struct DatabaseContext {
     pub(crate) db_connection: DatabaseConnection,
 }
 
-impl Debug for dyn DatabaseContextTrait {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("DatabaseContextTrait")
-            .field("db_connection", &self.get_connection())
-            .finish()
-    }
-}
+// impl Debug for dyn DatabaseContextTrait {
+//     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+//         f.debug_struct("DatabaseContextTrait")
+//             .field("db_connection", &self.get_connection())
+//             .finish()
+//     }
+// }
 
 #[async_trait]
-pub trait DatabaseContextTrait: Send + Sync {
+pub trait DatabaseContextTrait: Send + Sync + Debug {
     async fn new() -> Result<Self, DbErr>
     where
         Self: Sized;
