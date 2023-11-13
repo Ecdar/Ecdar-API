@@ -7,8 +7,8 @@ use crate::entities::access;
 use crate::entities::session::Model;
 use chrono::Local;
 use regex::Regex;
+use sea_orm::prelude::{TimeTime, Uuid};
 use sea_orm::SqlErr;
-use sea_orm::prelude::{Uuid, TimeTime};
 use tonic::{Code, Request, Response, Status};
 
 use crate::api::server::server::{
@@ -209,23 +209,29 @@ impl EcdarApi for ConcreteEcdarApi {
 }
 
 async fn handle_session(
-    session_context: Arc<dyn SessionContextTrait>, 
+    session_context: Arc<dyn SessionContextTrait>,
     request: &Request<GetAuthTokenRequest>,
     is_new_session: bool,
     access_token: String,
     refresh_token: String,
-    uid: String, 
+    uid: String,
 ) -> Result<(), Status> {
     if is_new_session {
-        session_context.create(Model {
-            id: Default::default(),
-            access_token: access_token.clone(),
-            refresh_token: refresh_token.clone(),
-            updated_at: Local::now().naive_local(),
-            user_id: uid.parse().unwrap(),
-        }).await.unwrap();
+        session_context
+            .create(Model {
+                id: Default::default(),
+                access_token: access_token.clone(),
+                refresh_token: refresh_token.clone(),
+                updated_at: Local::now().naive_local(),
+                user_id: uid.parse().unwrap(),
+            })
+            .await
+            .unwrap();
     } else {
-        let mut session = match session_context.get_by_refresh_token(auth::get_token_from_request(request)?).await {
+        let mut session = match session_context
+            .get_by_refresh_token(auth::get_token_from_request(request)?)
+            .await
+        {
             Ok(Some(session)) => session,
             Ok(None) => {
                 return Err(Status::new(
@@ -245,7 +251,7 @@ async fn handle_session(
             Err(err) => return Err(Status::new(Code::Internal, err.to_string())),
         };
     }
-        Ok(())
+    Ok(())
 }
 
 #[tonic::async_trait]
@@ -297,7 +303,6 @@ impl EcdarApiAuth for ConcreteEcdarApi {
                 uid = user_from_db.id.to_string();
 
                 is_new_session = true;
-
             } else {
                 return Err(Status::new(Code::Internal, "No user provided"));
             }
@@ -317,15 +322,16 @@ impl EcdarApiAuth for ConcreteEcdarApi {
             Ok(token) => token.to_owned(),
             Err(e) => return Err(Status::new(Code::Internal, e.to_string())),
         };
-        
+
         handle_session(
-            self.session_context.clone(), 
-            &request, 
-            is_new_session, 
-            access_token.clone(), 
-            refresh_token.clone(), 
-            uid
-        ).await?;
+            self.session_context.clone(),
+            &request,
+            is_new_session,
+            access_token.clone(),
+            refresh_token.clone(),
+            uid,
+        )
+        .await?;
 
         Ok(Response::new(GetAuthTokenResponse {
             access_token,

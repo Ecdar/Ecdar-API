@@ -2,13 +2,13 @@ use std::fmt::Debug;
 
 use sea_orm::prelude::async_trait::async_trait;
 use sea_orm::ActiveValue::{Set, Unchanged};
-use sea_orm::{ActiveModelTrait, DbErr, EntityTrait, QueryFilter, ColumnTrait};
+use sea_orm::{ActiveModelTrait, ColumnTrait, DbErr, EntityTrait, QueryFilter};
 
 use crate::database::database_context::DatabaseContextTrait;
 use crate::database::entity_context::EntityContextTrait;
 use crate::entities::prelude::Session as SessionEntity;
-use crate::entities::session::{ActiveModel, Model as Session};
 use crate::entities::session::Column as SessionColumn;
+use crate::entities::session::{ActiveModel, Model as Session};
 
 #[derive(Debug)]
 pub struct SessionContext {
