@@ -52,7 +52,7 @@ pub async fn start_grpc_server(
         .add_service(EcdarApiAuthServer::new(svc.clone()))
         .add_service(EcdarApiServer::with_interceptor(
             svc.clone(),
-            auth::token_validation,
+            auth::validation_interceptor,
         ))
         .add_service(EcdarBackendServer::new(svc.clone()))
         .serve(addr)

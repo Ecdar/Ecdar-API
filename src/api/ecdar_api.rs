@@ -2,7 +2,7 @@ use std::env;
 use std::sync::Arc;
 
 use crate::api::ecdar_api::helpers::helpers::{setup_db_with_entities, AnyEntity};
-use crate::api::server::server::get_auth_token_request::{user_credentials, AuthOption};
+use crate::api::server::server::get_auth_token_request::user_credentials;
 use regex::Regex;
 use sea_orm::SqlErr;
 use tonic::{Code, Request, Response, Status};
@@ -28,10 +28,9 @@ use crate::entities::user::Model as User;
 use super::{
     auth,
     server::server::{
-        ecdar_backend_server::EcdarBackend, CreateUserRequest, DeleteUserRequest,
-        GetAuthTokenRequest, GetAuthTokenResponse, QueryRequest, QueryResponse,
-        SimulationStartRequest, SimulationStepRequest, SimulationStepResponse, UpdateUserRequest,
-        UserTokenResponse,
+        ecdar_backend_server::EcdarBackend, CreateUserRequest, GetAuthTokenRequest,
+        GetAuthTokenResponse, QueryRequest, QueryResponse, SimulationStartRequest,
+        SimulationStepRequest, SimulationStepResponse, UpdateUserRequest, UserTokenResponse,
     },
 };
 
@@ -168,10 +167,7 @@ impl EcdarApi for ConcreteEcdarApi {
     /// # Errors
     /// Returns an error if the database context fails to delete the user or
     /// if the uid could not be parsed from the request metadata.
-    async fn delete_user(
-        &self,
-        request: Request<DeleteUserRequest>,
-    ) -> Result<Response<()>, Status> {
+    async fn delete_user(&self, request: Request<()>) -> Result<Response<()>, Status> {
         // Get uid from request metadata
         let uid = get_uid_from_request(&request)?;
 
@@ -214,36 +210,51 @@ impl EcdarApiAuth for ConcreteEcdarApi {
         request: Request<GetAuthTokenRequest>,
     ) -> Result<Response<GetAuthTokenResponse>, Status> {
         let message = request.get_ref().clone();
-        let uid = match message.auth_option {
-            Some(auth_option) => match auth_option {
-                AuthOption::RefreshToken(_refresh_token) => {
-                    get_uid_from_request(&request).unwrap().to_string()
-                }
-                AuthOption::UserCredentials(user_credentials) => {
-                    if let Some(user) = user_credentials.user {
-                        match user {
-                            user_credentials::User::Username(username) => {
-                                match self.user_context.get_by_username(username).await {
-                                    Ok(Some(user)) => user.id.to_string(),
-                                    Ok(None) => Err(Status::new(Code::Internal, "No user found"))?,
-                                    Err(err) => Err(Status::new(Code::Internal, err.to_string()))?,
-                                }
+        let uid: String;
+        let temp: User;
+
+        if let Some(user_credentials) = message.user_credentials {
+            if let Some(user) = user_credentials.user {
+                temp = match user {
+                    user_credentials::User::Username(username) => {
+                        match self.user_context.get_by_username(username).await {
+                            Ok(Some(user)) => user,
+                            Ok(None) => {
+                                return Err(Status::new(
+                                    Code::Internal,
+                                    "No user found with given username",
+                                ))
                             }
-                            user_credentials::User::Email(email) => {
-                                match self.user_context.get_by_email(email).await {
-                                    Ok(Some(user)) => user.id.to_string(),
-                                    Ok(None) => Err(Status::new(Code::Internal, "No user found"))?,
-                                    Err(err) => Err(Status::new(Code::Internal, err.to_string()))?,
-                                }
-                            }
+                            Err(err) => return Err(Status::new(Code::Internal, err.to_string())),
                         }
-                    } else {
-                        Err(Status::new(Code::Internal, "No user provided"))?
                     }
+                    user_credentials::User::Email(email) => {
+                        match self.user_context.get_by_email(email).await {
+                            Ok(Some(user)) => user,
+                            Ok(None) => {
+                                return Err(Status::new(
+                                    Code::Internal,
+                                    "No user found with given email",
+                                ))
+                            }
+                            Err(err) => return Err(Status::new(Code::Internal, err.to_string())),
+                        }
+                    }
+                };
+
+                uid = temp.id.to_string();
+
+                if user_credentials.password != temp.password {
+                    return Err(Status::new(Code::Unauthenticated, "Wrong password"));
                 }
-            },
-            None => Err(Status::new(Code::Internal, "No auth option provided"))?,
-        };
+            } else {
+                return Err(Status::new(Code::Internal, "No user provided"));
+            }
+        } else {
+            let refresh_token = auth::get_token_from_request(&request)?;
+            let token_data = auth::validate_token(refresh_token, true)?;
+            uid = token_data.claims.sub;
+        }
 
         let access_token = match auth::create_access_token(&uid) {
             Ok(token) => token,
@@ -258,6 +269,7 @@ impl EcdarApiAuth for ConcreteEcdarApi {
             refresh_token,
         }))
     }
+
     async fn create_user(
         &self,
         request: Request<CreateUserRequest>,
