@@ -22,12 +22,12 @@ pub mod server {
 }
 
 pub async fn start_grpc_server(
-    model_context: Arc<dyn ModelContextTrait + Send + Sync>,
-    user_context: Arc<dyn UserContextTrait + Send + Sync>,
-    access_context: Arc<dyn AccessContextTrait + Send + Sync>,
-    query_context: Arc<dyn QueryContextTrait + Send + Sync>,
-    session_context: Arc<dyn SessionContextTrait + Send + Sync>,
-    in_use_context: Arc<dyn InUseContextTrait + Send + Sync>,
+    model_context: Arc<dyn ModelContextTrait>,
+    user_context: Arc<dyn UserContextTrait>,
+    access_context: Arc<dyn AccessContextTrait>,
+    query_context: Arc<dyn QueryContextTrait>,
+    session_context: Arc<dyn SessionContextTrait>,
+    in_use_context: Arc<dyn InUseContextTrait>,
 ) -> Result<(), Box<dyn std::error::Error>> {
     // defining address for our service
     let addr = env::var("API_ADDRESS")

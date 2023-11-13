@@ -15,12 +15,6 @@ pub struct ModelContext {
 
 pub trait ModelContextTrait: EntityContextTrait<Model> {}
 
-impl Debug for dyn ModelContextTrait + Send + Sync + 'static {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("ModelContextTrait").finish()
-    }
-}
-
 impl ModelContextTrait for ModelContext {}
 
 #[async_trait]

@@ -18,12 +18,6 @@ pub trait QueryContextTrait: EntityContextTrait<Query> {}
 
 impl QueryContextTrait for QueryContext {}
 
-impl Debug for dyn QueryContextTrait + Send + Sync + 'static {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("ModelContextTrait").finish()
-    }
-}
-
 #[async_trait]
 impl EntityContextTrait<Query> for QueryContext {
     fn new(db_context: Box<dyn DatabaseContextTrait>) -> QueryContext {
