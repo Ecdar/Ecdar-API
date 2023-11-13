@@ -61,12 +61,12 @@ pub fn create_refresh_token(uid: &str) -> Result<String, Error> {
 }
 
 pub fn validation_interceptor(mut req: Request<()>) -> Result<Request<()>, Status> {
-    let token = match req.metadata().get("authorization") {
-        Some(token) => token.to_str(),
-        None => return Err(Status::unauthenticated("Token not found")),
+    let token = match get_token_from_request(&req) {
+        Ok(token) => token,
+        Err(err) => return Err(err),
     };
 
-    match validate_token(token.unwrap(), false) {
+    match validate_token(token, false) {
         Ok(token_data) => {
             req.metadata_mut().insert(
                 "uid",
@@ -78,7 +78,22 @@ pub fn validation_interceptor(mut req: Request<()>) -> Result<Request<()>, Statu
     }
 }
 
-pub fn validate_token(token: &str, is_refresh_token: bool) -> Result<TokenData<Claims>, Status> {
+pub fn get_token_from_request<T>(req: &Request<T>) -> Result<String, Status> {
+    let token = match req.metadata().get("authorization") {
+        Some(token) => token.to_str(),
+        None => return Err(Status::unauthenticated("Token not found")),
+    };
+
+    if token.is_ok() {
+        Ok(token.unwrap().to_string())
+    } else {
+        Err(Status::unauthenticated(
+            "Could not read token from metadata",
+        ))
+    }
+}
+
+pub fn validate_token(token: String, is_refresh_token: bool) -> Result<TokenData<Claims>, Status> {
     let secret: String;
 
     if is_refresh_token {

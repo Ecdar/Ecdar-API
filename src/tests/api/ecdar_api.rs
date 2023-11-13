@@ -3,7 +3,7 @@ mod ecdar_api {
     use crate::api::ecdar_api::helpers::helpers::AnyEntity;
     use crate::api::ecdar_api::ConcreteEcdarApi;
     use crate::api::server::server::ecdar_api_auth_server::EcdarApiAuth;
-    use crate::api::server::server::{CreateUserRequest, DeleteUserRequest, UpdateUserRequest};
+    use crate::api::server::server::{CreateUserRequest, UpdateUserRequest};
     use crate::database::entity_context::EntityContextTrait;
     use crate::database::user_context::UserContextTrait;
     use crate::{api::server::server::ecdar_api_server::EcdarApi, entities::user::Model as User};
@@ -16,9 +16,7 @@ mod ecdar_api {
     async fn delete_user_nonexistent_user_returns_err() {
         let api = ConcreteEcdarApi::setup_in_memory_db(vec![AnyEntity::User]).await;
 
-        let mut delete_request = Request::new(DeleteUserRequest {
-            token: "token".to_owned(),
-        });
+        let mut delete_request = Request::new({});
 
         // Insert uid into request metadata
         delete_request
@@ -45,9 +43,7 @@ mod ecdar_api {
             .await
             .unwrap();
 
-        let mut delete_request = Request::new(DeleteUserRequest {
-            token: "token".to_owned(),
-        });
+        let mut delete_request = Request::new({});
 
         // Insert uid into request metadata
         delete_request
@@ -199,7 +195,6 @@ mod ecdar_api {
         api.user_context.create(user.clone()).await.unwrap();
 
         let mut update_user_request = Request::new(UpdateUserRequest {
-            token: "token".to_string(),
             email: Some("new_test@test".to_string()),
             username: Some("new_test_user".to_string()),
             password: Some("new_test_pass".to_string()),
@@ -219,7 +214,6 @@ mod ecdar_api {
         let api = ConcreteEcdarApi::setup_in_memory_db(vec![AnyEntity::User]).await;
 
         let mut update_user_request = Request::new(UpdateUserRequest {
-            token: "token".to_string(),
             email: Some("new_test@test".to_string()),
             username: Some("new_test_user".to_string()),
             password: Some("new_test_pass".to_string()),
@@ -248,7 +242,6 @@ mod ecdar_api {
         api.user_context.create(user.clone()).await.unwrap();
 
         let mut update_user_request = Request::new(UpdateUserRequest {
-            token: "token".to_string(),
             email: Some("new_test@test".to_string()),
             username: None,
             password: None,
