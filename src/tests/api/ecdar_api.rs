@@ -1,15 +1,25 @@
 #[cfg(test)]
 mod ecdar_api {
+    use crate::api::auth::get_token_from_request;
     use crate::api::ecdar_api::helpers::helpers::AnyEntity;
-    use crate::api::ecdar_api::ConcreteEcdarApi;
+    use crate::api::ecdar_api::{handle_session, ConcreteEcdarApi};
     use crate::api::server::server::ecdar_api_auth_server::EcdarApiAuth;
-    use crate::api::server::server::{CreateUserRequest, UpdateUserRequest};
+    use crate::api::server::server::get_auth_token_request::user_credentials;
+    use crate::api::server::server::get_auth_token_request::UserCredentials;
+    use crate::api::server::server::{CreateUserRequest, GetAuthTokenRequest, UpdateUserRequest};
     use crate::database::entity_context::EntityContextTrait;
+    use crate::database::session_context;
     use crate::database::user_context::UserContextTrait;
-    use crate::{api::server::server::ecdar_api_server::EcdarApi, entities::user::Model as User};
+    use crate::entities;
+    use crate::{
+        api::server::server::ecdar_api_server::EcdarApi, entities::session::Model as Session,
+        entities::user::Model as User,
+    };
+    use sea_orm::ActiveValue::Set;
 
     use std::str::FromStr;
 
+    use chrono::Local;
     use tonic::{metadata, Request};
 
     #[tokio::test]
@@ -254,5 +264,155 @@ mod ecdar_api {
         let update_user_response = api.update_user(update_user_request).await;
 
         assert!(update_user_response.is_ok())
+    }
+
+    #[tokio::test]
+    async fn handle_session_updated_session_contains_correct_fields() {
+        let api =
+            ConcreteEcdarApi::setup_in_memory_db(vec![AnyEntity::User, AnyEntity::Session]).await;
+
+        let mut get_auth_token_request = Request::new(GetAuthTokenRequest {
+            user_credentials: Some(UserCredentials {
+                user: Some(user_credentials::User::Email("test@test".to_string())),
+                password: "test_password".to_string(),
+            }),
+        });
+
+        get_auth_token_request.metadata_mut().insert(
+            "authorization",
+            metadata::MetadataValue::from_str("Bearer test_refresh_token").unwrap(),
+        );
+
+        let user = User {
+            id: 1,
+            email: "test@test".to_string(),
+            username: "test_user".to_string(),
+            password: "test_pass".to_string(),
+        };
+
+        let is_new_session = false;
+
+        api.user_context.create(user.clone()).await.unwrap();
+
+        let old_session = api
+            .session_context
+            .create(Session {
+                id: Default::default(),
+                refresh_token: "test_refresh_token".to_string(),
+                access_token: "test_access_token".to_string(),
+                updated_at: Local::now().naive_local(),
+                user_id: 1,
+            })
+            .await
+            .unwrap();
+
+        handle_session(
+            api.session_context.clone(),
+            &get_auth_token_request,
+            is_new_session,
+            "new_access_token".to_string(),
+            "new_refresh_token".to_string(),
+            user.id.to_string(),
+        )
+        .await
+        .unwrap();
+
+        let expected_session = Session {
+            id: 1,
+            refresh_token: "new_refresh_token".to_string(),
+            access_token: "new_access_token".to_string(),
+            updated_at: Default::default(),
+            user_id: 1,
+        };
+
+        let updated_session = api.session_context.get_by_id(1).await.unwrap().unwrap();
+        assert!(dbg!(updated_session != old_session));
+        assert!(dbg!(updated_session.refresh_token) == dbg!(expected_session.refresh_token));
+        assert!(dbg!(updated_session.access_token) == dbg!(expected_session.access_token));
+        assert!(dbg!(updated_session.updated_at) > dbg!(old_session.updated_at));
+        assert!(dbg!(updated_session.user_id) == dbg!(expected_session.user_id));
+        assert!(dbg!(updated_session.id) == dbg!(expected_session.id));
+    }
+
+    #[tokio::test]
+    async fn handle_session_no_session_exists_creates_session() {
+        let api =
+            ConcreteEcdarApi::setup_in_memory_db(vec![AnyEntity::User, AnyEntity::Session]).await;
+
+        let mut get_auth_token_request = Request::new(GetAuthTokenRequest {
+            user_credentials: Some(UserCredentials {
+                user: Some(user_credentials::User::Email("test@test".to_string())),
+                password: "test_password".to_string(),
+            }),
+        });
+
+        get_auth_token_request.metadata_mut().insert(
+            "authorization",
+            metadata::MetadataValue::from_str("Bearer test_refresh_token").unwrap(),
+        );
+
+        let user = User {
+            id: 1,
+            email: "test@test".to_string(),
+            username: "test_user".to_string(),
+            password: "test_pass".to_string(),
+        };
+
+        let is_new_session = true;
+
+        api.user_context.create(user.clone()).await.unwrap();
+
+        handle_session(
+            api.session_context.clone(),
+            &get_auth_token_request,
+            is_new_session,
+            "access_token".to_string(),
+            "refresh_token".to_string(),
+            user.id.to_string(),
+        )
+        .await
+        .unwrap();
+
+        assert!(api.session_context.get_by_id(1).await.unwrap().is_some());
+    }
+
+    #[tokio::test]
+    async fn handle_session_update_non_existing_session_returns_err() {
+        let api =
+            ConcreteEcdarApi::setup_in_memory_db(vec![AnyEntity::User, AnyEntity::Session]).await;
+
+        let mut get_auth_token_request = Request::new(GetAuthTokenRequest {
+            user_credentials: Some(UserCredentials {
+                user: Some(user_credentials::User::Email("test@test".to_string())),
+                password: "test_password".to_string(),
+            }),
+        });
+
+        get_auth_token_request.metadata_mut().insert(
+            "authorization",
+            metadata::MetadataValue::from_str("Bearer test_refresh_token").unwrap(),
+        );
+
+        let user = User {
+            id: 1,
+            email: "test@test".to_string(),
+            username: "test_user".to_string(),
+            password: "test_pass".to_string(),
+        };
+
+        let is_new_session = false;
+
+        api.user_context.create(user.clone()).await.unwrap();
+
+        assert!(dbg!(handle_session(
+            api.session_context.clone(),
+            &get_auth_token_request,
+            is_new_session,
+            "access_token".to_string(),
+            "refresh_token".to_string(),
+            user.id.to_string(),
+        )
+        .await
+        .is_err()));
     }
 }
