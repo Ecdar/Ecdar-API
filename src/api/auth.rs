@@ -85,7 +85,7 @@ pub fn get_token_from_request<T>(req: &Request<T>) -> Result<String, Status> {
     };
 
     if token.is_ok() {
-        Ok(token.unwrap().to_string())
+        Ok(token.unwrap().trim_start_matches("Bearer ").to_string())
     } else {
         Err(Status::unauthenticated(
             "Could not read token from metadata",
@@ -107,7 +107,7 @@ pub fn validate_token(token: String, is_refresh_token: bool) -> Result<TokenData
     validation.validate_exp = true;
 
     match decode::<Claims>(
-        token.trim_start_matches("Bearer "),
+        &token,
         &DecodingKey::from_secret(secret.as_bytes()),
         &validation,
     ) {
