@@ -1,4 +1,4 @@
-use chrono::{Utc, Duration};
+use chrono::{Duration, Utc};
 use jsonwebtoken::{
     decode, encode,
     errors::{Error, ErrorKind},
@@ -22,29 +22,29 @@ pub enum TokenType {
 pub fn create_token(token_type: TokenType, uid: &str) -> Result<String, Error> {
     const ACCESS_TOKEN_DURATION_MINS: i64 = 20;
     const REFRESH_TOKEN_DURATION_DAYS: i64 = 90;
-    
+
     let secret: String;
     let expiration: i64;
-    
+
     match token_type {
         TokenType::AccessToken => {
             secret = env::var("ACCESS_TOKEN_HS512_SECRET")
-            .expect("Expected ACCESS_TOKEN_HS512_SECRET to be set.");
+                .expect("Expected ACCESS_TOKEN_HS512_SECRET to be set.");
 
             expiration = Utc::now()
-            .checked_add_signed(Duration::minutes(ACCESS_TOKEN_DURATION_MINS))
-            .expect("valid timestamp")
-            .timestamp();
-        },
+                .checked_add_signed(Duration::minutes(ACCESS_TOKEN_DURATION_MINS))
+                .expect("valid timestamp")
+                .timestamp();
+        }
         TokenType::RefreshToken => {
             secret = env::var("REFRESH_TOKEN_HS512_SECRET")
-            .expect("Expected REFRESH_TOKEN_HS512_SECRET to be set.");
+                .expect("Expected REFRESH_TOKEN_HS512_SECRET to be set.");
 
             expiration = Utc::now()
-            .checked_add_signed(Duration::days(REFRESH_TOKEN_DURATION_DAYS))
-            .expect("valid timestamp")
-            .timestamp();
-        },
+                .checked_add_signed(Duration::days(REFRESH_TOKEN_DURATION_DAYS))
+                .expect("valid timestamp")
+                .timestamp();
+        }
     };
 
     let claims = Claims {
