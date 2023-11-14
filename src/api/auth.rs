@@ -1,4 +1,4 @@
-use chrono::Utc;
+use chrono::{Utc, Duration};
 use jsonwebtoken::{
     decode, encode,
     errors::{Error, ErrorKind},
@@ -14,37 +14,38 @@ pub struct Claims {
     exp: usize,
 }
 
-pub fn create_access_token(uid: &str) -> Result<String, Error> {
-    let secret = env::var("ACCESS_TOKEN_HS512_SECRET")
-        .expect("Expected ACCESS_TOKEN_HS512_SECRET to be set.");
-
-    let expiration = Utc::now()
-        .checked_add_signed(chrono::Duration::minutes(20))
-        .expect("valid timestamp")
-        .timestamp();
-
-    let claims = Claims {
-        sub: uid.to_owned(),
-        exp: expiration as usize,
-    };
-
-    let header = Header::new(Algorithm::HS512);
-    encode(
-        &header,
-        &claims,
-        &EncodingKey::from_secret(secret.as_bytes()),
-    )
-    .map_err(|_| ErrorKind::InvalidToken.into())
+pub enum TokenType {
+    AccessToken,
+    RefreshToken,
 }
 
-pub fn create_refresh_token(uid: &str) -> Result<String, Error> {
-    let secret = env::var("REFRESH_TOKEN_HS512_SECRET")
-        .expect("Expected REFRESH_TOKEN_HS512_SECRET to be set.");
+pub fn create_token(token_type: TokenType, uid: &str) -> Result<String, Error> {
+    const ACCESS_TOKEN_DURATION_MINS: i64 = 20;
+    const REFRESH_TOKEN_DURATION_DAYS: i64 = 90;
+    
+    let secret: String;
+    let expiration: i64;
+    
+    match token_type {
+        TokenType::AccessToken => {
+            secret = env::var("ACCESS_TOKEN_HS512_SECRET")
+            .expect("Expected ACCESS_TOKEN_HS512_SECRET to be set.");
 
-    let expiration = Utc::now()
-        .checked_add_signed(chrono::Duration::days(90))
-        .expect("valid timestamp")
-        .timestamp();
+            expiration = Utc::now()
+            .checked_add_signed(Duration::minutes(ACCESS_TOKEN_DURATION_MINS))
+            .expect("valid timestamp")
+            .timestamp();
+        },
+        TokenType::RefreshToken => {
+            secret = env::var("REFRESH_TOKEN_HS512_SECRET")
+            .expect("Expected REFRESH_TOKEN_HS512_SECRET to be set.");
+
+            expiration = Utc::now()
+            .checked_add_signed(Duration::days(REFRESH_TOKEN_DURATION_DAYS))
+            .expect("valid timestamp")
+            .timestamp();
+        },
+    };
 
     let claims = Claims {
         sub: uid.to_owned(),
@@ -125,3 +126,7 @@ pub fn validate_token(token: String, is_refresh_token: bool) -> Result<TokenData
         },
     }
 }
+
+#[cfg(test)]
+#[path = "../tests/api/auth.rs"]
+mod tests;

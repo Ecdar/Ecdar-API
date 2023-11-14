@@ -329,11 +329,11 @@ impl EcdarApiAuth for ConcreteEcdarApi {
         }
 
         // Create new access and refresh token with user id
-        let access_token = match auth::create_access_token(&uid) {
+        let access_token = match auth::create_token(auth::TokenType::AccessToken, &uid) {
             Ok(token) => token.to_owned(),
             Err(e) => return Err(Status::new(Code::Internal, e.to_string())),
         };
-        let refresh_token = match auth::create_refresh_token(&uid) {
+        let refresh_token = match auth::create_token(auth::TokenType::RefreshToken, &uid) {
             Ok(token) => token.to_owned(),
             Err(e) => return Err(Status::new(Code::Internal, e.to_string())),
         };
