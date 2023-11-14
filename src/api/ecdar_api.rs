@@ -323,7 +323,7 @@ impl EcdarApiAuth for ConcreteEcdarApi {
             let refresh_token = auth::get_token_from_request(&request)?;
             let token_data = auth::validate_token(refresh_token, true)?;
             uid = token_data.claims.sub;
-            
+
             // Since the user does have a refresh_token, a session already exists
             is_new_session = false;
         }
