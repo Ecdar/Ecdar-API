@@ -16,7 +16,6 @@ use dotenv::dotenv;
 use sea_orm::{ConnectionTrait, Database, DbBackend};
 use std::env;
 use std::error::Error;
-use std::fmt::Debug;
 use std::sync::Arc;
 
 #[tokio::main]
@@ -31,29 +30,12 @@ async fn main() -> Result<(), Box<dyn Error>> {
         _ => panic!("Database protocol not supported"),
     };
 
-    let model_context = Arc::new(ModelContext::new(db_context.clone()));
-    let user_context = Arc::new(UserContext::new(db_context.clone()));
-    let access_context = Arc::new(AccessContext::new(db_context.clone()));
-    let query_context = Arc::new(QueryContext::new(db_context.clone()));
-    let session_context = Arc::new(SessionContext::new(db_context.clone()));
-    let in_use_context = Arc::new(InUseContext::new(db_context.clone()));
-
-    // Sharing entity contexts works
-    print_all_entities(model_context.as_ref()).await;
-    print_all_entities(model_context.as_ref()).await;
-    print_all_entities(model_context.as_ref()).await;
-
-    print_all_entities(user_context.as_ref()).await;
-    print_all_entities(access_context.as_ref()).await;
-    print_all_entities(query_context.as_ref()).await;
-    print_all_entities(session_context.as_ref()).await;
-    print_all_entities(in_use_context.as_ref()).await;
+    let _model_context = Arc::new(ModelContext::new(db_context.clone()));
+    let _user_context = Arc::new(UserContext::new(db_context.clone()));
+    let _access_context = Arc::new(AccessContext::new(db_context.clone()));
+    let _query_context = Arc::new(QueryContext::new(db_context.clone()));
+    let _session_context = Arc::new(SessionContext::new(db_context.clone()));
+    let _in_use_context = Arc::new(InUseContext::new(db_context.clone()));
 
     Ok(())
-}
-
-
-async fn print_all_entities<T:EntityContextTrait<impl Debug>>(entity_context: &T) {
-    let res = entity_context.get_all().await;
-    println!("{:?}", res.unwrap())
 }
