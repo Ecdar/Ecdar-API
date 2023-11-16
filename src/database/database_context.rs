@@ -1,7 +1,6 @@
 use migration::{Migrator, MigratorTrait};
 use sea_orm::prelude::async_trait::async_trait;
 use sea_orm::{ConnectionTrait, Database, DatabaseConnection, DbBackend, DbErr};
-use std::env;
 use std::sync::Arc;
 
 #[derive(Clone)]
@@ -21,9 +20,6 @@ pub trait DatabaseContextTrait: Send + Sync {
         Self: Sized;
     async fn reset(&self) -> Result<Arc<dyn DatabaseContextTrait>, DbErr>;
     fn get_connection(&self) -> DatabaseConnection;
-    fn get_url(&self) -> String {
-        env::var("DATABASE_URL").expect("Expected DATABASE_URL to be set.")
-    }
 }
 
 #[async_trait]
