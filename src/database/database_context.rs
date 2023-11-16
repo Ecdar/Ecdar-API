@@ -3,12 +3,10 @@ use sea_orm::prelude::async_trait::async_trait;
 use sea_orm::{ConnectionTrait, Database, DatabaseConnection, DbBackend, DbErr};
 use std::sync::Arc;
 
-#[derive(Clone)]
 pub struct PostgresDatabaseContext {
     pub(crate) db_connection: DatabaseConnection,
 }
 
-#[derive(Clone)]
 pub struct SQLiteDatabaseContext {
     pub(crate) db_connection: DatabaseConnection,
 }
