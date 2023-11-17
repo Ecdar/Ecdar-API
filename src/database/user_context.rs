@@ -3,16 +3,35 @@ use crate::database::entity_context::EntityContextTrait;
 use crate::entities::user;
 use sea_orm::prelude::async_trait::async_trait;
 use sea_orm::ActiveValue::{Set, Unchanged};
-use sea_orm::{ActiveModelTrait, DbErr, EntityTrait};
+use sea_orm::{ActiveModelTrait, ColumnTrait, DbErr, EntityTrait, QueryFilter};
 use std::sync::Arc;
 
+#[derive(Debug)]
 pub struct UserContext {
     db_context: Arc<dyn DatabaseContextTrait>,
 }
 
-pub trait UserContextTrait: EntityContextTrait<user::Model> {}
+#[async_trait]
+pub trait UserContextTrait: EntityContextTrait<user::Model> {
+    async fn get_by_username(&self, username: String) -> Result<Option<user::Model>, DbErr>;
+    async fn get_by_email(&self, email: String) -> Result<Option<user::Model>, DbErr>;
+}
 
-impl UserContextTrait for UserContext {}
+#[async_trait]
+impl UserContextTrait for UserContext {
+    async fn get_by_username(&self, username: String) -> Result<Option<user::Model>, DbErr> {
+        user::Entity::find()
+            .filter(user::Column::Username.eq(username))
+            .one(&self.db_context.get_connection())
+            .await
+    }
+    async fn get_by_email(&self, email: String) -> Result<Option<user::Model>, DbErr> {
+        user::Entity::find()
+            .filter(user::Column::Email.eq(email))
+            .one(&self.db_context.get_connection())
+            .await
+    }
+}
 
 #[async_trait]
 impl EntityContextTrait<user::Model> for UserContext {

@@ -1,18 +1,21 @@
 use migration::{Migrator, MigratorTrait};
 use sea_orm::prelude::async_trait::async_trait;
 use sea_orm::{ConnectionTrait, Database, DatabaseConnection, DbBackend, DbErr};
+use std::fmt::Debug;
 use std::sync::Arc;
 
+#[derive(Debug)]
 pub struct PostgresDatabaseContext {
     pub(crate) db_connection: DatabaseConnection,
 }
 
+#[derive(Debug)]
 pub struct SQLiteDatabaseContext {
     pub(crate) db_connection: DatabaseConnection,
 }
 
 #[async_trait]
-pub trait DatabaseContextTrait: Send + Sync {
+pub trait DatabaseContextTrait: Send + Sync + Debug {
     async fn new(connection_string: &str) -> Result<Self, DbErr>
     where
         Self: Sized;

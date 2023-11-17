@@ -21,13 +21,19 @@ impl MigrationTrait for Migration {
                             .primary_key(),
                     )
                     .col(
-                        ColumnDef::new(Session::Token)
-                            .uuid()
+                        ColumnDef::new(Session::RefreshToken)
+                            .string()
                             .not_null()
                             .unique_key(),
                     )
                     .col(
-                        ColumnDef::new(Session::CreatedAt)
+                        ColumnDef::new(Session::AccessToken)
+                            .string()
+                            .not_null()
+                            .unique_key(),
+                    )
+                    .col(
+                        ColumnDef::new(Session::UpdatedAt)
                             .timestamp()
                             .default(Expr::current_timestamp())
                             .not_null(),
@@ -55,7 +61,8 @@ impl MigrationTrait for Migration {
 pub enum Session {
     Table,
     Id,
-    Token,
-    CreatedAt,
+    RefreshToken,
+    AccessToken,
+    UpdatedAt,
     UserId,
 }

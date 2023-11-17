@@ -1,20 +1,38 @@
 use chrono::Utc;
 use sea_orm::prelude::async_trait::async_trait;
 use sea_orm::ActiveValue::{Set, Unchanged};
-use sea_orm::{ActiveModelTrait, DbErr, EntityTrait};
+use sea_orm::{ActiveModelTrait, ColumnTrait, DbErr, EntityTrait, QueryFilter};
 use std::sync::Arc;
 
 use crate::database::database_context::DatabaseContextTrait;
 use crate::database::entity_context::EntityContextTrait;
 use crate::entities::session;
 
+#[derive(Debug)]
 pub struct SessionContext {
     db_context: Arc<dyn DatabaseContextTrait>,
 }
 
-pub trait SessionContextTrait: EntityContextTrait<session::Model> {}
+#[async_trait]
+pub trait SessionContextTrait: EntityContextTrait<session::Model> {
+    async fn get_by_refresh_token(
+        &self,
+        refresh_token: String,
+    ) -> Result<Option<session::Model>, DbErr>;
+}
 
-impl SessionContextTrait for SessionContext {}
+#[async_trait]
+impl SessionContextTrait for SessionContext {
+    async fn get_by_refresh_token(
+        &self,
+        refresh_token: String,
+    ) -> Result<Option<session::Model>, DbErr> {
+        session::Entity::find()
+            .filter(session::Column::RefreshToken.eq(refresh_token))
+            .one(&self.db_context.get_connection())
+            .await
+    }
+}
 
 #[async_trait]
 impl EntityContextTrait<session::Model> for SessionContext {
@@ -38,9 +56,10 @@ impl EntityContextTrait<session::Model> for SessionContext {
     async fn create(&self, entity: session::Model) -> Result<session::Model, DbErr> {
         let session = session::ActiveModel {
             id: Default::default(),
-            token: Set(entity.token),
-            created_at: Set(Utc::now().naive_local()),
+            refresh_token: Set(entity.refresh_token),
+            access_token: Set(entity.access_token),
             user_id: Set(entity.user_id),
+            updated_at: Set(Utc::now().naive_local()),
         };
 
         let session = session.insert(&self.db_context.get_connection()).await;
@@ -96,9 +115,10 @@ impl EntityContextTrait<session::Model> for SessionContext {
     async fn update(&self, entity: session::Model) -> Result<session::Model, DbErr> {
         session::ActiveModel {
             id: Unchanged(entity.id),
-            token: Unchanged(entity.token),
-            created_at: Unchanged(entity.created_at),
+            refresh_token: Set(entity.refresh_token),
+            access_token: Set(entity.access_token),
             user_id: Unchanged(entity.user_id),
+            updated_at: Set(Default::default()),
         }
         .update(&self.db_context.get_connection())
         .await

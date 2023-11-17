@@ -6,6 +6,7 @@ use sea_orm::ActiveValue::{Set, Unchanged};
 use sea_orm::{ActiveModelTrait, DbErr, EntityTrait};
 use std::sync::Arc;
 
+#[derive(Debug)]
 pub struct QueryContext {
     db_context: Arc<dyn DatabaseContextTrait>,
 }

@@ -1,10 +1,11 @@
 use crate::database::database_context::DatabaseContextTrait;
 use sea_orm::prelude::async_trait::async_trait;
 use sea_orm::DbErr;
+use std::fmt::Debug;
 use std::sync::Arc;
 
 #[async_trait]
-pub trait EntityContextTrait<T> {
+pub trait EntityContextTrait<T>: Send + Sync + Debug {
     fn new(db_context: Arc<dyn DatabaseContextTrait>) -> Self
     where
         Self: Sized;

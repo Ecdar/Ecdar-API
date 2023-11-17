@@ -5,6 +5,7 @@ use async_trait::async_trait;
 use sea_orm::{ActiveModelTrait, DbErr, EntityTrait, IntoActiveModel, ModelTrait, Set, Unchanged};
 use std::sync::Arc;
 
+#[derive(Debug)]
 pub struct ModelContext {
     db_context: Arc<dyn DatabaseContextTrait>,
 }

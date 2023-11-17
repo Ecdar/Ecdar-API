@@ -8,7 +8,6 @@ use dotenv::dotenv;
 use sea_orm::{ConnectionTrait, Database, DbBackend};
 use std::env;
 use std::sync::Arc;
-use uuid::Uuid;
 
 pub async fn get_reset_database_context() -> Arc<dyn DatabaseContextTrait> {
     dotenv().ok();
@@ -85,9 +84,10 @@ pub fn create_accesses(amount: i32, user_id: i32, model_id: i32) -> Vec<access::
 pub fn create_sessions(amount: i32, user_id: i32) -> Vec<session::Model> {
     create_entities(amount, |i| session::Model {
         id: i + 1,
-        token: Uuid::new_v4(),
+        refresh_token: "test_refresh_token".to_string() + format!("{}", i).as_str(),
+        access_token: "test_access_token".to_string() + format!("{}", i).as_str(),
         user_id,
-        created_at: Default::default(),
+        updated_at: Default::default(),
     })
 }
 

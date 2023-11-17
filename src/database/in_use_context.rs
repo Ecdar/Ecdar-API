@@ -6,6 +6,7 @@ use chrono::Utc;
 use sea_orm::{ActiveModelTrait, DbErr, EntityTrait, Set, Unchanged};
 use std::sync::Arc;
 
+#[derive(Debug)]
 pub struct InUseContext {
     db_context: Arc<dyn DatabaseContextTrait>,
 }
