@@ -3,10 +3,10 @@ pub use sea_orm_migration::prelude::*;
 mod m20231012_094213_create_user_table;
 mod m20231012_094228_create_model_table;
 mod m20231012_094242_create_query_table;
-mod m20231012_094422_create_session_table;
 mod m20231012_094303_create_in_use_table;
-mod m20231012_122243_create_role_type;
+mod m20231012_094422_create_session_table;
 mod m20231012_094533_create_access_table;
+mod m20231012_122243_create_role_type;
 
 pub struct Migrator;
 

@@ -17,16 +17,23 @@ impl MigrationTrait for Migration {
                         ColumnDef::new(Query::Id)
                             .integer()
                             .not_null()
-                            .auto_increment()
+                            .primary_key()
+                            .auto_increment(),
                     )
                     .col(ColumnDef::new(Query::String).string().not_null())
                     .col(ColumnDef::new(Query::Result).json())
+                    .col(
+                        ColumnDef::new(Query::Outdated)
+                            .boolean()
+                            .not_null()
+                            .default(true),
+                    )
                     .col(ColumnDef::new(Query::ModelId).integer().not_null())
-                    .primary_key(Index::create().col(Query::Id).col(Query::ModelId))
                     .foreign_key(
                         ForeignKey::create()
                             .from(Query::Table, Query::ModelId)
                             .to(Model::Table, Model::Id)
+                            .on_delete(ForeignKeyAction::Cascade),
                     )
                     .to_owned(),
             )
@@ -46,5 +53,6 @@ enum Query {
     Id,
     String,
     Result,
-    ModelId
+    ModelId,
+    Outdated,
 }
