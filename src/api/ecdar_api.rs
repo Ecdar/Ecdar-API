@@ -82,7 +82,6 @@ async fn handle_session(
 
         session.access_token = access_token.clone();
         session.refresh_token = refresh_token.clone();
-        session.updated_at = Local::now().naive_local();
 
         match session_context.update(session).await {
             Ok(_) => (),

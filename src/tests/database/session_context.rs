@@ -10,6 +10,7 @@ mod database_tests {
         to_active_models,
     };
 
+    use crate::database::session_context::SessionContextTrait;
     use chrono::{Duration, Utc};
 
     async fn seed_db() -> (SessionContext, session::Model, user::Model, model::Model) {
@@ -187,15 +188,18 @@ mod database_tests {
             .unwrap();
 
         //A session has nothing to update
-        let new_session = session::Model { ..session };
+        let mut new_session = session::Model { ..session };
 
-        let updated_session = session_context.update(new_session.clone()).await.unwrap();
+        let mut updated_session = session_context.update(new_session.clone()).await.unwrap();
 
         let fetched_session = session::Entity::find_by_id(updated_session.id)
             .one(&session_context.db_context.get_connection())
             .await
             .unwrap()
             .unwrap();
+
+        new_session.updated_at = fetched_session.updated_at;
+        updated_session.updated_at = fetched_session.updated_at;
 
         assert_eq!(new_session, updated_session);
         assert_eq!(updated_session, fetched_session);
@@ -219,8 +223,8 @@ mod database_tests {
     }
 
     #[tokio::test]
-    async fn update_does_not_modify_updated_at_test() {
-        let (session_context, session, _, _) = seed_db().await;
+    async fn update_does_modifies_updated_at_automatically_test() {
+        let (session_context, mut session, _, _) = seed_db().await;
         session::Entity::insert(session.clone().into_active_model())
             .exec(&session_context.db_context.get_connection())
             .await
@@ -235,12 +239,16 @@ mod database_tests {
             .await
             .unwrap();
 
+        assert!(session.updated_at < res.updated_at);
+
+        session.updated_at = res.updated_at;
+
         assert_eq!(session, res);
     }
 
     #[tokio::test]
     async fn update_does_not_modify_user_id_test() {
-        let (session_context, session, _, _) = seed_db().await;
+        let (session_context, mut session, _, _) = seed_db().await;
         session::Entity::insert(session.clone().into_active_model())
             .exec(&session_context.db_context.get_connection())
             .await
@@ -254,6 +262,8 @@ mod database_tests {
             .update(updated_session.clone())
             .await
             .unwrap();
+
+        session.updated_at = res.updated_at;
 
         assert_eq!(session, res);
     }
@@ -330,5 +340,25 @@ mod database_tests {
             deleted_session.unwrap_err(),
             DbErr::RecordNotFound(_)
         ));
+    }
+
+    #[tokio::test]
+    async fn get_by_refresh_token_test() {
+        let (session_context, session, _, _) = seed_db().await;
+
+        session::Entity::insert(session.clone().into_active_model())
+            .exec(&session_context.db_context.get_connection())
+            .await
+            .unwrap();
+
+        let fetched_session = session_context
+            .get_by_refresh_token(session.refresh_token.clone())
+            .await
+            .unwrap();
+
+        assert_eq!(
+            fetched_session.unwrap().refresh_token,
+            session.refresh_token
+        );
     }
 }

@@ -12,7 +12,6 @@ mod ecdar_api {
     use std::str::FromStr;
 
     use crate::tests::api::helpers::get_reset_concrete_ecdar_api;
-    use chrono::Local;
     use tonic::{metadata, Request};
 
     #[tokio::test]
@@ -292,7 +291,7 @@ mod ecdar_api {
                 id: Default::default(),
                 refresh_token: "test_refresh_token".to_string(),
                 access_token: "test_access_token".to_string(),
-                updated_at: Local::now().naive_local(),
+                updated_at: Default::default(),
                 user_id: 1,
             })
             .await
@@ -318,12 +317,15 @@ mod ecdar_api {
         };
 
         let updated_session = api.session_context.get_by_id(1).await.unwrap().unwrap();
-        assert!(dbg!(updated_session != old_session));
-        assert!(dbg!(updated_session.refresh_token) == dbg!(expected_session.refresh_token));
-        assert!(dbg!(updated_session.access_token) == dbg!(expected_session.access_token));
-        assert!(dbg!(updated_session.updated_at) > dbg!(old_session.updated_at));
-        assert!(dbg!(updated_session.user_id) == dbg!(expected_session.user_id));
-        assert!(dbg!(updated_session.id) == dbg!(expected_session.id));
+        assert_ne!(updated_session, old_session);
+        assert_eq!(
+            updated_session.refresh_token,
+            expected_session.refresh_token
+        );
+        assert_eq!(updated_session.access_token, expected_session.access_token);
+        assert!(updated_session.updated_at > old_session.updated_at);
+        assert_eq!(updated_session.user_id, expected_session.user_id);
+        assert_eq!(updated_session.id, expected_session.id);
     }
 
     #[tokio::test]
@@ -394,7 +396,7 @@ mod ecdar_api {
 
         api.user_context.create(user.clone()).await.unwrap();
 
-        assert!(dbg!(handle_session(
+        assert!(handle_session(
             api.session_context.clone(),
             &get_auth_token_request,
             is_new_session,
@@ -403,6 +405,6 @@ mod ecdar_api {
             user.id.to_string(),
         )
         .await
-        .is_err()));
+        .is_err());
     }
 }

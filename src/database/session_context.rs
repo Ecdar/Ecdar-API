@@ -1,4 +1,4 @@
-use chrono::Utc;
+use chrono::{Local, Utc};
 use sea_orm::prelude::async_trait::async_trait;
 use sea_orm::ActiveValue::{Set, Unchanged};
 use sea_orm::{ActiveModelTrait, ColumnTrait, DbErr, EntityTrait, QueryFilter};
@@ -118,7 +118,7 @@ impl EntityContextTrait<session::Model> for SessionContext {
             refresh_token: Set(entity.refresh_token),
             access_token: Set(entity.access_token),
             user_id: Unchanged(entity.user_id),
-            updated_at: Set(Default::default()),
+            updated_at: Set(Local::now().naive_local()),
         }
         .update(&self.db_context.get_connection())
         .await

@@ -1,5 +1,6 @@
 #[cfg(test)]
 mod database_tests {
+    use crate::database::user_context::UserContextTrait;
     use crate::tests::database::helpers::*;
     use crate::{
         database::{
@@ -499,5 +500,38 @@ mod database_tests {
             deleted_user.unwrap_err(),
             DbErr::RecordNotFound(_)
         ));
+    }
+
+    #[tokio::test]
+    async fn get_by_username_test() {
+        let (user_context, user) = seed_db().await;
+
+        user::Entity::insert(user.clone().into_active_model())
+            .exec(&user_context.db_context.get_connection())
+            .await
+            .unwrap();
+
+        // Fetches the user created using the 'get_by_username' function
+        let fetched_user = user_context
+            .get_by_username(user.username.clone())
+            .await
+            .unwrap();
+
+        // Assert if the fetched user is the same as the created user
+        assert_eq!(fetched_user.unwrap().username, user.username);
+    }
+
+    #[tokio::test]
+    async fn get_by_email_test() {
+        let (user_context, user) = seed_db().await;
+
+        user::Entity::insert(user.clone().into_active_model())
+            .exec(&user_context.db_context.get_connection())
+            .await
+            .unwrap();
+
+        let fetched_user = user_context.get_by_email(user.email.clone()).await.unwrap();
+
+        assert_eq!(fetched_user.unwrap().email, user.email);
     }
 }
