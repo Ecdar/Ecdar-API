@@ -5,6 +5,7 @@ use std::fmt::Debug;
 use std::sync::Arc;
 
 #[async_trait]
+
 pub trait EntityContextTrait<T>: Send + Sync + Debug {
     fn new(db_context: Arc<dyn DatabaseContextTrait>) -> Self
     where

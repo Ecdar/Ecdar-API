@@ -1,6 +1,8 @@
 #[cfg(test)]
 mod ecdar_api {
-    use crate::api::ecdar_api::handle_session;
+    use crate::api::ecdar_api::{
+        handle_session, MockConcreteEcdarApi, MockConcreteEcdarApi_EcdarBackend,
+    };
     use crate::api::server::server::ecdar_api_auth_server::EcdarApiAuth;
     use crate::api::server::server::get_auth_token_request::user_credentials;
     use crate::api::server::server::get_auth_token_request::UserCredentials;
@@ -10,7 +12,9 @@ mod ecdar_api {
         entities::user::Model as User,
     };
     use std::str::FromStr;
+    use std::sync::Arc;
 
+    use crate::api::server::server::ecdar_backend_server::EcdarBackend;
     use crate::tests::api::helpers::get_reset_concrete_ecdar_api;
     use tonic::{metadata, Request};
 
@@ -371,7 +375,7 @@ mod ecdar_api {
 
     #[tokio::test]
     async fn handle_session_update_non_existing_session_returns_err() {
-        let api = get_reset_concrete_ecdar_api().await;
+        let api = get_reset_concrete_ecdar_api(Arc::new(MockEcdarBackend)).await;
 
         let mut get_auth_token_request = Request::new(GetAuthTokenRequest {
             user_credentials: Some(UserCredentials {

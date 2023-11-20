@@ -3,6 +3,8 @@ mod database;
 mod entities;
 mod tests;
 
+use crate::api::reveaal_context::ReveaalContext;
+use crate::api::server::server::ecdar_backend_server::EcdarBackend;
 use crate::database::access_context::AccessContext;
 use crate::database::database_context::{PostgresDatabaseContext, SQLiteDatabaseContext};
 use crate::database::in_use_context::InUseContext;
@@ -37,8 +39,10 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let query_context = Arc::new(QueryContext::new(db_context.clone()));
     let session_context = Arc::new(SessionContext::new(db_context.clone()));
     let in_use_context = Arc::new(InUseContext::new(db_context.clone()));
+    let reveaal_context = Arc::new(ReveaalContext);
 
     start_grpc_server(
+        reveaal_context,
         model_context,
         user_context,
         access_context,

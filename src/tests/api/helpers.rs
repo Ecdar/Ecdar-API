@@ -1,6 +1,11 @@
 #![cfg(test)]
 
 use crate::api::ecdar_api::ConcreteEcdarApi;
+use crate::api::server::server::ecdar_backend_server::EcdarBackend;
+use crate::api::server::server::{
+    QueryRequest, QueryResponse, SimulationStartRequest, SimulationStepRequest,
+    SimulationStepResponse, UserTokenResponse,
+};
 use crate::database::access_context::AccessContext;
 use crate::database::database_context::{
     DatabaseContextTrait, PostgresDatabaseContext, SQLiteDatabaseContext,
@@ -15,8 +20,11 @@ use dotenv::dotenv;
 use sea_orm::{ConnectionTrait, Database, DbBackend};
 use std::env;
 use std::sync::Arc;
+use tonic::{Request, Response, Status};
 
-pub async fn get_reset_concrete_ecdar_api() -> ConcreteEcdarApi {
+pub async fn get_reset_concrete_ecdar_api(
+    mock_ecdar_backend: Arc<dyn EcdarBackend>,
+) -> ConcreteEcdarApi {
     dotenv().ok();
 
     let url = env::var("TEST_DATABASE_URL").expect("TEST_DATABASE_URL must be set to run tests.");
@@ -43,6 +51,7 @@ pub async fn get_reset_concrete_ecdar_api() -> ConcreteEcdarApi {
         query_context,
         session_context,
         in_use_context,
+        mock_ecdar_backend,
     )
     .await
 }

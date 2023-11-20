@@ -23,6 +23,7 @@ serde = "1.0.189"
 chrono = "0.4.31"
 uuid = { version = "1.5.0", features = ["v4"] }
 regex = "1.10.2"
+mockall = "0.11.4"
 
 [build-dependencies]
 tonic-build = "0.10.2"

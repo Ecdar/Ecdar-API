@@ -7,7 +7,7 @@ use crate::api::auth;
 use crate::api::ecdar_api::ConcreteEcdarApi;
 use crate::api::server::server::ecdar_api_auth_server::EcdarApiAuthServer;
 use crate::api::server::server::ecdar_api_server::EcdarApiServer;
-use crate::api::server::server::ecdar_backend_server::EcdarBackendServer;
+use crate::api::server::server::ecdar_backend_server::{EcdarBackend, EcdarBackendServer};
 use crate::database::access_context::AccessContextTrait;
 use crate::database::in_use_context::InUseContextTrait;
 use crate::database::model_context::ModelContextTrait;
@@ -20,6 +20,7 @@ pub mod server {
 }
 
 pub async fn start_grpc_server(
+    reveaal_context: Arc<dyn EcdarBackend>,
     model_context: Arc<dyn ModelContextTrait>,
     user_context: Arc<dyn UserContextTrait>,
     access_context: Arc<dyn AccessContextTrait>,
@@ -42,6 +43,7 @@ pub async fn start_grpc_server(
         query_context,
         session_context,
         in_use_context,
+        reveaal_context,
     )
     .await;
 
