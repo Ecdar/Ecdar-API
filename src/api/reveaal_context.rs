@@ -5,6 +5,7 @@ use crate::api::server::server::{
     SimulationStepResponse, UserTokenResponse,
 };
 use async_trait::async_trait;
+use mockall::automock;
 use std::env;
 use tonic::transport::Channel;
 use tonic::{Request, Response, Status};

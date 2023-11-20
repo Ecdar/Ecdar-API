@@ -382,7 +382,6 @@ impl EcdarApiAuth for ConcreteEcdarApi {
 
 /// Implementation of the EcdarBackend trait, which is used to ensure backwards compatability with the Reveaal engine.
 #[tonic::async_trait]
-#[automock]
 impl EcdarBackend for ConcreteEcdarApi {
     async fn get_user_token(
         &self,

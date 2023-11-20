@@ -11,16 +11,27 @@ mod ecdar_api {
         api::server::server::ecdar_api_server::EcdarApi, entities::session::Model as Session,
         entities::user::Model as User,
     };
+    use mockall::{mock, predicate};
     use std::str::FromStr;
     use std::sync::Arc;
+    use async_trait::async_trait;
+    use futures::SinkExt;
 
     use crate::api::server::server::ecdar_backend_server::EcdarBackend;
-    use crate::tests::api::helpers::get_reset_concrete_ecdar_api;
+    use crate::database::entity_context::EntityContextTrait;
+    use crate::database::user_context::MockUserContextTrait;
+    use crate::tests::api::helpers::get_mock_concrete_ecdar_api;
     use tonic::{metadata, Request};
 
     #[tokio::test]
     async fn delete_user_nonexistent_user_returns_err() {
-        let api = get_reset_concrete_ecdar_api().await;
+        mock! {
+            C {}
+            #[async_trait]
+            impl EntityContextTrait<user::Model> for C {
+                async fn delete(&self, entity_id: i32) -> Result<user::Model, DbErr>;
+            }
+        }
 
         let mut delete_request = Request::new({});
 
@@ -29,6 +40,13 @@ mod ecdar_api {
             .metadata_mut()
             .insert("uid", metadata::MetadataValue::from_str("1").unwrap());
 
+
+        let mut mock_user_context = MockC::new();
+
+        mock_user_context.expect_delete().
+
+        let api = get_mock_concrete_ecdar_api(Arc::new(mock_user_context)).await;
+
         let delete_response = api.delete_user(delete_request).await;
 
         assert!(delete_response.is_err());
@@ -36,7 +54,7 @@ mod ecdar_api {
 
     #[tokio::test]
     async fn delete_user_existing_user_returns_ok() {
-        let api = get_reset_concrete_ecdar_api().await;
+        let api = get_mock_concrete_ecdar_api().await;
 
         let _ = api
             .user_context
@@ -63,7 +81,7 @@ mod ecdar_api {
 
     #[tokio::test]
     async fn create_user_nonexistent_user_returns_ok() {
-        let api = get_reset_concrete_ecdar_api().await;
+        let api = get_mock_concrete_ecdar_api().await;
 
         let create_user_request = Request::new(CreateUserRequest {
             email: "anders21@student.aau.dk".to_string(),
@@ -77,7 +95,7 @@ mod ecdar_api {
 
     #[tokio::test]
     async fn create_user_nonexistent_user_inserts_user() {
-        let api = get_reset_concrete_ecdar_api().await;
+        let api = get_mock_concrete_ecdar_api().await;
 
         let username = "newuser".to_string();
 
@@ -99,7 +117,7 @@ mod ecdar_api {
 
     #[tokio::test]
     async fn test_create_user_duplicate_email_returns_error() {
-        let api = get_reset_concrete_ecdar_api().await;
+        let api = get_mock_concrete_ecdar_api().await;
 
         let _ = api
             .user_context
@@ -123,7 +141,7 @@ mod ecdar_api {
 
     #[tokio::test]
     async fn test_create_user_invalid_email_returns_error() {
-        let api = get_reset_concrete_ecdar_api().await;
+        let api = get_mock_concrete_ecdar_api().await;
 
         let create_user_request = Request::new(CreateUserRequest {
             email: "invalid-email".to_string(),
@@ -137,7 +155,7 @@ mod ecdar_api {
 
     #[tokio::test]
     async fn test_create_user_duplicate_username_returns_error() {
-        let api = get_reset_concrete_ecdar_api().await;
+        let api = get_mock_concrete_ecdar_api().await;
 
         let _ = api
             .user_context
@@ -161,7 +179,7 @@ mod ecdar_api {
 
     #[tokio::test]
     async fn test_create_user_invalid_username_returns_error() {
-        let api = get_reset_concrete_ecdar_api().await;
+        let api = get_mock_concrete_ecdar_api().await;
 
         let create_user_request = Request::new(CreateUserRequest {
             email: "valid@email.com".to_string(),
@@ -175,7 +193,7 @@ mod ecdar_api {
 
     #[tokio::test]
     async fn test_create_user_valid_request_returns_ok() {
-        let api = get_reset_concrete_ecdar_api().await;
+        let api = get_mock_concrete_ecdar_api().await;
 
         let create_user_request = Request::new(CreateUserRequest {
             email: "newuser@example.com".to_string(),
@@ -189,7 +207,7 @@ mod ecdar_api {
 
     #[tokio::test]
     async fn update_user_returns_ok() {
-        let api = get_reset_concrete_ecdar_api().await;
+        let api = get_mock_concrete_ecdar_api().await;
 
         let user = User {
             id: 1,
@@ -217,7 +235,7 @@ mod ecdar_api {
 
     #[tokio::test]
     async fn update_user_non_existant_user_returns_err() {
-        let api = get_reset_concrete_ecdar_api().await;
+        let api = get_mock_concrete_ecdar_api().await;
 
         let mut update_user_request = Request::new(UpdateUserRequest {
             email: Some("new_test@test".to_string()),
@@ -236,7 +254,7 @@ mod ecdar_api {
 
     #[tokio::test]
     async fn update_user_single_field_returns_ok() {
-        let api = get_reset_concrete_ecdar_api().await;
+        let api = get_mock_concrete_ecdar_api().await;
 
         let user = User {
             id: 1,
@@ -264,7 +282,7 @@ mod ecdar_api {
 
     #[tokio::test]
     async fn handle_session_updated_session_contains_correct_fields() {
-        let api = get_reset_concrete_ecdar_api().await;
+        let api = get_mock_concrete_ecdar_api().await;
 
         let mut get_auth_token_request = Request::new(GetAuthTokenRequest {
             user_credentials: Some(UserCredentials {
@@ -334,7 +352,7 @@ mod ecdar_api {
 
     #[tokio::test]
     async fn handle_session_no_session_exists_creates_session() {
-        let api = get_reset_concrete_ecdar_api().await;
+        let api = get_mock_concrete_ecdar_api().await;
 
         let mut get_auth_token_request = Request::new(GetAuthTokenRequest {
             user_credentials: Some(UserCredentials {
@@ -375,7 +393,7 @@ mod ecdar_api {
 
     #[tokio::test]
     async fn handle_session_update_non_existing_session_returns_err() {
-        let api = get_reset_concrete_ecdar_api(Arc::new(MockEcdarBackend)).await;
+        let api = get_mock_concrete_ecdar_api(Arc::new(MockEcdarBackend)).await;
 
         let mut get_auth_token_request = Request::new(GetAuthTokenRequest {
             user_credentials: Some(UserCredentials {
