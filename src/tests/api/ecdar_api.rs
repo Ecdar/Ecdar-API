@@ -11,11 +11,11 @@ mod ecdar_api {
         api::server::server::ecdar_api_server::EcdarApi, entities::session::Model as Session,
         entities::user::Model as User,
     };
+    use async_trait::async_trait;
+    use futures::SinkExt;
     use mockall::{mock, predicate};
     use std::str::FromStr;
     use std::sync::Arc;
-    use async_trait::async_trait;
-    use futures::SinkExt;
 
     use crate::api::server::server::ecdar_backend_server::EcdarBackend;
     use crate::database::entity_context::EntityContextTrait;
@@ -40,10 +40,9 @@ mod ecdar_api {
             .metadata_mut()
             .insert("uid", metadata::MetadataValue::from_str("1").unwrap());
 
-
         let mut mock_user_context = MockC::new();
 
-        mock_user_context.expect_delete().
+        mock_user_context.expect_delete()
 
         let api = get_mock_concrete_ecdar_api(Arc::new(mock_user_context)).await;
 

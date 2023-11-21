@@ -1,9 +1,9 @@
 #[cfg(test)]
 mod auth {
     use crate::api::auth;
+    use crate::api::auth::TokenType;
     use std::{env, str::FromStr};
     use tonic::{metadata::MetadataValue, Request};
-    use crate::api::auth::TokenType;
 
     #[tokio::test]
     async fn gtfr_bearer_token_trims_token() {
@@ -70,8 +70,10 @@ mod auth {
         env::set_var("ACCESS_TOKEN_HS512_SECRET", "access_secret");
         env::set_var("REFRESH_TOKEN_HS512_SECRET", "refresh_secret");
 
-        let result_access = auth::validate_token("invalid_token".to_string(), TokenType::AccessToken);
-        let result_refresh = auth::validate_token("invalid_token".to_string(), TokenType::RefreshToken);
+        let result_access =
+            auth::validate_token("invalid_token".to_string(), TokenType::AccessToken);
+        let result_refresh =
+            auth::validate_token("invalid_token".to_string(), TokenType::RefreshToken);
         assert!(result_access.is_err() && result_refresh.is_err());
     }
 

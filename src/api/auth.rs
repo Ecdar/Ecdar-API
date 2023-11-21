@@ -57,7 +57,7 @@ pub fn create_token(token_type: TokenType, uid: &str) -> Result<String, Error> {
         &claims,
         &EncodingKey::from_secret(token_type.secret().as_bytes()),
     )
-        .map_err(|_| ErrorKind::InvalidToken.into())
+    .map_err(|_| ErrorKind::InvalidToken.into())
 }
 
 /// This method is used to validate the access token (not refresh).

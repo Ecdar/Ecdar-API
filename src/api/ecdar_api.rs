@@ -1,14 +1,14 @@
-use std::env;
-use std::fmt::{Debug, Formatter};
-use std::sync::Arc;
+use crate::api::auth::TokenType;
 use crate::api::server::server::get_auth_token_request::user_credentials;
 use crate::entities::access;
 use crate::entities::session::Model;
 use chrono::Local;
 use regex::Regex;
 use sea_orm::SqlErr;
+use std::env;
+use std::fmt::{Debug, Formatter};
+use std::sync::Arc;
 use tonic::{Code, Request, Response, Status};
-use crate::api::auth::TokenType;
 
 use crate::api::server::server::{ecdar_api_auth_server::EcdarApiAuth, ecdar_api_server::EcdarApi};
 use crate::database::access_context::AccessContextTrait;
@@ -366,7 +366,7 @@ impl EcdarApiAuth for ConcreteEcdarApi {
             refresh_token.clone(),
             uid,
         )
-            .await?;
+        .await?;
 
         Ok(Response::new(GetAuthTokenResponse {
             access_token,
