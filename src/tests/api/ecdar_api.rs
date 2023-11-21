@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod ecdar_api {
-    use crate::api::auth::get_token_from_request;
+
     use crate::api::ecdar_api::helpers::helpers::AnyEntity;
     use crate::api::ecdar_api::{handle_session, ConcreteEcdarApi};
     use crate::api::server::server::ecdar_api_auth_server::EcdarApiAuth;
@@ -8,14 +8,13 @@ mod ecdar_api {
     use crate::api::server::server::get_auth_token_request::UserCredentials;
     use crate::api::server::server::{CreateUserRequest, GetAuthTokenRequest, UpdateUserRequest};
     use crate::database::entity_context::EntityContextTrait;
-    use crate::database::session_context;
+
     use crate::database::user_context::UserContextTrait;
-    use crate::entities;
+
     use crate::{
         api::server::server::ecdar_api_server::EcdarApi, entities::session::Model as Session,
         entities::user::Model as User,
     };
-    use sea_orm::ActiveValue::Set;
 
     use std::str::FromStr;
 
@@ -26,7 +25,7 @@ mod ecdar_api {
     async fn delete_user_nonexistent_user_returns_err() {
         let api = ConcreteEcdarApi::setup_in_memory_db(vec![AnyEntity::User]).await;
 
-        let mut delete_request = Request::new({});
+        let mut delete_request = Request::new(());
 
         // Insert uid into request metadata
         delete_request
@@ -53,7 +52,7 @@ mod ecdar_api {
             .await
             .unwrap();
 
-        let mut delete_request = Request::new({});
+        let mut delete_request = Request::new(());
 
         // Insert uid into request metadata
         delete_request

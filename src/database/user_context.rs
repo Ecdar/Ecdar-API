@@ -158,8 +158,8 @@ impl EntityContextTrait<User> for UserContext {
                     username: Set(username),
                     password: Set(password),
                 }
-                    .update(&self.db_context.get_connection())
-                    .await
+                .update(&self.db_context.get_connection())
+                .await
             }
         };
         return updated_user;

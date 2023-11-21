@@ -3,13 +3,21 @@ use std::sync::Arc;
 
 use crate::api::ecdar_api::helpers::helpers::{setup_db_with_entities, AnyEntity};
 use crate::api::server::server::get_auth_token_request::user_credentials;
-use crate::entities::access;
+
 use crate::entities::session::Model;
 use chrono::Local;
 use regex::Regex;
 use sea_orm::SqlErr;
 use tonic::{Code, Request, Response, Status};
 
+use super::{
+    auth,
+    server::server::{
+        ecdar_backend_server::EcdarBackend, CreateUserRequest, GetAuthTokenRequest,
+        GetAuthTokenResponse, QueryRequest, QueryResponse, SimulationStartRequest,
+        SimulationStepRequest, SimulationStepResponse, UpdateUserRequest, UserTokenResponse,
+    },
+};
 use crate::api::server::server::{
     ecdar_api_auth_server::EcdarApiAuth, ecdar_api_server::EcdarApi,
     ecdar_backend_client::EcdarBackendClient,
@@ -28,14 +36,6 @@ use crate::database::{
 };
 use crate::entities::user::Model as User;
 use bcrypt::verify;
-use super::{
-    auth,
-    server::server::{
-        ecdar_backend_server::EcdarBackend, CreateUserRequest, GetAuthTokenRequest,
-        GetAuthTokenResponse, QueryRequest, QueryResponse, SimulationStartRequest,
-        SimulationStepRequest, SimulationStepResponse, UpdateUserRequest, UserTokenResponse,
-    },
-};
 
 #[path = "../tests/database/helpers.rs"]
 pub mod helpers;
@@ -160,7 +160,7 @@ impl ConcreteEcdarApi {
             Arc::new(SessionContext::new(db_context.clone())),
             Arc::new(InUseContext::new(db_context.clone())),
         )
-            .await
+        .await
     }
 }
 
@@ -347,7 +347,7 @@ impl EcdarApiAuth for ConcreteEcdarApi {
             refresh_token.clone(),
             uid,
         )
-            .await?;
+        .await?;
 
         Ok(Response::new(GetAuthTokenResponse {
             access_token,
