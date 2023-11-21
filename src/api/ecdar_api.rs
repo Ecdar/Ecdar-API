@@ -27,7 +27,7 @@ use crate::database::{
     session_context::SessionContext, user_context::UserContext,
 };
 use crate::entities::user::Model as User;
-
+use bcrypt::verify;
 use super::{
     auth,
     server::server::{
@@ -86,7 +86,7 @@ async fn handle_session(
                 return Err(Status::new(
                     Code::Unauthenticated,
                     "No session found with given refresh token",
-                ))
+                ));
             }
             Err(err) => return Err(Status::new(Code::Internal, err.to_string())),
         };
@@ -160,7 +160,7 @@ impl ConcreteEcdarApi {
             Arc::new(SessionContext::new(db_context.clone())),
             Arc::new(InUseContext::new(db_context.clone())),
         )
-        .await
+            .await
     }
 }
 
@@ -287,7 +287,7 @@ impl EcdarApiAuth for ConcreteEcdarApi {
                                 return Err(Status::new(
                                     Code::Internal,
                                     "No user found with given username",
-                                ))
+                                ));
                             }
                             Err(err) => return Err(Status::new(Code::Internal, err.to_string())),
                         }
@@ -300,14 +300,14 @@ impl EcdarApiAuth for ConcreteEcdarApi {
                                 return Err(Status::new(
                                     Code::Internal,
                                     "No user found with given email",
-                                ))
+                                ));
                             }
                             Err(err) => return Err(Status::new(Code::Internal, err.to_string())),
                         }
                     }
                 };
-                // Check if password in request matches users password
-                if user_credentials.password != user_from_db.password {
+                // Check if password in request matches users password and verify
+                if !verify(user_credentials.password, &user_from_db.password).unwrap() {
                     return Err(Status::new(Code::Unauthenticated, "Wrong password"));
                 }
 
@@ -318,7 +318,7 @@ impl EcdarApiAuth for ConcreteEcdarApi {
             } else {
                 return Err(Status::new(Code::Internal, "No user provided"));
             }
-        // Get user from refresh_token
+            // Get user from refresh_token
         } else {
             let refresh_token = auth::get_token_from_request(&request)?;
             let token_data = auth::validate_token(refresh_token, true)?;
@@ -347,7 +347,7 @@ impl EcdarApiAuth for ConcreteEcdarApi {
             refresh_token.clone(),
             uid,
         )
-        .await?;
+            .await?;
 
         Ok(Response::new(GetAuthTokenResponse {
             access_token,

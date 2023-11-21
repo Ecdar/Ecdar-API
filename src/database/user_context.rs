@@ -9,6 +9,9 @@ use crate::database::entity_context::EntityContextTrait;
 use crate::entities::prelude::User as UserEntity;
 use crate::entities::user::Column as UserColumn;
 use crate::entities::user::{ActiveModel, Model as User};
+use bcrypt::hash;
+
+const HASH_COST: u32 = 12;
 
 #[derive(Debug)]
 pub struct UserContext {
@@ -63,11 +66,13 @@ impl EntityContextTrait<User> for UserContext {
     /// context.create(model);
     /// ```
     async fn create(&self, entity: User) -> Result<User, DbErr> {
+        let hashed_password = hash(entity.password, HASH_COST).unwrap();
+
         let user = ActiveModel {
             id: Default::default(),
             email: Set(entity.email),
             username: Set(entity.username),
-            password: Set(entity.password),
+            password: Set(hashed_password),
         };
         let user: User = user.insert(&self.db_context.get_connection()).await?;
         Ok(user)
@@ -144,7 +149,7 @@ impl EntityContextTrait<User> for UserContext {
                 if entity.password.is_empty() {
                     password = user.password.clone();
                 } else {
-                    password = entity.password.clone();
+                    password = hash(entity.password, HASH_COST).unwrap();
                 }
 
                 ActiveModel {
@@ -153,8 +158,8 @@ impl EntityContextTrait<User> for UserContext {
                     username: Set(username),
                     password: Set(password),
                 }
-                .update(&self.db_context.get_connection())
-                .await
+                    .update(&self.db_context.get_connection())
+                    .await
             }
         };
         return updated_user;

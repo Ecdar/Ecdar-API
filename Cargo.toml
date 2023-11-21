@@ -21,6 +21,7 @@ jsonwebtoken = "9.1.0"
 serde = "1.0.189"
 chrono = "0.4.31"
 regex = "1.10.2"
+bcrypt = "0.15.0"
 
 [build-dependencies]
 tonic-build = "0.10.2"
