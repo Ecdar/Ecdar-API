@@ -67,7 +67,7 @@ pub fn validation_interceptor(mut req: Request<()>) -> Result<Request<()>, Statu
         Err(err) => return Err(err),
     };
 
-    match validate_token(token, false) {
+    match validate_token(token, TokenType::AccessToken) {
         Ok(token_data) => {
             req.metadata_mut().insert(
                 "uid",

@@ -30,12 +30,14 @@ impl MigrationTrait for Migration {
                     .foreign_key(
                         ForeignKey::create()
                             .from(InUse::Table, InUse::ModelId)
-                            .to(Model::Table, Model::Id),
+                            .to(Model::Table, Model::Id)
+                            .on_delete(ForeignKeyAction::Cascade),
                     )
                     .foreign_key(
                         ForeignKey::create()
                             .from(InUse::Table, InUse::SessionId)
-                            .to(Session::Table, Session::Id),
+                            .to(Session::Table, Session::Id)
+                            .on_delete(ForeignKeyAction::Cascade),
                     )
                     .to_owned(),
             )

@@ -1,30 +1,37 @@
 #[cfg(test)]
 mod ecdar_api {
-    use crate::api::auth::get_token_from_request;
-    use crate::api::ecdar_api::helpers::helpers::AnyEntity;
-    use crate::api::ecdar_api::{handle_session, ConcreteEcdarApi};
+    use crate::api::ecdar_api::{
+        handle_session, MockConcreteEcdarApi, MockConcreteEcdarApi_EcdarBackend,
+    };
     use crate::api::server::server::ecdar_api_auth_server::EcdarApiAuth;
     use crate::api::server::server::get_auth_token_request::user_credentials;
     use crate::api::server::server::get_auth_token_request::UserCredentials;
     use crate::api::server::server::{CreateUserRequest, GetAuthTokenRequest, UpdateUserRequest};
-    use crate::database::entity_context::EntityContextTrait;
-    use crate::database::session_context;
-    use crate::database::user_context::UserContextTrait;
-    use crate::entities;
     use crate::{
         api::server::server::ecdar_api_server::EcdarApi, entities::session::Model as Session,
         entities::user::Model as User,
     };
-    use sea_orm::ActiveValue::Set;
-
+    use mockall::{mock, predicate};
     use std::str::FromStr;
+    use std::sync::Arc;
+    use async_trait::async_trait;
+    use futures::SinkExt;
 
-    use chrono::Local;
+    use crate::api::server::server::ecdar_backend_server::EcdarBackend;
+    use crate::database::entity_context::EntityContextTrait;
+    use crate::database::user_context::MockUserContextTrait;
+    use crate::tests::api::helpers::get_mock_concrete_ecdar_api;
     use tonic::{metadata, Request};
 
     #[tokio::test]
     async fn delete_user_nonexistent_user_returns_err() {
-        let api = ConcreteEcdarApi::setup_in_memory_db(vec![AnyEntity::User]).await;
+        mock! {
+            C {}
+            #[async_trait]
+            impl EntityContextTrait<user::Model> for C {
+                async fn delete(&self, entity_id: i32) -> Result<user::Model, DbErr>;
+            }
+        }
 
         let mut delete_request = Request::new({});
 
@@ -33,6 +40,13 @@ mod ecdar_api {
             .metadata_mut()
             .insert("uid", metadata::MetadataValue::from_str("1").unwrap());
 
+
+        let mut mock_user_context = MockC::new();
+
+        mock_user_context.expect_delete().
+
+        let api = get_mock_concrete_ecdar_api(Arc::new(mock_user_context)).await;
+
         let delete_response = api.delete_user(delete_request).await;
 
         assert!(delete_response.is_err());
@@ -40,7 +54,7 @@ mod ecdar_api {
 
     #[tokio::test]
     async fn delete_user_existing_user_returns_ok() {
-        let api = ConcreteEcdarApi::setup_in_memory_db(vec![AnyEntity::User]).await;
+        let api = get_mock_concrete_ecdar_api().await;
 
         let _ = api
             .user_context
@@ -67,7 +81,7 @@ mod ecdar_api {
 
     #[tokio::test]
     async fn create_user_nonexistent_user_returns_ok() {
-        let api = ConcreteEcdarApi::setup_in_memory_db(vec![AnyEntity::User]).await;
+        let api = get_mock_concrete_ecdar_api().await;
 
         let create_user_request = Request::new(CreateUserRequest {
             email: "anders21@student.aau.dk".to_string(),
@@ -81,7 +95,7 @@ mod ecdar_api {
 
     #[tokio::test]
     async fn create_user_nonexistent_user_inserts_user() {
-        let api = ConcreteEcdarApi::setup_in_memory_db(vec![AnyEntity::User]).await;
+        let api = get_mock_concrete_ecdar_api().await;
 
         let username = "newuser".to_string();
 
@@ -103,7 +117,7 @@ mod ecdar_api {
 
     #[tokio::test]
     async fn test_create_user_duplicate_email_returns_error() {
-        let api = ConcreteEcdarApi::setup_in_memory_db(vec![AnyEntity::User]).await;
+        let api = get_mock_concrete_ecdar_api().await;
 
         let _ = api
             .user_context
@@ -127,7 +141,7 @@ mod ecdar_api {
 
     #[tokio::test]
     async fn test_create_user_invalid_email_returns_error() {
-        let api = ConcreteEcdarApi::setup_in_memory_db(vec![AnyEntity::User]).await;
+        let api = get_mock_concrete_ecdar_api().await;
 
         let create_user_request = Request::new(CreateUserRequest {
             email: "invalid-email".to_string(),
@@ -141,7 +155,7 @@ mod ecdar_api {
 
     #[tokio::test]
     async fn test_create_user_duplicate_username_returns_error() {
-        let api = ConcreteEcdarApi::setup_in_memory_db(vec![AnyEntity::User]).await;
+        let api = get_mock_concrete_ecdar_api().await;
 
         let _ = api
             .user_context
@@ -165,7 +179,7 @@ mod ecdar_api {
 
     #[tokio::test]
     async fn test_create_user_invalid_username_returns_error() {
-        let api = ConcreteEcdarApi::setup_in_memory_db(vec![AnyEntity::User]).await;
+        let api = get_mock_concrete_ecdar_api().await;
 
         let create_user_request = Request::new(CreateUserRequest {
             email: "valid@email.com".to_string(),
@@ -179,7 +193,7 @@ mod ecdar_api {
 
     #[tokio::test]
     async fn test_create_user_valid_request_returns_ok() {
-        let api = ConcreteEcdarApi::setup_in_memory_db(vec![AnyEntity::User]).await;
+        let api = get_mock_concrete_ecdar_api().await;
 
         let create_user_request = Request::new(CreateUserRequest {
             email: "newuser@example.com".to_string(),
@@ -193,7 +207,7 @@ mod ecdar_api {
 
     #[tokio::test]
     async fn update_user_returns_ok() {
-        let api = ConcreteEcdarApi::setup_in_memory_db(vec![AnyEntity::User]).await;
+        let api = get_mock_concrete_ecdar_api().await;
 
         let user = User {
             id: 1,
@@ -221,7 +235,7 @@ mod ecdar_api {
 
     #[tokio::test]
     async fn update_user_non_existant_user_returns_err() {
-        let api = ConcreteEcdarApi::setup_in_memory_db(vec![AnyEntity::User]).await;
+        let api = get_mock_concrete_ecdar_api().await;
 
         let mut update_user_request = Request::new(UpdateUserRequest {
             email: Some("new_test@test".to_string()),
@@ -240,7 +254,7 @@ mod ecdar_api {
 
     #[tokio::test]
     async fn update_user_single_field_returns_ok() {
-        let api = ConcreteEcdarApi::setup_in_memory_db(vec![AnyEntity::User]).await;
+        let api = get_mock_concrete_ecdar_api().await;
 
         let user = User {
             id: 1,
@@ -268,8 +282,7 @@ mod ecdar_api {
 
     #[tokio::test]
     async fn handle_session_updated_session_contains_correct_fields() {
-        let api =
-            ConcreteEcdarApi::setup_in_memory_db(vec![AnyEntity::User, AnyEntity::Session]).await;
+        let api = get_mock_concrete_ecdar_api().await;
 
         let mut get_auth_token_request = Request::new(GetAuthTokenRequest {
             user_credentials: Some(UserCredentials {
@@ -300,7 +313,7 @@ mod ecdar_api {
                 id: Default::default(),
                 refresh_token: "test_refresh_token".to_string(),
                 access_token: "test_access_token".to_string(),
-                updated_at: Local::now().naive_local(),
+                updated_at: Default::default(),
                 user_id: 1,
             })
             .await
@@ -326,18 +339,20 @@ mod ecdar_api {
         };
 
         let updated_session = api.session_context.get_by_id(1).await.unwrap().unwrap();
-        assert!(dbg!(updated_session != old_session));
-        assert!(dbg!(updated_session.refresh_token) == dbg!(expected_session.refresh_token));
-        assert!(dbg!(updated_session.access_token) == dbg!(expected_session.access_token));
-        assert!(dbg!(updated_session.updated_at) > dbg!(old_session.updated_at));
-        assert!(dbg!(updated_session.user_id) == dbg!(expected_session.user_id));
-        assert!(dbg!(updated_session.id) == dbg!(expected_session.id));
+        assert_ne!(updated_session, old_session);
+        assert_eq!(
+            updated_session.refresh_token,
+            expected_session.refresh_token
+        );
+        assert_eq!(updated_session.access_token, expected_session.access_token);
+        assert!(updated_session.updated_at > old_session.updated_at);
+        assert_eq!(updated_session.user_id, expected_session.user_id);
+        assert_eq!(updated_session.id, expected_session.id);
     }
 
     #[tokio::test]
     async fn handle_session_no_session_exists_creates_session() {
-        let api =
-            ConcreteEcdarApi::setup_in_memory_db(vec![AnyEntity::User, AnyEntity::Session]).await;
+        let api = get_mock_concrete_ecdar_api().await;
 
         let mut get_auth_token_request = Request::new(GetAuthTokenRequest {
             user_credentials: Some(UserCredentials {
@@ -378,8 +393,7 @@ mod ecdar_api {
 
     #[tokio::test]
     async fn handle_session_update_non_existing_session_returns_err() {
-        let api =
-            ConcreteEcdarApi::setup_in_memory_db(vec![AnyEntity::User, AnyEntity::Session]).await;
+        let api = get_mock_concrete_ecdar_api(Arc::new(MockEcdarBackend)).await;
 
         let mut get_auth_token_request = Request::new(GetAuthTokenRequest {
             user_credentials: Some(UserCredentials {
@@ -404,7 +418,7 @@ mod ecdar_api {
 
         api.user_context.create(user.clone()).await.unwrap();
 
-        assert!(dbg!(handle_session(
+        assert!(handle_session(
             api.session_context.clone(),
             &get_auth_token_request,
             is_new_session,
@@ -413,6 +427,6 @@ mod ecdar_api {
             user.id.to_string(),
         )
         .await
-        .is_err()));
+        .is_err());
     }
 }

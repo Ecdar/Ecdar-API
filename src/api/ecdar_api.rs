@@ -1,7 +1,6 @@
 use std::env;
+use std::fmt::{Debug, Formatter};
 use std::sync::Arc;
-
-use crate::api::ecdar_api::helpers::helpers::{setup_db_with_entities, AnyEntity};
 use crate::api::server::server::get_auth_token_request::user_credentials;
 use crate::entities::access;
 use crate::entities::session::Model;
@@ -9,11 +8,9 @@ use chrono::Local;
 use regex::Regex;
 use sea_orm::SqlErr;
 use tonic::{Code, Request, Response, Status};
+use crate::api::auth::TokenType;
 
-use crate::api::server::server::{
-    ecdar_api_auth_server::EcdarApiAuth, ecdar_api_server::EcdarApi,
-    ecdar_backend_client::EcdarBackendClient,
-};
+use crate::api::server::server::{ecdar_api_auth_server::EcdarApiAuth, ecdar_api_server::EcdarApi};
 use crate::database::access_context::AccessContextTrait;
 use crate::database::database_context::DatabaseContextTrait;
 use crate::database::in_use_context::InUseContextTrait;
@@ -37,18 +34,28 @@ use super::{
     },
 };
 
-#[path = "../tests/database/helpers.rs"]
-pub mod helpers;
-
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct ConcreteEcdarApi {
-    reveaal_address: String,
+    reveaal_context: Arc<dyn EcdarBackend>,
     model_context: Arc<dyn ModelContextTrait>,
     user_context: Arc<dyn UserContextTrait>,
     access_context: Arc<dyn AccessContextTrait>,
     query_context: Arc<dyn QueryContextTrait>,
     session_context: Arc<dyn SessionContextTrait>,
     in_use_context: Arc<dyn InUseContextTrait>,
+}
+
+impl Debug for ConcreteEcdarApi {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        f.debug_tuple("")
+            .field(&self.model_context)
+            .field(&self.user_context)
+            .field(&self.access_context)
+            .field(&self.query_context)
+            .field(&self.session_context)
+            .field(&self.in_use_context)
+            .finish()
+    }
 }
 
 /// Updates or creates a session in the database for a given user.
@@ -149,10 +156,10 @@ impl ConcreteEcdarApi {
         query_context: Arc<dyn QueryContextTrait>,
         session_context: Arc<dyn SessionContextTrait>,
         in_use_context: Arc<dyn InUseContextTrait>,
+        reveaal_context: Arc<dyn EcdarBackend>,
     ) -> Self {
         ConcreteEcdarApi {
-            reveaal_address: env::var("REVEAAL_ADDRESS")
-                .expect("Expected REVEAAL_ADDRESS to be set."),
+            reveaal_context,
             model_context,
             user_context,
             access_context,
@@ -160,19 +167,6 @@ impl ConcreteEcdarApi {
             session_context,
             in_use_context,
         }
-    }
-    pub async fn setup_in_memory_db(entities: Vec<AnyEntity>) -> Self {
-        let db_context = Box::new(setup_db_with_entities(entities).await);
-        env::set_var("REVEAAL_ADDRESS", "");
-        ConcreteEcdarApi::new(
-            Arc::new(ModelContext::new(db_context.clone())),
-            Arc::new(UserContext::new(db_context.clone())),
-            Arc::new(AccessContext::new(db_context.clone())),
-            Arc::new(QueryContext::new(db_context.clone())),
-            Arc::new(SessionContext::new(db_context.clone())),
-            Arc::new(InUseContext::new(db_context.clone())),
-        )
-            .await
     }
 }
 
@@ -346,7 +340,7 @@ impl EcdarApiAuth for ConcreteEcdarApi {
             // Get user from refresh_token
         } else {
             let refresh_token = auth::get_token_from_request(&request)?;
-            let token_data = auth::validate_token(refresh_token, true)?;
+            let token_data = auth::validate_token(refresh_token, TokenType::RefreshToken)?;
             uid = token_data.claims.sub;
 
             // Since the user does have a refresh_token, a session already exists
@@ -429,40 +423,28 @@ impl EcdarBackend for ConcreteEcdarApi {
         &self,
         _request: Request<()>,
     ) -> Result<Response<UserTokenResponse>, Status> {
-        let mut client = EcdarBackendClient::connect(self.reveaal_address.clone())
-            .await
-            .unwrap();
-        client.get_user_token(_request).await
+        self.reveaal_context.get_user_token(_request).await
     }
 
     async fn send_query(
         &self,
         request: Request<QueryRequest>,
     ) -> Result<Response<QueryResponse>, Status> {
-        let mut client = EcdarBackendClient::connect(self.reveaal_address.clone())
-            .await
-            .unwrap();
-        client.send_query(request).await
+        self.reveaal_context.send_query(request).await
     }
 
     async fn start_simulation(
         &self,
         request: Request<SimulationStartRequest>,
     ) -> Result<Response<SimulationStepResponse>, Status> {
-        let mut client = EcdarBackendClient::connect(self.reveaal_address.clone())
-            .await
-            .unwrap();
-        client.start_simulation(request).await
+        self.reveaal_context.start_simulation(request).await
     }
 
     async fn take_simulation_step(
         &self,
         request: Request<SimulationStepRequest>,
     ) -> Result<Response<SimulationStepResponse>, Status> {
-        let mut client = EcdarBackendClient::connect(self.reveaal_address.clone())
-            .await
-            .unwrap();
-        client.take_simulation_step(request).await
+        self.reveaal_context.take_simulation_step(request).await
     }
 }
 

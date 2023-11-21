@@ -3,6 +3,7 @@ mod auth {
     use crate::api::auth;
     use std::{env, str::FromStr};
     use tonic::{metadata::MetadataValue, Request};
+    use crate::api::auth::TokenType;
 
     #[tokio::test]
     async fn gtfr_bearer_token_trims_token() {
@@ -51,7 +52,7 @@ mod auth {
         env::set_var("ACCESS_TOKEN_HS512_SECRET", "access_secret");
 
         let token = auth::create_token(auth::TokenType::AccessToken, "1").unwrap();
-        let result = auth::validate_token(token, false);
+        let result = auth::validate_token(token, TokenType::AccessToken);
         assert!(result.is_ok());
     }
 
@@ -60,7 +61,7 @@ mod auth {
         env::set_var("REFRESH_TOKEN_HS512_SECRET", "refresh_secret");
 
         let token = auth::create_token(auth::TokenType::RefreshToken, "1").unwrap();
-        let result = auth::validate_token(token, true);
+        let result = auth::validate_token(token, TokenType::RefreshToken);
         assert!(result.is_ok());
     }
 
@@ -69,8 +70,8 @@ mod auth {
         env::set_var("ACCESS_TOKEN_HS512_SECRET", "access_secret");
         env::set_var("REFRESH_TOKEN_HS512_SECRET", "refresh_secret");
 
-        let result_access = auth::validate_token("invalid_token".to_string(), false);
-        let result_refresh = auth::validate_token("invalid_token".to_string(), true);
+        let result_access = auth::validate_token("invalid_token".to_string(), TokenType::AccessToken);
+        let result_refresh = auth::validate_token("invalid_token".to_string(), TokenType::RefreshToken);
         assert!(result_access.is_err() && result_refresh.is_err());
     }
 
@@ -80,10 +81,10 @@ mod auth {
         env::set_var("REFRESH_TOKEN_HS512_SECRET", "refresh_secret");
 
         let token = auth::create_token(auth::TokenType::AccessToken, "1").unwrap();
-        let result_access = auth::validate_token(token, true);
+        let result_access = auth::validate_token(token, TokenType::RefreshToken);
 
         let token = auth::create_token(auth::TokenType::RefreshToken, "1").unwrap();
-        let result_refresh = auth::validate_token(token, false);
+        let result_refresh = auth::validate_token(token, TokenType::AccessToken);
 
         assert!(result_access.is_err() && result_refresh.is_err());
     }

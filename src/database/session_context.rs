@@ -1,44 +1,44 @@
-use std::fmt::Debug;
-
+use chrono::{Local, Utc};
+use mockall::automock;
 use sea_orm::prelude::async_trait::async_trait;
 use sea_orm::ActiveValue::{Set, Unchanged};
 use sea_orm::{ActiveModelTrait, ColumnTrait, DbErr, EntityTrait, QueryFilter};
+use std::sync::Arc;
 
 use crate::database::database_context::DatabaseContextTrait;
 use crate::database::entity_context::EntityContextTrait;
-use crate::entities::prelude::Session as SessionEntity;
-use crate::entities::session::Column as SessionColumn;
-use crate::entities::session::{ActiveModel, Model as Session};
+use crate::entities::session;
 
 #[derive(Debug)]
 pub struct SessionContext {
-    db_context: Box<dyn DatabaseContextTrait>,
+    db_context: Arc<dyn DatabaseContextTrait>,
 }
 
 #[async_trait]
-pub trait SessionContextTrait: EntityContextTrait<Session> {
-    async fn get_by_refresh_token(&self, refresh_token: String) -> Result<Option<Session>, DbErr>;
+pub trait SessionContextTrait: EntityContextTrait<session::Model> {
+    async fn get_by_refresh_token(
+        &self,
+        refresh_token: String,
+    ) -> Result<Option<session::Model>, DbErr>;
 }
 
 #[async_trait]
 impl SessionContextTrait for SessionContext {
-    /// Returns a session by searching for its refresh_token.
-    /// # Example
-    /// ```rust
-    /// let session: Result<Option<Model>, DbErr> = session_context.get_by_refresh_token(refresh_token).await;
-    /// ```
-    async fn get_by_refresh_token(&self, refresh_token: String) -> Result<Option<Session>, DbErr> {
-        SessionEntity::find()
-            .filter(SessionColumn::RefreshToken.eq(refresh_token))
+    async fn get_by_refresh_token(
+        &self,
+        refresh_token: String,
+    ) -> Result<Option<session::Model>, DbErr> {
+        session::Entity::find()
+            .filter(session::Column::RefreshToken.eq(refresh_token))
             .one(&self.db_context.get_connection())
             .await
     }
 }
 
 #[async_trait]
-impl EntityContextTrait<Session> for SessionContext {
+impl EntityContextTrait<session::Model> for SessionContext {
     /// Creates a new `SessionContext` for interacting with the database.
-    fn new(db_context: Box<dyn DatabaseContextTrait>) -> Self {
+    fn new(db_context: Arc<dyn DatabaseContextTrait>) -> Self {
         SessionContext { db_context }
     }
     /// Creates a new session in the database based on the provided model.
@@ -54,16 +54,17 @@ impl EntityContextTrait<Session> for SessionContext {
     ///     };
     /// let created_session = session_context.create(model).await.unwrap();
     /// ```
-    async fn create(&self, entity: Session) -> Result<Session, DbErr> {
-        let session = ActiveModel {
+    async fn create(&self, entity: session::Model) -> Result<session::Model, DbErr> {
+        let session = session::ActiveModel {
             id: Default::default(),
             refresh_token: Set(entity.refresh_token),
             access_token: Set(entity.access_token),
-            updated_at: Set(entity.updated_at),
             user_id: Set(entity.user_id),
+            updated_at: Set(Utc::now().naive_local()),
         };
 
-        session.insert(&self.db_context.get_connection()).await
+        let session = session.insert(&self.db_context.get_connection()).await;
+        session
     }
 
     /// Returns a session by searching for its id.
@@ -71,8 +72,8 @@ impl EntityContextTrait<Session> for SessionContext {
     /// ```rust
     /// let session: Result<Option<Model>, DbErr> = session_context.get_by_id(id).await;
     /// ```
-    async fn get_by_id(&self, id: i32) -> Result<Option<Session>, DbErr> {
-        SessionEntity::find_by_id(id)
+    async fn get_by_id(&self, id: i32) -> Result<Option<session::Model>, DbErr> {
+        session::Entity::find_by_id(id)
             .one(&self.db_context.get_connection())
             .await
     }
@@ -82,8 +83,8 @@ impl EntityContextTrait<Session> for SessionContext {
     /// ```rust
     /// let session: Result<Vec<Model>, DbErr> = session_context.get_all().await;
     /// ```
-    async fn get_all(&self) -> Result<Vec<Session>, DbErr> {
-        SessionEntity::find()
+    async fn get_all(&self) -> Result<Vec<session::Model>, DbErr> {
+        session::Entity::find()
             .all(&self.db_context.get_connection())
             .await
     }
@@ -112,26 +113,16 @@ impl EntityContextTrait<Session> for SessionContext {
     /// | id | token                                | created_at                | user_id |
     /// |----|--------------------------------------|---------------------------|---------|
     /// | 1  | 4473240f-2acb-422f-bd1a-5214554ed0e0 | 2023-10-24T13:49:16+02:00 | 2       |
-    async fn update(&self, entity: Session) -> Result<Session, DbErr> {
-        let res = &self.get_by_id(entity.id).await?;
-        let updated_session: Result<Session, DbErr> = match res {
-            None => Err(DbErr::RecordNotFound(format!(
-                "Could not find entity {:?}",
-                entity
-            ))),
-            Some(session) => {
-                ActiveModel {
-                    id: Unchanged(session.id),
-                    refresh_token: Set(entity.refresh_token),
-                    access_token: Set(entity.access_token),
-                    updated_at: Set(entity.updated_at),
-                    user_id: Unchanged(session.user_id), //TODO Should it be allowed to change the user_id of a session?
-                }
-                .update(&self.db_context.get_connection())
-                .await
-            }
-        };
-        return updated_session;
+    async fn update(&self, entity: session::Model) -> Result<session::Model, DbErr> {
+        session::ActiveModel {
+            id: Unchanged(entity.id),
+            refresh_token: Set(entity.refresh_token),
+            access_token: Set(entity.access_token),
+            user_id: Unchanged(entity.user_id),
+            updated_at: Set(Local::now().naive_local()),
+        }
+        .update(&self.db_context.get_connection())
+        .await
     }
 
     /// Deletes a model in the database with a specific id.
@@ -150,14 +141,12 @@ impl EntityContextTrait<Session> for SessionContext {
     /// | id | token | created_at | user_id |
     /// |----|-------|------------|---------|
     /// |    |       |            |         |
-    async fn delete(&self, id: i32) -> Result<Session, DbErr> {
+    async fn delete(&self, id: i32) -> Result<session::Model, DbErr> {
         let session = self.get_by_id(id).await?;
         match session {
-            None => Err(DbErr::Exec(sea_orm::RuntimeErr::Internal(
-                "No record was deleted".into(),
-            ))),
+            None => Err(DbErr::RecordNotFound("No record was deleted".into())),
             Some(session) => {
-                SessionEntity::delete_by_id(id)
+                session::Entity::delete_by_id(id)
                     .exec(&self.db_context.get_connection())
                     .await?;
                 Ok(session)

@@ -1,63 +1,121 @@
-pub mod helpers {
-    use crate::{
-        database::{database_context::DatabaseContext, entity_context::EntityContextTrait},
-        entities::access::Entity as AccessEntity,
-        entities::in_use::Entity as InUseEntity,
-        entities::model::Entity as ModelEntity,
-        entities::query::Entity as QueryEntity,
-        entities::session::Entity as SessionEntity,
-        entities::user::Entity as UserEntity,
+#![cfg(test)]
+
+use crate::database::database_context::{
+    DatabaseContextTrait, PostgresDatabaseContext, SQLiteDatabaseContext,
+};
+use crate::entities::{access, in_use, model, query, session, user};
+use dotenv::dotenv;
+use sea_orm::{ConnectionTrait, Database, DbBackend};
+use std::env;
+use std::sync::Arc;
+
+pub async fn get_reset_database_context() -> Arc<dyn DatabaseContextTrait> {
+    dotenv().ok();
+
+    let url = env::var("TEST_DATABASE_URL").expect("TEST_DATABASE_URL must be set to run tests.");
+    let db = Database::connect(&url).await.unwrap();
+    let db_context: Arc<dyn DatabaseContextTrait> = match db.get_database_backend() {
+        DbBackend::Sqlite => Arc::new(SQLiteDatabaseContext::new(&url).await.unwrap()),
+        DbBackend::Postgres => Arc::new(PostgresDatabaseContext::new(&url).await.unwrap()),
+        _ => panic!("Database protocol not supported"),
     };
-    use sea_orm::sea_query::TableCreateStatement;
-    use sea_orm::{ConnectionTrait, Database, DatabaseBackend, DatabaseConnection, Schema};
 
-    pub async fn setup_db_with_entities(entities: Vec<AnyEntity>) -> DatabaseContext {
-        let connection = Database::connect("sqlite::memory:").await.unwrap();
-        let schema = Schema::new(DatabaseBackend::Sqlite);
-        for entity in entities.iter() {
-            entity.create_table_from(&connection, &schema).await;
-        }
-        DatabaseContext {
-            db_connection: connection,
-        }
-    }
+    db_context.reset().await.unwrap()
+}
 
-    pub enum AnyEntity {
-        User,
-        Model,
-        Access,
-        Session,
-        InUse,
-        Query,
-    }
+///
+///
+/// # Arguments
+///
+/// * `amount`:
+/// * `model`:
+///
+/// returns: Vec<M, Global>
+///
+/// # Examples
+///
+/// ```
+/// let vector: Vec<UserModel> = create_entities(3,|x| UserModel {
+///     id: &x+i,
+///     email: format!("mail{}@mail.dk",&x),
+///     username: format!("username{}", &x),
+///     password: format!("qwerty{}", &x),
+/// );
+/// ```
 
-    impl AnyEntity {
-        async fn create_table_from(&self, connection: &DatabaseConnection, schema: &Schema) {
-            let stmt: TableCreateStatement;
-            match self {
-                AnyEntity::User => {
-                    stmt = schema.create_table_from_entity(UserEntity);
-                }
-                AnyEntity::Model => {
-                    stmt = schema.create_table_from_entity(ModelEntity);
-                }
-                AnyEntity::Access => {
-                    stmt = schema.create_table_from_entity(AccessEntity);
-                }
-                AnyEntity::Session => {
-                    stmt = schema.create_table_from_entity(SessionEntity);
-                }
-                AnyEntity::InUse => {
-                    stmt = schema.create_table_from_entity(InUseEntity);
-                }
-                AnyEntity::Query => {
-                    stmt = schema.create_table_from_entity(QueryEntity);
-                }
-            }
-            connection
-                .execute(connection.get_database_backend().build(&stmt))
-                .await
-                .unwrap();
-        }
+pub fn create_entities<M, F>(amount: i32, model_creator: F) -> Vec<M>
+where
+    F: Fn(i32) -> M,
+{
+    let mut vector: Vec<M> = vec![];
+    for i in 0..amount {
+        vector.push(model_creator(i));
     }
+    vector
+}
+
+pub fn create_users(amount: i32) -> Vec<user::Model> {
+    create_entities(amount, |i| user::Model {
+        id: i + 1,
+        email: format!("mail{}@mail.dk", &i),
+        username: format!("username{}", &i),
+        password: format!("qwerty{}", &i),
+    })
+}
+
+pub fn create_models(amount: i32, user_id: i32) -> Vec<model::Model> {
+    create_entities(amount, |i| model::Model {
+        id: i + 1,
+        name: "name".to_string(),
+        components_info: "{}".to_owned().parse().unwrap(),
+        owner_id: user_id,
+    })
+}
+
+pub fn create_accesses(amount: i32, user_id: i32, model_id: i32) -> Vec<access::Model> {
+    create_entities(amount, |i| access::Model {
+        id: i + 1,
+        role: "Reader".into(),
+        model_id: model_id + i,
+        user_id: user_id + i,
+    })
+}
+
+pub fn create_sessions(amount: i32, user_id: i32) -> Vec<session::Model> {
+    create_entities(amount, |i| session::Model {
+        id: i + 1,
+        refresh_token: "test_refresh_token".to_string() + format!("{}", i).as_str(),
+        access_token: "test_access_token".to_string() + format!("{}", i).as_str(),
+        user_id,
+        updated_at: Default::default(),
+    })
+}
+
+pub fn create_in_uses(amount: i32, model_id: i32, session_id: i32) -> Vec<in_use::Model> {
+    create_entities(amount, |i| in_use::Model {
+        model_id: model_id + i,
+        session_id,
+        latest_activity: Default::default(),
+    })
+}
+
+pub fn create_queries(amount: i32, model_id: i32) -> Vec<query::Model> {
+    create_entities(amount, |i| query::Model {
+        id: i + 1,
+        string: "".to_string(),
+        result: None,
+        outdated: true,
+        model_id,
+    })
+}
+
+#[macro_export]
+macro_rules! to_active_models {
+    ($vec:expr) => {{
+        let mut models = Vec::new();
+        for model in $vec {
+            models.push(model.into_active_model());
+        }
+        models
+    }};
 }

@@ -1,137 +1,317 @@
 #[cfg(test)]
 mod database_tests {
+    use crate::tests::database::helpers::{
+        create_models, create_queries, create_users, get_reset_database_context,
+    };
     use crate::{
-        database::{
-            database_context::DatabaseContext, entity_context::EntityContextTrait,
-            model_context::ModelContext, query_context::QueryContext, user_context::UserContext,
-        },
-        entities::model::{Entity as ModelEntity, Model},
-        entities::query::{Entity as QueryEntity, Model as Query},
-        entities::user::{Entity as UserEntity, Model as User},
+        database::{entity_context::EntityContextTrait, query_context::QueryContext},
+        entities::{model, query, user},
+        to_active_models,
     };
-    use sea_orm::{
-        entity::prelude::*, sea_query::TableCreateStatement, Database, DatabaseBackend,
-        DatabaseConnection, Schema,
-    };
+    use sea_orm::{entity::prelude::*, IntoActiveModel};
 
-    async fn setup_schema(db: &DatabaseConnection) {
-        // Setup Schema helper
-        let schema = Schema::new(DatabaseBackend::Sqlite);
+    async fn seed_db() -> (QueryContext, query::Model, model::Model) {
+        let db_context = get_reset_database_context().await;
 
-        // Derive from Entity
-        let stmt: TableCreateStatement = schema.create_table_from_entity(UserEntity);
-        let _ = db.execute(db.get_database_backend().build(&stmt)).await;
-        let stmt: TableCreateStatement = schema.create_table_from_entity(ModelEntity);
-        let _ = db.execute(db.get_database_backend().build(&stmt)).await;
-        let stmt: TableCreateStatement = schema.create_table_from_entity(QueryEntity);
-        let _ = db.execute(db.get_database_backend().build(&stmt)).await;
+        let query_context = QueryContext::new(db_context);
+
+        let user = create_users(1)[0].clone();
+        let model = create_models(1, user.id)[0].clone();
+        let query = create_queries(1, model.id)[0].clone();
+
+        user::Entity::insert(user.clone().into_active_model())
+            .exec(&query_context.db_context.get_connection())
+            .await
+            .unwrap();
+        model::Entity::insert(model.clone().into_active_model())
+            .exec(&query_context.db_context.get_connection())
+            .await
+            .unwrap();
+
+        (query_context, query, model)
     }
 
     #[tokio::test]
-    async fn create_test() -> Result<(), DbErr> {
-        let db_connection = Database::connect("sqlite::memory:").await.unwrap();
-        setup_schema(&db_connection).await;
-        setup_schema(&db_connection).await;
-        let db_context = Box::new(DatabaseContext { db_connection });
+    async fn create_test() {
+        let (query_context, query, _) = seed_db().await;
 
-        let user_context = UserContext::new(db_context.clone());
-        let model_context = ModelContext::new(db_context.clone());
-        let query_context = QueryContext::new(db_context.clone());
+        let created_query = query_context.create(query.clone()).await.unwrap();
 
-        let user = User {
-            id: 1,
-            email: "test@test.com".to_string(),
-            username: "anders".to_string(),
-            password: "qwerty".to_string(),
-        };
-        user_context.create(user).await?;
-
-        let model = Model {
-            id: 1,
-            name: "Test".to_string(),
-            components_info: "{}".to_owned().parse().unwrap(),
-            owner_id: 1,
-        };
-        model_context.create(model).await?;
-
-        let new_query = Query {
-            id: 1,
-            string: "query_string".to_owned(),
-            result: Some("{}".to_owned().parse().unwrap()),
-            model_id: 1,
-            out_dated: false,
-        };
-        let created_query = query_context.create(new_query).await?;
-
-        let fetched_query = QueryEntity::find_by_id(created_query.id)
+        let fetched_query = query::Entity::find_by_id(created_query.id)
             .one(&query_context.db_context.get_connection())
-            .await?
-            .clone()
+            .await
+            .unwrap()
             .unwrap();
 
-        assert_eq!(fetched_query.id, created_query.id);
-        assert_eq!(fetched_query.model_id, created_query.model_id);
-        assert_eq!(fetched_query.string, created_query.string);
-
-        Ok(())
+        // Assert if the fetched access is the same as the created access
+        assert_eq!(query, created_query);
+        assert_eq!(fetched_query, created_query);
     }
 
     #[tokio::test]
-    async fn update_test() -> Result<(), DbErr> {
-        let db_connection = Database::connect("sqlite::memory:").await.unwrap();
-        setup_schema(&db_connection).await;
-        setup_schema(&db_connection).await;
-        let db_context = Box::new(DatabaseContext { db_connection });
+    async fn create_default_outdated_test() {
+        let (query_context, query, _) = seed_db().await;
 
-        let user_context = UserContext::new(db_context.clone());
-        let model_context = ModelContext::new(db_context.clone());
-        let query_context = QueryContext::new(db_context.clone());
+        let _inserted_query = query_context.create(query.clone()).await.unwrap();
 
-        let user = User {
-            id: 1,
-            email: "test@test.com".to_string(),
-            username: "anders".to_string(),
-            password: "qwerty".to_string(),
-        };
-        user_context.create(user).await?;
-
-        let model = Model {
-            id: 1,
-            name: "Test".to_string(),
-            components_info: "{}".to_owned().parse().unwrap(),
-            owner_id: 1,
-        };
-        model_context.create(model).await?;
-
-        let new_query = Query {
-            id: 1,
-            string: "query_string".to_owned(),
-            result: Some("{}".to_owned().parse().unwrap()),
-            model_id: 1,
-            out_dated: false,
-        };
-        let created_query = query_context.create(new_query).await?;
-
-        let fetched_query = QueryEntity::find_by_id(created_query.id)
+        let fetched_query = query::Entity::find_by_id(query.model_id)
             .one(&query_context.db_context.get_connection())
-            .await?
-            .clone()
+            .await
+            .unwrap()
             .unwrap();
 
-        let updated_query = Query {
-            id: fetched_query.id,
-            string: "updated query string".to_owned(),
-            result: fetched_query.result,
-            model_id: fetched_query.model_id,
-            out_dated: true,
+        assert!(fetched_query.outdated)
+    }
+
+    #[tokio::test]
+    async fn create_auto_increment_test() {
+        let (query_context, query, _) = seed_db().await;
+
+        let created_query1 = query_context.create(query.clone()).await.unwrap();
+        let created_query2 = query_context.create(query.clone()).await.unwrap();
+
+        let fetched_query1 = query::Entity::find_by_id(created_query1.id)
+            .one(&query_context.db_context.get_connection())
+            .await
+            .unwrap()
+            .unwrap();
+
+        let fetched_query2 = query::Entity::find_by_id(created_query2.id)
+            .one(&query_context.db_context.get_connection())
+            .await
+            .unwrap()
+            .unwrap();
+
+        assert_ne!(fetched_query1.id, fetched_query2.id);
+        assert_ne!(created_query1.id, created_query2.id);
+        assert_eq!(created_query1.id, fetched_query1.id);
+        assert_eq!(created_query2.id, fetched_query2.id);
+    }
+
+    #[tokio::test]
+    async fn get_by_id_test() {
+        let (query_context, query, _) = seed_db().await;
+
+        query::Entity::insert(query.clone().into_active_model())
+            .exec(&query_context.db_context.get_connection())
+            .await
+            .unwrap();
+
+        let fetched_in_use = query_context
+            .get_by_id(query.model_id)
+            .await
+            .unwrap()
+            .unwrap();
+
+        assert_eq!(fetched_in_use, query)
+    }
+
+    #[tokio::test]
+    async fn get_by_non_existing_id_test() {
+        let (query_context, _, _) = seed_db().await;
+
+        let query = query_context.get_by_id(1).await;
+
+        assert!(query.unwrap().is_none())
+    }
+
+    #[tokio::test]
+    async fn get_all_test() {
+        let (query_context, _, model) = seed_db().await;
+
+        let queries = create_queries(10, model.id);
+
+        query::Entity::insert_many(to_active_models!(queries.clone()))
+            .exec(&query_context.db_context.get_connection())
+            .await
+            .unwrap();
+
+        assert_eq!(query_context.get_all().await.unwrap().len(), 10);
+
+        let mut sorted = queries.clone();
+        sorted.sort_by_key(|k| k.model_id);
+
+        for (i, query) in sorted.into_iter().enumerate() {
+            assert_eq!(query, queries[i]);
+        }
+    }
+
+    #[tokio::test]
+    async fn get_all_empty_test() {
+        let (query_context, _, _) = seed_db().await;
+
+        let queries = query_context.get_all().await.unwrap();
+
+        assert_eq!(0, queries.len())
+    }
+
+    #[tokio::test]
+    async fn update_test() {
+        let (query_context, query, _) = seed_db().await;
+
+        query::Entity::insert(query.clone().into_active_model())
+            .exec(&query_context.db_context.get_connection())
+            .await
+            .unwrap();
+
+        let new_query = query::Model { ..query };
+
+        let updated_query = query_context.update(new_query.clone()).await.unwrap();
+
+        let fetched_query = query::Entity::find_by_id(updated_query.model_id)
+            .one(&query_context.db_context.get_connection())
+            .await
+            .unwrap()
+            .unwrap();
+
+        assert_eq!(new_query, updated_query);
+        assert_eq!(updated_query, fetched_query);
+    }
+
+    #[tokio::test]
+    async fn update_modifies_string_test() {
+        let (query_context, query, _) = seed_db().await;
+
+        query::Entity::insert(query.clone().into_active_model())
+            .exec(&query_context.db_context.get_connection())
+            .await
+            .unwrap();
+
+        let new_query = query::Model {
+            string: query.clone().string + "123".into(),
+            ..query.clone()
         };
 
-        let result = query_context.update(updated_query).await?;
+        let updated_query = query_context.update(new_query.clone()).await.unwrap();
 
-        assert_eq!(result.id, created_query.id);
-        assert_ne!(result.string, created_query.string);
-        assert_ne!(result.out_dated, created_query.out_dated);
+        assert_ne!(query, updated_query);
+        assert_ne!(query, new_query);
+    }
 
-        Ok(())
+    #[tokio::test]
+    async fn update_modifies_outdated_test() {
+        let (query_context, query, _) = seed_db().await;
+
+        query::Entity::insert(query.clone().into_active_model())
+            .exec(&query_context.db_context.get_connection())
+            .await
+            .unwrap();
+
+        let new_query = query::Model {
+            outdated: !query.clone().outdated,
+            ..query.clone()
+        };
+
+        let updated_query = query_context.update(new_query.clone()).await.unwrap();
+
+        assert_ne!(query, updated_query);
+        assert_ne!(query, new_query);
+    }
+
+    #[tokio::test]
+    async fn update_modifies_result_test() {
+        let (query_context, mut query, _) = seed_db().await;
+
+        query.result = Some("{}".to_owned().parse().unwrap());
+
+        query::Entity::insert(query.clone().into_active_model())
+            .exec(&query_context.db_context.get_connection())
+            .await
+            .unwrap();
+
+        let new_query = query::Model {
+            result: None,
+            ..query.clone()
+        };
+
+        let updated_query = query_context.update(new_query.clone()).await.unwrap();
+
+        assert_ne!(query, updated_query);
+        assert_ne!(query, new_query);
+    }
+
+    #[tokio::test]
+    async fn update_does_not_modify_id_test() {
+        let (query_context, query, _) = seed_db().await;
+
+        query::Entity::insert(query.clone().into_active_model())
+            .exec(&query_context.db_context.get_connection())
+            .await
+            .unwrap();
+
+        let new_query = query::Model {
+            id: query.id + 1,
+            ..query.clone()
+        };
+
+        let updated_query = query_context.update(new_query.clone()).await;
+
+        assert!(matches!(
+            updated_query.unwrap_err(),
+            DbErr::RecordNotUpdated
+        ));
+    }
+
+    #[tokio::test]
+    async fn update_does_not_modify_model_id_test() {
+        let (query_context, query, _) = seed_db().await;
+
+        query::Entity::insert(query.clone().into_active_model())
+            .exec(&query_context.db_context.get_connection())
+            .await
+            .unwrap();
+
+        let new_query = query::Model {
+            model_id: query.model_id + 1,
+            ..query.clone()
+        };
+
+        let updated_query = query_context.update(new_query.clone()).await.unwrap();
+
+        assert_eq!(query, updated_query);
+    }
+
+    #[tokio::test]
+    async fn update_non_existing_id_test() {
+        let (query_context, query, _) = seed_db().await;
+
+        let updated_query = query_context.update(query.clone()).await;
+
+        assert!(matches!(
+            updated_query.unwrap_err(),
+            DbErr::RecordNotUpdated
+        ));
+    }
+
+    #[tokio::test]
+    async fn delete_test() {
+        let (query_context, query, _) = seed_db().await;
+
+        query::Entity::insert(query.clone().into_active_model())
+            .exec(&query_context.db_context.get_connection())
+            .await
+            .unwrap();
+
+        let deleted_query = query_context.delete(query.model_id).await.unwrap();
+
+        let all_queries = query::Entity::find()
+            .all(&query_context.db_context.get_connection())
+            .await
+            .unwrap();
+
+        assert_eq!(query, deleted_query);
+        assert!(all_queries.is_empty());
+    }
+
+    #[tokio::test]
+    async fn delete_non_existing_id_test() {
+        let (query_context, _, _) = seed_db().await;
+
+        let deleted_query = query_context.delete(1).await;
+
+        assert!(matches!(
+            deleted_query.unwrap_err(),
+            DbErr::RecordNotFound(_)
+        ))
     }
 }

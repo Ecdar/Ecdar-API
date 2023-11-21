@@ -22,12 +22,18 @@ impl MigrationTrait for Migration {
                     )
                     .col(ColumnDef::new(Query::String).string().not_null())
                     .col(ColumnDef::new(Query::Result).json())
-                    .col(ColumnDef::new(Query::OutDated).boolean().not_null())
+                    .col(
+                        ColumnDef::new(Query::Outdated)
+                            .boolean()
+                            .not_null()
+                            .default(true),
+                    )
                     .col(ColumnDef::new(Query::ModelId).integer().not_null())
                     .foreign_key(
                         ForeignKey::create()
                             .from(Query::Table, Query::ModelId)
-                            .to(Model::Table, Model::Id),
+                            .to(Model::Table, Model::Id)
+                            .on_delete(ForeignKeyAction::Cascade),
                     )
                     .to_owned(),
             )
@@ -48,5 +54,5 @@ enum Query {
     String,
     Result,
     ModelId,
-    OutDated
+    Outdated,
 }
