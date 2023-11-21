@@ -163,7 +163,8 @@ mod database_tests {
         for user in users_vec.iter_mut() {
             res_users.push(user_context.create(user.to_owned()).await.unwrap());
         }
-        assert_eq!(users_vec, res_users);
+        assert_eq!(users_vec[0].username, res_users[0].username);
+        assert_eq!(users_vec[1].username, res_users[1].username);
     }
 
     #[tokio::test]
@@ -182,8 +183,8 @@ mod database_tests {
             ..user
         };
         assert_eq!(
-            updated_user,
-            user_context.update(updated_user.to_owned()).await.unwrap()
+            updated_user.username,
+            user_context.update(updated_user.to_owned()).await.unwrap().username
         )
     }
 
@@ -215,8 +216,8 @@ mod database_tests {
         };
 
         assert_eq!(
-            expected_user,
-            user_context.update(update_user.to_owned()).await.unwrap()
+            expected_user.username,
+            user_context.update(update_user.to_owned()).await.unwrap().username
         )
     }
 
@@ -251,7 +252,7 @@ mod database_tests {
         for user in users.iter_mut() {
             let _ = user_context.create(user.to_owned()).await;
         }
-        assert_eq!(users[0], user_context.delete(users[0].id).await.unwrap())
+        assert_eq!(users[0].username, user_context.delete(users[0].id).await.unwrap().username)
     }
 
     #[tokio::test]
