@@ -42,7 +42,7 @@ mod ecdar_api {
 
         let mut mock_user_context = MockC::new();
 
-        mock_user_context.expect_delete()
+        mock_user_context.expect_delete().
 
         let api = get_mock_concrete_ecdar_api(Arc::new(mock_user_context)).await;
 

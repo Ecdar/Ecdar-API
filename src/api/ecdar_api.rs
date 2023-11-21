@@ -1,11 +1,11 @@
 use crate::api::auth::TokenType;
 use crate::api::server::server::get_auth_token_request::user_credentials;
-use crate::entities::access;
+
 use crate::entities::session::Model;
 use chrono::Local;
 use regex::Regex;
 use sea_orm::SqlErr;
-use std::env;
+
 use std::fmt::{Debug, Formatter};
 use std::sync::Arc;
 use tonic::{Code, Request, Response, Status};
@@ -13,16 +13,12 @@ use tonic::{Code, Request, Response, Status};
 use crate::api::server::server::{ecdar_api_auth_server::EcdarApiAuth, ecdar_api_server::EcdarApi};
 use crate::database::access_context::AccessContextTrait;
 use crate::database::database_context::DatabaseContextTrait;
+use crate::database::entity_context::EntityContextTrait;
 use crate::database::in_use_context::InUseContextTrait;
 use crate::database::model_context::ModelContextTrait;
 use crate::database::query_context::QueryContextTrait;
 use crate::database::session_context::SessionContextTrait;
 use crate::database::user_context::UserContextTrait;
-use crate::database::{
-    access_context::AccessContext, entity_context::EntityContextTrait,
-    in_use_context::InUseContext, model_context::ModelContext, query_context::QueryContext,
-    session_context::SessionContext, user_context::UserContext,
-};
 use crate::entities::user::Model as User;
 
 use super::{

@@ -4,7 +4,7 @@ mod entities;
 mod tests;
 
 use crate::api::reveaal_context::ReveaalContext;
-use crate::api::server::server::ecdar_backend_server::EcdarBackend;
+
 use crate::database::access_context::AccessContext;
 use crate::database::database_context::{PostgresDatabaseContext, SQLiteDatabaseContext};
 use crate::database::in_use_context::InUseContext;

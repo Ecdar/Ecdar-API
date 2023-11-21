@@ -1,5 +1,5 @@
 use chrono::{Local, Utc};
-use mockall::automock;
+
 use sea_orm::prelude::async_trait::async_trait;
 use sea_orm::ActiveValue::{Set, Unchanged};
 use sea_orm::{ActiveModelTrait, ColumnTrait, DbErr, EntityTrait, QueryFilter};
@@ -63,8 +63,7 @@ impl EntityContextTrait<session::Model> for SessionContext {
             updated_at: Set(Utc::now().naive_local()),
         };
 
-        let session = session.insert(&self.db_context.get_connection()).await;
-        session
+        session.insert(&self.db_context.get_connection()).await
     }
 
     /// Returns a session by searching for its id.
