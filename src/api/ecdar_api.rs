@@ -86,7 +86,7 @@ async fn handle_session(
                 return Err(Status::new(
                     Code::Unauthenticated,
                     "No session found with given refresh token",
-                ))
+                ));
             }
             Err(err) => return Err(Status::new(Code::Internal, err.to_string())),
         };
@@ -129,6 +129,18 @@ fn is_valid_username(username: &str) -> bool {
         .is_match(username)
 }
 
+fn is_valid_password(password: &str) -> bool {
+    let lowercase_regex = Regex::new(r"[a-z]").unwrap();
+    let uppercase_regex = Regex::new(r"[A-Z]").unwrap();
+    let digit_regex = Regex::new(r"\d").unwrap();
+    let valid_chars_regex = Regex::new(r"[a-zA-Z\d@$!%*?.]{8,}").unwrap();
+
+    lowercase_regex.is_match(password)
+        && uppercase_regex.is_match(password)
+        && digit_regex.is_match(password)
+        && valid_chars_regex.is_match(password)
+}
+
 impl ConcreteEcdarApi {
     pub async fn new(
         model_context: Arc<dyn ModelContextTrait>,
@@ -160,7 +172,7 @@ impl ConcreteEcdarApi {
             Arc::new(SessionContext::new(db_context.clone())),
             Arc::new(InUseContext::new(db_context.clone())),
         )
-        .await
+            .await
     }
 }
 
@@ -214,6 +226,19 @@ impl EcdarApi for ConcreteEcdarApi {
             Some(email) => email,
             None => "".to_string(),
         };
+
+        // Check if new values are valid
+        if !is_valid_username(new_username.as_str()) {
+            return Err(Status::new(Code::InvalidArgument, "Invalid username"));
+        }
+
+        if !is_valid_email(new_email.as_str()) {
+            return Err(Status::new(Code::InvalidArgument, "Invalid email"));
+        }
+
+        if !is_valid_password(new_password.as_str()) {
+            return Err(Status::new(Code::InvalidArgument, "Invalid password"));
+        }
 
         // Record to be inserted in database
         let user = User {
@@ -287,7 +312,7 @@ impl EcdarApiAuth for ConcreteEcdarApi {
                                 return Err(Status::new(
                                     Code::Internal,
                                     "No user found with given username",
-                                ))
+                                ));
                             }
                             Err(err) => return Err(Status::new(Code::Internal, err.to_string())),
                         }
@@ -300,7 +325,7 @@ impl EcdarApiAuth for ConcreteEcdarApi {
                                 return Err(Status::new(
                                     Code::Internal,
                                     "No user found with given email",
-                                ))
+                                ));
                             }
                             Err(err) => return Err(Status::new(Code::Internal, err.to_string())),
                         }
@@ -318,7 +343,7 @@ impl EcdarApiAuth for ConcreteEcdarApi {
             } else {
                 return Err(Status::new(Code::Internal, "No user provided"));
             }
-        // Get user from refresh_token
+            // Get user from refresh_token
         } else {
             let refresh_token = auth::get_token_from_request(&request)?;
             let token_data = auth::validate_token(refresh_token, true)?;
@@ -347,7 +372,7 @@ impl EcdarApiAuth for ConcreteEcdarApi {
             refresh_token.clone(),
             uid,
         )
-        .await?;
+            .await?;
 
         Ok(Response::new(GetAuthTokenResponse {
             access_token,
@@ -367,6 +392,10 @@ impl EcdarApiAuth for ConcreteEcdarApi {
 
         if !is_valid_email(message.clone().email.as_str()) {
             return Err(Status::new(Code::InvalidArgument, "Invalid email"));
+        }
+
+        if !is_valid_password(message.clone().password.as_str()) {
+            return Err(Status::new(Code::InvalidArgument, "Invalid password"));
         }
 
         let user = User {
