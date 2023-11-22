@@ -170,32 +170,44 @@ impl EcdarApi for ConcreteEcdarApi {
         // Get uid from request metadata
         let uid = get_uid_from_request(&request)?;
 
-        // Get new values from request message. Empty string means the value will remain unchanged in the database.
-        let new_username = match message.username {
-            Some(username) => username,
-            None => "".to_string(),
-        };
-
-        let new_password = match message.password {
-            Some(password) => password,
-            None => "".to_string(),
-        };
-
-        let new_email = match message.email {
-            Some(email) => email,
-            None => "".to_string(),
+        // Get user from database
+        let user = match self.user_context.get_by_id(uid).await {
+            Ok(Some(user)) => user,
+            Ok(None) => return Err(Status::new(Code::Internal, "No user found with given uid")),
+            Err(error) => return Err(Status::new(Code::Internal, error.to_string())),
         };
 
         // Record to be inserted in database
-        let user = User {
-            id: uid,
-            username: new_username.clone(),
-            password: new_password.clone(),
-            email: new_email.clone(),
+        let new_user = User {
+            id: Default::default(),
+            username: match message.clone().username {
+                Some(username) => {
+                    if !is_valid_username(username.as_str()) {
+                        return Err(Status::new(Code::InvalidArgument, "Invalid username"));
+                    } else {
+                        username
+                    }
+                }
+                None => user.username,
+            },
+            email: match message.clone().email {
+                Some(email) => {
+                    if is_valid_email(email.as_str()) {
+                        email
+                    } else {
+                        return Err(Status::new(Code::InvalidArgument, "Invalid email"));
+                    }
+                }
+                None => user.email,
+            },
+            password: match message.clone().password {
+                Some(password) => password,
+                None => user.password,
+            },
         };
 
         // Update user in database
-        match self.user_context.update(user).await {
+        match self.user_context.update(new_user).await {
             Ok(_) => Ok(Response::new(())),
             Err(error) => Err(Status::new(Code::Internal, error.to_string())),
         }
