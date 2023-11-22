@@ -21,7 +21,7 @@ use super::{
     auth,
     server::server::{
         ecdar_backend_server::EcdarBackend, CreateQueryRequest, CreateUserRequest,
-        GetAuthTokenRequest, GetAuthTokenResponse, QueryRequest, QueryResponse,
+        DeleteQueryRequest, GetAuthTokenRequest, GetAuthTokenResponse, QueryRequest, QueryResponse,
         SimulationStartRequest, SimulationStepRequest, SimulationStepResponse, UpdateUserRequest,
         UserTokenResponse,
     },
@@ -149,6 +149,24 @@ impl EcdarApi for ConcreteEcdarApi {
 
     async fn create_access(&self, _request: Request<()>) -> Result<Response<()>, Status> {
         todo!()
+    }
+
+    /// Deletes a query record in the database.
+    /// # Errors
+    /// Returns an error if the provided query_id is not found in the database.
+    async fn delete_query(
+        &self,
+        request: tonic::Request<DeleteQueryRequest>,
+    ) -> Result<Response<()>, Status> {
+        match self.query_context.delete(request.get_ref().query_id).await {
+            Ok(_) => Ok(Response::new(())),
+            Err(error) => match error {
+                sea_orm::DbErr::RecordNotFound(message) => {
+                    Err(Status::new(Code::NotFound, message))
+                }
+                _ => Err(Status::new(Code::Internal, error.to_string())),
+            },
+        }
     }
 
     /// Updates a user record in the database.
