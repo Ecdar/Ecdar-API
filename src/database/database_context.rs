@@ -16,16 +16,12 @@ pub struct SQLiteDatabaseContext {
 
 #[async_trait]
 pub trait DatabaseContextTrait: Send + Sync + Debug {
-    async fn new(connection_string: &str) -> Result<Self, DbErr>
-    where
-        Self: Sized;
     async fn reset(&self) -> Result<Arc<dyn DatabaseContextTrait>, DbErr>;
     fn get_connection(&self) -> DatabaseConnection;
 }
 
-#[async_trait]
-impl DatabaseContextTrait for PostgresDatabaseContext {
-    async fn new(connection_string: &str) -> Result<PostgresDatabaseContext, DbErr> {
+impl PostgresDatabaseContext {
+    pub async fn new(connection_string: &str) -> Result<PostgresDatabaseContext, DbErr> {
         let db = Database::connect(connection_string).await?;
 
         let db = match db.get_database_backend() {
@@ -35,7 +31,10 @@ impl DatabaseContextTrait for PostgresDatabaseContext {
 
         Ok(PostgresDatabaseContext { db_connection: db })
     }
+}
 
+#[async_trait]
+impl DatabaseContextTrait for PostgresDatabaseContext {
     async fn reset(&self) -> Result<Arc<dyn DatabaseContextTrait>, DbErr> {
         Migrator::fresh(&self.db_connection).await.unwrap();
 
@@ -49,9 +48,8 @@ impl DatabaseContextTrait for PostgresDatabaseContext {
     }
 }
 
-#[async_trait]
-impl DatabaseContextTrait for SQLiteDatabaseContext {
-    async fn new(connection_string: &str) -> Result<SQLiteDatabaseContext, DbErr> {
+impl SQLiteDatabaseContext {
+    pub async fn new(connection_string: &str) -> Result<SQLiteDatabaseContext, DbErr> {
         let db = Database::connect(connection_string).await?;
 
         let db = match db.get_database_backend() {
@@ -61,7 +59,10 @@ impl DatabaseContextTrait for SQLiteDatabaseContext {
 
         Ok(SQLiteDatabaseContext { db_connection: db })
     }
+}
 
+#[async_trait]
+impl DatabaseContextTrait for SQLiteDatabaseContext {
     async fn reset(&self) -> Result<Arc<dyn DatabaseContextTrait>, DbErr> {
         Migrator::fresh(&self.db_connection).await.unwrap();
 

@@ -6,7 +6,6 @@ use chrono::Utc;
 use sea_orm::{ActiveModelTrait, DbErr, EntityTrait, Set, Unchanged};
 use std::sync::Arc;
 
-#[derive(Debug)]
 pub struct InUseContext {
     db_context: Arc<dyn DatabaseContextTrait>,
 }
@@ -15,12 +14,13 @@ pub trait InUseContextTrait: EntityContextTrait<in_use::Model> {}
 
 impl InUseContextTrait for InUseContext {}
 
-#[async_trait]
-impl EntityContextTrait<in_use::Model> for InUseContext {
-    fn new(db_context: Arc<dyn DatabaseContextTrait>) -> InUseContext {
+impl InUseContext {
+    pub fn new(db_context: Arc<dyn DatabaseContextTrait>) -> InUseContext {
         InUseContext { db_context }
     }
-
+}
+#[async_trait]
+impl EntityContextTrait<in_use::Model> for InUseContext {
     /// Used for creating a Model entity
     async fn create(&self, entity: in_use::Model) -> Result<in_use::Model, DbErr> {
         let in_use = in_use::ActiveModel {

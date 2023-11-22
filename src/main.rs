@@ -4,7 +4,6 @@ mod entities;
 mod tests;
 
 use crate::api::reveaal_context::ReveaalContext;
-use crate::api::server::server::ecdar_backend_server::EcdarBackend;
 use crate::database::access_context::AccessContext;
 use crate::database::database_context::{PostgresDatabaseContext, SQLiteDatabaseContext};
 use crate::database::in_use_context::InUseContext;
@@ -42,13 +41,13 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let reveaal_context = Arc::new(ReveaalContext);
 
     start_grpc_server(
-        reveaal_context,
-        model_context,
-        user_context,
         access_context,
+        in_use_context,
+        model_context,
         query_context,
         session_context,
-        in_use_context,
+        user_context,
+        reveaal_context,
     )
     .await
     .unwrap();

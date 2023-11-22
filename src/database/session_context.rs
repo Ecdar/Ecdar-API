@@ -1,5 +1,4 @@
 use chrono::{Local, Utc};
-use mockall::automock;
 use sea_orm::prelude::async_trait::async_trait;
 use sea_orm::ActiveValue::{Set, Unchanged};
 use sea_orm::{ActiveModelTrait, ColumnTrait, DbErr, EntityTrait, QueryFilter};
@@ -9,7 +8,6 @@ use crate::database::database_context::DatabaseContextTrait;
 use crate::database::entity_context::EntityContextTrait;
 use crate::entities::session;
 
-#[derive(Debug)]
 pub struct SessionContext {
     db_context: Arc<dyn DatabaseContextTrait>,
 }
@@ -35,12 +33,14 @@ impl SessionContextTrait for SessionContext {
     }
 }
 
-#[async_trait]
-impl EntityContextTrait<session::Model> for SessionContext {
-    /// Creates a new `SessionContext` for interacting with the database.
-    fn new(db_context: Arc<dyn DatabaseContextTrait>) -> Self {
+impl SessionContext {
+    pub fn new(db_context: Arc<dyn DatabaseContextTrait>) -> Self {
         SessionContext { db_context }
     }
+}
+
+#[async_trait]
+impl EntityContextTrait<session::Model> for SessionContext {
     /// Creates a new session in the database based on the provided model.
     /// # Example
     /// ```rust

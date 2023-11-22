@@ -6,7 +6,6 @@ use sea_orm::ActiveValue::{Set, Unchanged};
 use sea_orm::{ActiveModelTrait, DbErr, EntityTrait};
 use std::sync::Arc;
 
-#[derive(Debug)]
 pub struct QueryContext {
     db_context: Arc<dyn DatabaseContextTrait>,
 }
@@ -15,12 +14,14 @@ pub trait QueryContextTrait: EntityContextTrait<query::Model> {}
 
 impl QueryContextTrait for QueryContext {}
 
-#[async_trait]
-impl EntityContextTrait<query::Model> for QueryContext {
-    fn new(db_context: Arc<dyn DatabaseContextTrait>) -> QueryContext {
+impl QueryContext {
+    pub fn new(db_context: Arc<dyn DatabaseContextTrait>) -> QueryContext {
         QueryContext { db_context }
     }
+}
 
+#[async_trait]
+impl EntityContextTrait<query::Model> for QueryContext {
     /// Used for creating a query entity
     /// ## Example
     /// ```

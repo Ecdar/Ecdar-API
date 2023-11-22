@@ -6,7 +6,6 @@ use sea_orm::ActiveValue::{Set, Unchanged};
 use sea_orm::{ActiveModelTrait, DbErr, EntityTrait};
 use std::sync::Arc;
 
-#[derive(Debug)]
 pub struct AccessContext {
     db_context: Arc<dyn DatabaseContextTrait>,
 }
@@ -15,12 +14,14 @@ pub trait AccessContextTrait: EntityContextTrait<access::Model> {}
 
 impl AccessContextTrait for AccessContext {}
 
-#[async_trait]
-impl EntityContextTrait<access::Model> for AccessContext {
-    fn new(db_context: Arc<dyn DatabaseContextTrait>) -> AccessContext {
+impl AccessContext {
+    pub fn new(db_context: Arc<dyn DatabaseContextTrait>) -> AccessContext {
         AccessContext { db_context }
     }
+}
 
+#[async_trait]
+impl EntityContextTrait<access::Model> for AccessContext {
     /// Used for creating an access::Model entity
     /// # Example
     /// ```

@@ -20,13 +20,13 @@ pub mod server {
 }
 
 pub async fn start_grpc_server(
-    reveaal_context: Arc<dyn EcdarBackend>,
-    model_context: Arc<dyn ModelContextTrait>,
-    user_context: Arc<dyn UserContextTrait>,
     access_context: Arc<dyn AccessContextTrait>,
+    in_use_context: Arc<dyn InUseContextTrait>,
+    model_context: Arc<dyn ModelContextTrait>,
     query_context: Arc<dyn QueryContextTrait>,
     session_context: Arc<dyn SessionContextTrait>,
-    in_use_context: Arc<dyn InUseContextTrait>,
+    user_context: Arc<dyn UserContextTrait>,
+    reveaal_context: Arc<dyn EcdarBackend>,
 ) -> Result<(), Box<dyn std::error::Error>> {
     // defining address for our service
     let addr = env::var("API_ADDRESS")
@@ -37,12 +37,12 @@ pub async fn start_grpc_server(
     println!("Starting grpc server on '{}'", addr);
 
     let svc = ConcreteEcdarApi::new(
-        model_context,
-        user_context,
         access_context,
+        in_use_context,
+        model_context,
         query_context,
         session_context,
-        in_use_context,
+        user_context,
         reveaal_context,
     )
     .await;

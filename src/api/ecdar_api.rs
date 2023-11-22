@@ -1,11 +1,8 @@
-use std::env;
-use std::fmt::{Debug, Formatter};
 use std::sync::Arc;
 
 use crate::api::server::server::get_auth_token_request::user_credentials;
 use crate::entities::session::Model;
 use chrono::Local;
-use mockall::automock;
 use regex::Regex;
 use sea_orm::SqlErr;
 use tonic::{Code, Request, Response, Status};
@@ -30,26 +27,13 @@ use super::{
 
 #[derive(Clone)]
 pub struct ConcreteEcdarApi {
-    reveaal_context: Arc<dyn EcdarBackend>,
-    model_context: Arc<dyn ModelContextTrait>,
-    user_context: Arc<dyn UserContextTrait>,
     access_context: Arc<dyn AccessContextTrait>,
+    in_use_context: Arc<dyn InUseContextTrait>,
+    model_context: Arc<dyn ModelContextTrait>,
     query_context: Arc<dyn QueryContextTrait>,
     session_context: Arc<dyn SessionContextTrait>,
-    in_use_context: Arc<dyn InUseContextTrait>,
-}
-
-impl Debug for ConcreteEcdarApi {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        f.debug_tuple("")
-            .field(&self.model_context)
-            .field(&self.user_context)
-            .field(&self.access_context)
-            .field(&self.query_context)
-            .field(&self.session_context)
-            .field(&self.in_use_context)
-            .finish()
-    }
+    user_context: Arc<dyn UserContextTrait>,
+    reveaal_context: Arc<dyn EcdarBackend>,
 }
 
 /// Updates or creates a session in the database for a given user.
@@ -131,22 +115,22 @@ fn is_valid_username(username: &str) -> bool {
 
 impl ConcreteEcdarApi {
     pub async fn new(
-        model_context: Arc<dyn ModelContextTrait>,
-        user_context: Arc<dyn UserContextTrait>,
         access_context: Arc<dyn AccessContextTrait>,
+        in_use_context: Arc<dyn InUseContextTrait>,
+        model_context: Arc<dyn ModelContextTrait>,
         query_context: Arc<dyn QueryContextTrait>,
         session_context: Arc<dyn SessionContextTrait>,
-        in_use_context: Arc<dyn InUseContextTrait>,
+        user_context: Arc<dyn UserContextTrait>,
         reveaal_context: Arc<dyn EcdarBackend>,
     ) -> Self {
         ConcreteEcdarApi {
-            reveaal_context,
-            model_context,
-            user_context,
             access_context,
+            in_use_context,
+            model_context,
             query_context,
             session_context,
-            in_use_context,
+            user_context,
+            reveaal_context,
         }
     }
 }

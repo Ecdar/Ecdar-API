@@ -1,13 +1,11 @@
 use crate::database::database_context::DatabaseContextTrait;
 use crate::database::entity_context::EntityContextTrait;
 use crate::entities::user;
-use mockall::{automock, mock};
 use sea_orm::prelude::async_trait::async_trait;
 use sea_orm::ActiveValue::{Set, Unchanged};
 use sea_orm::{ActiveModelTrait, ColumnTrait, DbErr, EntityTrait, QueryFilter};
 use std::sync::Arc;
 
-#[derive(Debug)]
 pub struct UserContext {
     db_context: Arc<dyn DatabaseContextTrait>,
 }
@@ -34,12 +32,14 @@ impl UserContextTrait for UserContext {
     }
 }
 
-#[async_trait]
-impl EntityContextTrait<user::Model> for UserContext {
-    fn new(db_context: Arc<dyn DatabaseContextTrait>) -> UserContext {
+impl UserContext {
+    pub fn new(db_context: Arc<dyn DatabaseContextTrait>) -> UserContext {
         UserContext { db_context }
     }
+}
 
+#[async_trait]
+impl EntityContextTrait<user::Model> for UserContext {
     /// Used for creating a User entity
     /// # Example
     /// ```
