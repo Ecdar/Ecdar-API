@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use crate::api::server::server::get_auth_token_request::user_credentials;
+use crate::entities::query;
 use crate::entities::session::Model;
 use chrono::Local;
 use regex::Regex;
@@ -21,7 +22,7 @@ use super::{
     server::server::{
         ecdar_backend_server::EcdarBackend, CreateUserRequest, GetAuthTokenRequest,
         GetAuthTokenResponse, QueryRequest, QueryResponse, SimulationStartRequest,
-        SimulationStepRequest, SimulationStepResponse, UpdateUserRequest, UserTokenResponse,
+        SimulationStepRequest, SimulationStepResponse, UpdateUserRequest, UpdateQueryRequest, UserTokenResponse,
     },
 };
 
@@ -226,6 +227,35 @@ impl EcdarApi for ConcreteEcdarApi {
 
     async fn delete_access(&self, _request: Request<()>) -> Result<Response<()>, Status> {
         todo!()
+    }
+
+    async fn update_query(&self, request: Request<UpdateQueryRequest>) -> Result<Response<()>, Status> {
+        let message = request.get_ref().clone();
+
+        let uid = get_uid_from_request(&request).unwrap();
+
+        let string = message.string.map_or("".to_string(), |v| v);
+
+        let model_id = message.model_id.map_or(0, |v| v);
+
+        let result = message.result.map_or(None, |json| Some(json.to_owned().parse().unwrap()));
+
+        let outdated = message.outdated.map_or(true, |v| v);
+
+        let query = query::Model {
+            id: uid,
+            string,
+            model_id,
+            result,
+            outdated,
+        };
+
+        match self.query_context.update(query).await {
+            Ok(_) => Ok(Response::new(())),
+            Err(error) => Err(Status::new(Code::Internal, error.to_string())),
+        }
+
+
     }
 }
 
