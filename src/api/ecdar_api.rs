@@ -14,14 +14,16 @@ use crate::database::model_context::ModelContextTrait;
 use crate::database::query_context::QueryContextTrait;
 use crate::database::session_context::SessionContextTrait;
 use crate::database::user_context::UserContextTrait;
+use crate::entities::query;
 use crate::entities::user::Model as User;
 
 use super::{
     auth,
     server::server::{
-        ecdar_backend_server::EcdarBackend, CreateUserRequest, GetAuthTokenRequest,
-        GetAuthTokenResponse, QueryRequest, QueryResponse, SimulationStartRequest,
-        SimulationStepRequest, SimulationStepResponse, UpdateUserRequest, UserTokenResponse,
+        ecdar_backend_server::EcdarBackend, CreateQueryRequest, CreateUserRequest,
+        GetAuthTokenRequest, GetAuthTokenResponse, QueryRequest, QueryResponse,
+        SimulationStartRequest, SimulationStepRequest, SimulationStepResponse, UpdateUserRequest,
+        UserTokenResponse,
     },
 };
 
@@ -137,10 +139,6 @@ impl ConcreteEcdarApi {
 
 #[tonic::async_trait]
 impl EcdarApi for ConcreteEcdarApi {
-    async fn list_models_info(&self, _request: Request<()>) -> Result<Response<()>, Status> {
-        todo!()
-    }
-
     async fn get_model(&self, _request: Request<()>) -> Result<Response<()>, Status> {
         todo!()
     }
@@ -149,11 +147,7 @@ impl EcdarApi for ConcreteEcdarApi {
         todo!()
     }
 
-    async fn update_model(&self, _request: Request<()>) -> Result<Response<()>, Status> {
-        todo!()
-    }
-
-    async fn delete_model(&self, _request: Request<()>) -> Result<Response<()>, Status> {
+    async fn create_access(&self, _request: Request<()>) -> Result<Response<()>, Status> {
         todo!()
     }
 
@@ -201,6 +195,14 @@ impl EcdarApi for ConcreteEcdarApi {
         }
     }
 
+    async fn update_model(&self, _request: Request<()>) -> Result<Response<()>, Status> {
+        todo!()
+    }
+
+    async fn update_access(&self, _request: Request<()>) -> Result<Response<()>, Status> {
+        todo!()
+    }
+
     /// Deletes a user from the database.
     /// # Errors
     /// Returns an error if the database context fails to delete the user or
@@ -216,16 +218,38 @@ impl EcdarApi for ConcreteEcdarApi {
         }
     }
 
-    async fn create_access(&self, _request: Request<()>) -> Result<Response<()>, Status> {
-        todo!()
-    }
-
-    async fn update_access(&self, _request: Request<()>) -> Result<Response<()>, Status> {
+    async fn delete_model(&self, _request: Request<()>) -> Result<Response<()>, Status> {
         todo!()
     }
 
     async fn delete_access(&self, _request: Request<()>) -> Result<Response<()>, Status> {
         todo!()
+    }
+
+    async fn list_models_info(&self, _request: Request<()>) -> Result<Response<()>, Status> {
+        todo!()
+    }
+
+    /// Creates a query in the database
+    /// # Errors
+    /// Returns an error if the database context fails to create the query or
+    async fn create_query(
+        &self,
+        request: Request<CreateQueryRequest>,
+    ) -> Result<Response<()>, Status> {
+        let query_request = request.get_ref();
+        let query = query::Model {
+            id: Default::default(),
+            string: query_request.string.to_string(),
+            result: Default::default(),
+            outdated: Default::default(),
+            model_id: query_request.model_id.clone() as i32,
+        };
+
+        match self.query_context.create(query).await {
+            Ok(_) => Ok(Response::new("query created".into())),
+            Err(error) => Err(Status::new(Code::Internal, error.to_string())),
+        }
     }
 }
 
