@@ -287,11 +287,22 @@ impl EcdarApi for ConcreteEcdarApi {
         todo!()
     }
 
+    /// Deletes a query record in the database.
+    /// # Errors
+    /// Returns an error if the provided query_id is not found in the database.
     async fn delete_query(
         &self,
-        request: Request<DeleteQueryRequest>,
+        request: tonic::Request<DeleteQueryRequest>,
     ) -> Result<Response<()>, Status> {
-        todo!()
+        match self.query_context.delete(request.get_ref().query_id).await {
+            Ok(_) => Ok(Response::new(())),
+            Err(error) => match error {
+                sea_orm::DbErr::RecordNotFound(message) => {
+                    Err(Status::new(Code::NotFound, message))
+                }
+                _ => Err(Status::new(Code::Internal, error.to_string())),
+            },
+        }
     }
 }
 
