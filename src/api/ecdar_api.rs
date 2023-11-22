@@ -185,10 +185,10 @@ impl EcdarApi for ConcreteEcdarApi {
             id: Default::default(),
             username: match message.clone().username {
                 Some(username) => {
-                    if !is_valid_username(username.as_str()) {
-                        return Err(Status::new(Code::InvalidArgument, "Invalid username"));
-                    } else {
+                    if is_valid_username(username.as_str()) {
                         username
+                    } else {
+                        return Err(Status::new(Code::InvalidArgument, "Invalid username"));
                     }
                 }
                 None => user.username,
