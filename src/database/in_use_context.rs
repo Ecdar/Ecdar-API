@@ -4,33 +4,24 @@ use crate::EntityContextTrait;
 use async_trait::async_trait;
 use chrono::Utc;
 use sea_orm::{ActiveModelTrait, DbErr, EntityTrait, Set, Unchanged};
+use std::sync::Arc;
 
 pub struct InUseContext {
-    db_context: Box<dyn DatabaseContextTrait>,
+    db_context: Arc<dyn DatabaseContextTrait>,
 }
 
 pub trait InUseContextTrait: EntityContextTrait<in_use::Model> {}
 
 impl InUseContextTrait for InUseContext {}
 
-#[async_trait]
-impl EntityContextTrait<in_use::Model> for InUseContext {
-    fn new(db_context: Box<dyn DatabaseContextTrait>) -> InUseContext {
+impl InUseContext {
+    pub fn new(db_context: Arc<dyn DatabaseContextTrait>) -> InUseContext {
         InUseContext { db_context }
     }
-
-    /// Used for creating an in_use::Model entity
-    /// # Example
-    /// Assuming you have a `model` variable of type model::Model and `session` variable of type session::Model.
-    /// ```rust
-    /// let in_use = in_use::Model {
-    ///     model_id: model.id,
-    ///     session_id: session.id,
-    ///     latest_activity: Utc::now().naive_local(),
-    /// };
-    /// let in_use_context: InUseContext = InUseContext::new(...);
-    /// in_use_context.create(in_use);
-    /// ```
+}
+#[async_trait]
+impl EntityContextTrait<in_use::Model> for InUseContext {
+    /// Used for creating a Model entity
     async fn create(&self, entity: in_use::Model) -> Result<in_use::Model, DbErr> {
         let in_use = in_use::ActiveModel {
             model_id: Set(entity.model_id),
@@ -41,42 +32,18 @@ impl EntityContextTrait<in_use::Model> for InUseContext {
         Ok(in_use)
     }
 
-    /// Returns a single in_use entity (Uses a model id as key)
-    /// # Example
-    /// Assuming you have a `model` variable of type model::Model.
-    /// ```rust
-    /// let in_use_context: InUseContext = InUseContext::new(...);
-    /// let in_use = in_use_context.get_by_id(model.id).unwrap();
-    /// ```
     async fn get_by_id(&self, entity_id: i32) -> Result<Option<in_use::Model>, DbErr> {
         in_use::Entity::find_by_id(entity_id)
             .one(&self.db_context.get_connection())
             .await
     }
 
-    /// Returns a all in_use entities
-    /// # Example
-    /// ```rust
-    /// let in_use_context: InUseContext = InUseContext::new(...);
-    /// let in_use = in_use_context.get_all().unwrap();
-    /// ```
     async fn get_all(&self) -> Result<Vec<in_use::Model>, DbErr> {
         in_use::Entity::find()
             .all(&self.db_context.get_connection())
             .await
     }
 
-    /// Updates a single in_use entity
-    /// # Example
-    /// ```rust
-    /// let update_in_use = in_use::Model {
-    ///     latest_activity: Utc::now().naive_local(),
-    ///     ..original_in_use
-    /// };
-    ///
-    /// let model_context: ModelContext = ModelContext::new(...);
-    /// let model = model_context.update(update_in_use).unwrap();
-    /// ```
     async fn update(&self, entity: in_use::Model) -> Result<in_use::Model, DbErr> {
         in_use::ActiveModel {
             model_id: Unchanged(entity.model_id),
@@ -87,13 +54,6 @@ impl EntityContextTrait<in_use::Model> for InUseContext {
         .await
     }
 
-    /// Returns and deletes a single in_use entity
-    /// # Example
-    /// Assuming that `id` is a variable containing the id of the entity to be deleted.
-    /// ```rust
-    /// let in_use_context: InUseContext = InUseContext::new(...);
-    /// let in_use = in_use_context.delete(id).unwrap();
-    /// ```
     async fn delete(&self, entity_id: i32) -> Result<in_use::Model, DbErr> {
         let in_use = self.get_by_id(entity_id).await?;
         match in_use {

@@ -1,7 +1,12 @@
 [package]
 name = "api_server"
 version = "0.0.1"
+build = "src/build.rs"
 edition = "2021"
+
+[[bin]]
+name = "server"
+path = "src/main.rs"
 
 [dependencies]
 migration = { path = "migration" }
@@ -10,7 +15,16 @@ dotenv = "0.15.0"
 sea-orm = { version = "^0.12.0", features = [ "sqlx-postgres", "runtime-async-std-native-tls", "macros","tests-cfg","sqlx-sqlite" ] }
 async-trait = { version = "0.1.73", features = [] }
 futures = "0.3.28"
+tonic = "0.10.2"
+prost = "0.12.1"
+log = "0.4.20"
+jsonwebtoken = "9.1.0"
+serde = "1.0.189"
 chrono = "0.4.31"
 uuid = { version = "1.5.0", features = ["v4"] }
+regex = "1.10.2"
+mockall = "0.11.4"
 
+[build-dependencies]
+tonic-build = "0.10.2"
 

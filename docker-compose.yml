@@ -1,0 +1,21 @@
+version: '3.0'
+
+services:
+
+  ecdar-api-dev-db:
+    image: postgres:16
+    environment:
+      - POSTGRES_DB
+      - POSTGRES_PASSWORD
+    ports:
+      - ${POSTGRES_DEV_PORT}:5432
+    volumes:
+      - ./data:/var/lib/postgresql/data
+
+  ecdar-api-test-db:
+    image: postgres
+    environment:
+      - POSTGRES_DB
+      - POSTGRES_PASSWORD
+    ports:
+      - ${POSTGRES_TEST_PORT}:5432

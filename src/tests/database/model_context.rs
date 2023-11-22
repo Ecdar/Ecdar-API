@@ -11,17 +11,9 @@ mod database_tests {
     use std::matches;
 
     async fn seed_db() -> (ModelContext, model::Model, user::Model) {
-        let db_context = setup_db_with_entities(vec![
-            AnyEntity::User,
-            AnyEntity::Session,
-            AnyEntity::Model,
-            AnyEntity::InUse,
-            AnyEntity::Query,
-            AnyEntity::Access,
-        ])
-        .await;
+        let db_context = get_reset_database_context().await;
 
-        let model_context = ModelContext::new(db_context.clone());
+        let model_context = ModelContext::new(db_context);
 
         let user = create_users(1)[0].clone();
         let model = create_models(1, user.id)[0].clone();
@@ -285,6 +277,7 @@ mod database_tests {
 
     #[tokio::test]
     async fn delete_test() {
+        // Setting up database and user context
         let (model_context, model, _) = seed_db().await;
 
         model::Entity::insert(model.clone().into_active_model())

@@ -1,7 +1,7 @@
 #[cfg(test)]
 mod database_tests {
     use crate::tests::database::helpers::{
-        create_models, create_queries, create_users, setup_db_with_entities, AnyEntity,
+        create_models, create_queries, create_users, get_reset_database_context,
     };
     use crate::{
         database::{entity_context::EntityContextTrait, query_context::QueryContext},
@@ -11,10 +11,9 @@ mod database_tests {
     use sea_orm::{entity::prelude::*, IntoActiveModel};
 
     async fn seed_db() -> (QueryContext, query::Model, model::Model) {
-        let db_context =
-            setup_db_with_entities(vec![AnyEntity::User, AnyEntity::Model, AnyEntity::Query]).await;
+        let db_context = get_reset_database_context().await;
 
-        let query_context = QueryContext::new(db_context.clone());
+        let query_context = QueryContext::new(db_context);
 
         let user = create_users(1)[0].clone();
         let model = create_models(1, user.id)[0].clone();
@@ -44,6 +43,7 @@ mod database_tests {
             .unwrap()
             .unwrap();
 
+        // Assert if the fetched access is the same as the created access
         assert_eq!(query, created_query);
         assert_eq!(fetched_query, created_query);
     }

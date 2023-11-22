@@ -21,15 +21,9 @@ mod database_tests {
         model::Model,
         user::Model,
     ) {
-        let db_context = setup_db_with_entities(vec![
-            AnyEntity::User,
-            AnyEntity::Session,
-            AnyEntity::Model,
-            AnyEntity::InUse,
-        ])
-        .await;
+        let db_context = get_reset_database_context().await;
 
-        let in_use_context = InUseContext::new(db_context.clone());
+        let in_use_context = InUseContext::new(db_context);
 
         let user = create_users(1)[0].clone();
         let model = create_models(1, user.id)[0].clone();

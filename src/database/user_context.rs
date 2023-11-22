@@ -3,37 +3,55 @@ use crate::database::entity_context::EntityContextTrait;
 use crate::entities::user;
 use sea_orm::prelude::async_trait::async_trait;
 use sea_orm::ActiveValue::{Set, Unchanged};
-use sea_orm::{ActiveModelTrait, DbErr, EntityTrait};
+use sea_orm::{ActiveModelTrait, ColumnTrait, DbErr, EntityTrait, QueryFilter};
+use std::sync::Arc;
 
 pub struct UserContext {
-    db_context: Box<dyn DatabaseContextTrait>,
+    db_context: Arc<dyn DatabaseContextTrait>,
 }
 
-pub trait UserContextTrait: EntityContextTrait<user::Model> {}
+#[async_trait]
+pub trait UserContextTrait: EntityContextTrait<user::Model> {
+    async fn get_by_username(&self, username: String) -> Result<Option<user::Model>, DbErr>;
+    async fn get_by_email(&self, email: String) -> Result<Option<user::Model>, DbErr>;
+}
 
-impl UserContextTrait for UserContext {}
+#[async_trait]
+impl UserContextTrait for UserContext {
+    async fn get_by_username(&self, username: String) -> Result<Option<user::Model>, DbErr> {
+        user::Entity::find()
+            .filter(user::Column::Username.eq(username))
+            .one(&self.db_context.get_connection())
+            .await
+    }
+    async fn get_by_email(&self, email: String) -> Result<Option<user::Model>, DbErr> {
+        user::Entity::find()
+            .filter(user::Column::Email.eq(email))
+            .one(&self.db_context.get_connection())
+            .await
+    }
+}
+
+impl UserContext {
+    pub fn new(db_context: Arc<dyn DatabaseContextTrait>) -> UserContext {
+        UserContext { db_context }
+    }
+}
 
 #[async_trait]
 impl EntityContextTrait<user::Model> for UserContext {
-    fn new(db_context: Box<dyn DatabaseContextTrait>) -> UserContext {
-        UserContext { db_context }
-    }
-
     /// Used for creating a User entity
     /// # Example
     /// ```
-    /// let model : user::Model = {
-    ///     id: 1,
+    /// let model : Model = {
+    ///     id: Default::default(),
     ///     email: "anders@aau.dk".into(),
     ///     username: "Anders".into(),
     ///     password: "qwerty".into()
     /// }
     /// let context : UserContext = UserContext::new(...);
-    /// let created_user = context.create(model.clone());
-    /// assert_eq!(model,created_user);
+    /// context.create(model);
     /// ```
-    /// # Note
-    /// The id passed by `entity` will not be used, instead the database will provide an id which uniquely the entity
     async fn create(&self, entity: user::Model) -> Result<user::Model, DbErr> {
         let user = user::ActiveModel {
             id: Default::default(),
@@ -45,9 +63,7 @@ impl EntityContextTrait<user::Model> for UserContext {
         Ok(user)
     }
 
-    /// Returns a single user entity (uses primary key).
-    ///
-    /// If no user entity with the given id exists, a [Option::None] is returned.
+    /// Returns a single user entity (uses primary key)
     /// # Example
     /// ```
     /// let context : UserContext = UserContext::new(...);
@@ -60,7 +76,7 @@ impl EntityContextTrait<user::Model> for UserContext {
             .await
     }
 
-    /// Returns all the user entities in this table.
+    /// Returns all the user entities
     /// # Example
     /// ```
     /// let context : UserContext = UserContext::new(...);
@@ -74,8 +90,6 @@ impl EntityContextTrait<user::Model> for UserContext {
     }
 
     /// Updates and returns the given user entity
-    ///
-    /// Finds a User entity by id and updates that entity. If no entity was found, [DbErr::RecordNotFound] is returned
     /// # Example
     /// ```
     /// let context : UserContext = UserContext::new(...);
@@ -108,7 +122,6 @@ impl EntityContextTrait<user::Model> for UserContext {
 
     /// Returns and deletes a user entity by id
     ///
-    /// If no user entity with the given id exists, [DbErr::RecordNotFound] is returned
     /// # Example
     /// ```
     /// let context : UserContext = UserContext::new(...);
@@ -119,7 +132,6 @@ impl EntityContextTrait<user::Model> for UserContext {
     ///     username: "andersAnden",
     ///     password: user.password
     /// }
-    /// assert_eq!(context.get_by_id(user.id),None)
     async fn delete(&self, entity_id: i32) -> Result<user::Model, DbErr> {
         let user = self.get_by_id(entity_id).await?;
         match user {

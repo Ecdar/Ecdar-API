@@ -6,7 +6,7 @@ mod m20231012_094242_create_query_table;
 mod m20231012_094303_create_in_use_table;
 mod m20231012_094422_create_session_table;
 mod m20231012_094533_create_access_table;
-mod m20231012_122243_create_role_type;
+mod m20231111_205633_create_role_table;
 
 pub struct Migrator;
 
@@ -19,7 +19,7 @@ impl MigratorTrait for Migrator {
             Box::new(m20231012_094242_create_query_table::Migration),
             Box::new(m20231012_094422_create_session_table::Migration),
             Box::new(m20231012_094303_create_in_use_table::Migration),
-            Box::new(m20231012_122243_create_role_type::Migration),
+            Box::new(m20231111_205633_create_role_table::Migration),
             Box::new(m20231012_094533_create_access_table::Migration),
         ]
     }

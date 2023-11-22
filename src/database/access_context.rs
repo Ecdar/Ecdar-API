@@ -4,32 +4,35 @@ use crate::entities::access;
 use sea_orm::prelude::async_trait::async_trait;
 use sea_orm::ActiveValue::{Set, Unchanged};
 use sea_orm::{ActiveModelTrait, DbErr, EntityTrait};
+use std::sync::Arc;
 
 pub struct AccessContext {
-    db_context: Box<dyn DatabaseContextTrait>,
+    db_context: Arc<dyn DatabaseContextTrait>,
 }
 
 pub trait AccessContextTrait: EntityContextTrait<access::Model> {}
 
 impl AccessContextTrait for AccessContext {}
 
-#[async_trait]
-impl EntityContextTrait<access::Model> for AccessContext {
-    fn new(db_context: Box<dyn DatabaseContextTrait>) -> AccessContext {
+impl AccessContext {
+    pub fn new(db_context: Arc<dyn DatabaseContextTrait>) -> AccessContext {
         AccessContext { db_context }
     }
+}
 
+#[async_trait]
+impl EntityContextTrait<access::Model> for AccessContext {
     /// Used for creating an access::Model entity
     /// # Example
-    /// ```rust
+    /// ```
     /// let access = access::Model {
     ///     id: Default::default(),
     ///     role: Role::Editor,
     ///     user_id: 1,
     ///     model_id: 1
     /// };
-    /// let context: AccessContext = AccessContext::new(...);
-    /// context.create(access);
+    /// let context : AccessContext = AccessContext::new(...);
+    /// context.create(model);
     /// ```
     async fn create(&self, entity: access::Model) -> Result<access::Model, DbErr> {
         let access = access::ActiveModel {
@@ -44,10 +47,9 @@ impl EntityContextTrait<access::Model> for AccessContext {
 
     /// Returns a single access entity (uses primary key)
     /// # Example
-    /// The following example will return an access model that has the id of 1.
-    /// ```rust
+    /// ```
     /// let context : AccessContext = AccessContext::new(...);
-    /// let access : access::Model = context.get_by_id(1).unwrap();
+    /// let model : Model = context.get_by_id(1).unwrap();
     /// ```
     async fn get_by_id(&self, entity_id: i32) -> Result<Option<access::Model>, DbErr> {
         access::Entity::find_by_id(entity_id)
@@ -57,9 +59,9 @@ impl EntityContextTrait<access::Model> for AccessContext {
 
     /// Returns all the access entities
     /// # Example
-    /// ```rust
-    /// let context: AccessContext = AccessContext::new(...);
-    /// let accesses: vec<access::Model> = context.get_all().unwrap();
+    /// ```
+    /// let context : AccessContext = AccessContext::new(...);
+    /// let model : vec<Model> = context.get_all().unwrap();
     /// ```
     async fn get_all(&self) -> Result<Vec<access::Model>, DbErr> {
         access::Entity::find()
@@ -69,10 +71,10 @@ impl EntityContextTrait<access::Model> for AccessContext {
 
     /// Updates and returns the given access entity
     /// # Example
-    /// ```rust
+    /// ```
     /// let context : AccessContext = AccessContext::new(...);
     /// let access = context.get_by_id(1).unwrap();
-    /// let updated_access = access::Model {
+    /// let updated_access = Model {
     ///     id: access.id,
     ///     role: Role::Reader,
     ///     user_id: access.user_id,
@@ -92,13 +94,7 @@ impl EntityContextTrait<access::Model> for AccessContext {
         .await
     }
 
-    /// Deletes an access entity by id and return it.
-    /// # Example
-    /// Assuming that `id` is a variable containing the id of the entity to be deleted.
-    /// ```rust
-    /// let access_context: AccessContext = AccessContext::new(...);
-    /// let access = access_context.delete(id).unwrap();
-    /// ```
+    /// Deletes a access entity by id
     async fn delete(&self, entity_id: i32) -> Result<access::Model, DbErr> {
         let access = self.get_by_id(entity_id).await?;
         match access {
@@ -115,4 +111,3 @@ impl EntityContextTrait<access::Model> for AccessContext {
 #[cfg(test)]
 #[path = "../tests/database/access_context.rs"]
 mod tests;
-

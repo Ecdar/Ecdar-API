@@ -3,24 +3,26 @@ use crate::entities::{model, query};
 use crate::EntityContextTrait;
 use async_trait::async_trait;
 use sea_orm::{ActiveModelTrait, DbErr, EntityTrait, IntoActiveModel, ModelTrait, Set, Unchanged};
+use std::sync::Arc;
 
 pub struct ModelContext {
-    db_context: Box<dyn DatabaseContextTrait>,
+    db_context: Arc<dyn DatabaseContextTrait>,
 }
 
 pub trait ModelContextTrait: EntityContextTrait<model::Model> {}
 
 impl ModelContextTrait for ModelContext {}
 
-#[async_trait]
-impl EntityContextTrait<model::Model> for ModelContext {
-    fn new(db_context: Box<dyn DatabaseContextTrait>) -> ModelContext {
+impl ModelContext {
+    pub fn new(db_context: Arc<dyn DatabaseContextTrait>) -> ModelContext {
         ModelContext { db_context }
     }
-
+}
+#[async_trait]
+impl EntityContextTrait<model::Model> for ModelContext {
     /// Used for creating a model::Model entity
     /// # Example
-    /// ```rust
+    /// ```
     /// let model = model::Model {
     ///     id: Default::default(),
     ///     name: "model::Model name".to_owned(),
@@ -43,7 +45,7 @@ impl EntityContextTrait<model::Model> for ModelContext {
 
     /// Returns a single model entity (Uses primary key)
     /// # Example
-    /// ```rust
+    /// ```
     /// let model_context: ModelContext = ModelContext::new(...);
     /// let model = model_context.get_by_id(1).unwrap();
     /// ```
@@ -55,7 +57,7 @@ impl EntityContextTrait<model::Model> for ModelContext {
 
     /// Returns a all model entities (Uses primary key)
     /// # Example
-    /// ```rust
+    /// ```
     /// let model_context: ModelContext = ModelContext::new(...);
     /// let model = model_context.get_all().unwrap();
     /// ```
@@ -67,7 +69,7 @@ impl EntityContextTrait<model::Model> for ModelContext {
 
     /// Updates a single model entity
     /// # Example
-    /// ```rust
+    /// ```
     /// let update_model = model::Model {
     ///     name: "new name",
     ///     ..original_model
@@ -105,10 +107,9 @@ impl EntityContextTrait<model::Model> for ModelContext {
 
     /// Returns and deletes a single model entity
     /// # Example
-    /// Assuming that `id` is a variable containing the id of the entity to be deleted.
-    /// ```rust
+    /// ```
     /// let model_context: ModelContext = ModelContext::new(...);
-    /// let model = model_context.delete(id).unwrap();
+    /// let model = model_context.delete().unwrap();
     /// ```
     async fn delete(&self, entity_id: i32) -> Result<model::Model, DbErr> {
         let model = self.get_by_id(entity_id).await?;

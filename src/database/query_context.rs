@@ -4,21 +4,24 @@ use crate::entities::query;
 use sea_orm::prelude::async_trait::async_trait;
 use sea_orm::ActiveValue::{Set, Unchanged};
 use sea_orm::{ActiveModelTrait, DbErr, EntityTrait};
+use std::sync::Arc;
 
 pub struct QueryContext {
-    db_context: Box<dyn DatabaseContextTrait>,
+    db_context: Arc<dyn DatabaseContextTrait>,
 }
 
 pub trait QueryContextTrait: EntityContextTrait<query::Model> {}
 
 impl QueryContextTrait for QueryContext {}
 
-#[async_trait]
-impl EntityContextTrait<query::Model> for QueryContext {
-    fn new(db_context: Box<dyn DatabaseContextTrait>) -> QueryContext {
+impl QueryContext {
+    pub fn new(db_context: Arc<dyn DatabaseContextTrait>) -> QueryContext {
         QueryContext { db_context }
     }
+}
 
+#[async_trait]
+impl EntityContextTrait<query::Model> for QueryContext {
     /// Used for creating a query entity
     /// ## Example
     /// ```
@@ -30,7 +33,7 @@ impl EntityContextTrait<query::Model> for QueryContext {
     ///     out_dated: true
     /// }
     /// let context : QueryContext = QueryContext::new(...);
-    /// assert_eq!(model,context.create(model.clone()));
+    /// context.create(model);
     /// ```
     async fn create(&self, entity: query::Model) -> Result<query::Model, DbErr> {
         let query = query::ActiveModel {
@@ -104,21 +107,7 @@ impl EntityContextTrait<query::Model> for QueryContext {
         .await
     }
 
-    /// Returns and deletes a user entity by id
-    ///
-    /// If no user entity with the given id exists, [DbErr::RecordNotFound] is returned
-    /// # Example
-    /// ```
-    /// let context : QueryContext = UserContext::new(...);
-    /// let query = context.get_by_id(1).unwrap();
-    /// let query = Model {
-    ///     id: query.id,
-    ///     string: query.string,
-    ///     model_id: query.model_id,
-    ///     result: query.result,
-    ///     out_dated: false
-    /// }
-    /// assert_eq!(context.get_by_id(query.id),None)
+    /// Delete a query entity by id
     async fn delete(&self, entity_id: i32) -> Result<query::Model, DbErr> {
         let query = self.get_by_id(entity_id).await?;
         match query {

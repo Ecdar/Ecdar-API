@@ -2,7 +2,7 @@ use sea_orm_migration::prelude::*;
 
 use super::m20231012_094213_create_user_table::User;
 use super::m20231012_094228_create_model_table::Model;
-use super::m20231012_122243_create_role_type::Role;
+use super::m20231111_205633_create_role_table::Role;
 
 #[derive(DeriveMigrationName)]
 pub struct Migration;
@@ -22,11 +22,7 @@ impl MigrationTrait for Migration {
                             .auto_increment()
                             .primary_key(),
                     )
-                    .col(
-                        ColumnDef::new(Access::Role)
-                            .enumeration(Role::Table, [Role::Reader, Role::Commenter, Role::Editor])
-                            .not_null(),
-                    )
+                    .col(ColumnDef::new(Access::Role).string().not_null())
                     .col(ColumnDef::new(Access::ModelId).integer().not_null())
                     .col(ColumnDef::new(Access::UserId).integer().not_null())
                     .index(
@@ -34,6 +30,12 @@ impl MigrationTrait for Migration {
                             .col(Access::ModelId)
                             .col(Access::UserId)
                             .unique(),
+                    )
+                    .foreign_key(
+                        ForeignKey::create()
+                            .from(Access::Table, Access::Role)
+                            .to(Role::Table, Role::Name)
+                            .on_delete(ForeignKeyAction::Cascade),
                     )
                     .foreign_key(
                         ForeignKey::create()

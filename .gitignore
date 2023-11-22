@@ -1,5 +1,10 @@
 .env
 .idea
+.vscode
+*.code-workspace
+
+# Docker volume
+data
 
 # Created by https://www.toptal.com/developers/gitignore/api/rust,visualstudiocode
 # Edit at https://www.toptal.com/developers/gitignore?templates=rust,visualstudiocode
@@ -19,14 +24,6 @@ Cargo.lock
 
 # MSVC Windows builds of rustc generate these, which store debugging information
 *.pdb
-
-### VisualStudioCode ###
-.vscode/*
-!.vscode/settings.json
-!.vscode/tasks.json
-!.vscode/launch.json
-!.vscode/extensions.json
-!.vscode/*.code-snippets
 
 # Local History for Visual Studio Code
 .history/

@@ -1,81 +1,26 @@
 #![cfg(test)]
-use crate::database::database_context::DatabaseContext;
-use crate::entities::sea_orm_active_enums::Role;
+
+use crate::database::database_context::{
+    DatabaseContextTrait, PostgresDatabaseContext, SQLiteDatabaseContext,
+};
 use crate::entities::{access, in_use, model, query, session, user};
 use dotenv::dotenv;
-use migration::{Migrator, MigratorTrait};
-use sea_orm::{ConnectionTrait, Database, DatabaseBackend, DatabaseConnection, Schema, Statement};
+use sea_orm::{ConnectionTrait, Database, DbBackend};
 use std::env;
-use uuid::Uuid;
+use std::sync::Arc;
 
-fn get_database_backend() -> DatabaseBackend {
+pub async fn get_reset_database_context() -> Arc<dyn DatabaseContextTrait> {
     dotenv().ok();
 
     let url = env::var("TEST_DATABASE_URL").expect("TEST_DATABASE_URL must be set to run tests.");
-    if url.starts_with("sqlite") {
-        DatabaseBackend::Sqlite
-    } else if url.starts_with("postgresql") {
-        DatabaseBackend::Postgres
-    } else {
-        panic!("Unsupported database connection string.")
-    }
-}
+    let db = Database::connect(&url).await.unwrap();
+    let db_context: Arc<dyn DatabaseContextTrait> = match db.get_database_backend() {
+        DbBackend::Sqlite => Arc::new(SQLiteDatabaseContext::new(&url).await.unwrap()),
+        DbBackend::Postgres => Arc::new(PostgresDatabaseContext::new(&url).await.unwrap()),
+        _ => panic!("Database protocol not supported"),
+    };
 
-pub async fn setup_db_with_entities(entities: Vec<AnyEntity>) -> Box<DatabaseContext> {
-    let database_backend = get_database_backend();
-
-    let schema = Schema::new(database_backend);
-
-    match database_backend {
-        DatabaseBackend::Postgres => {
-            let conn_string = env::var("TEST_DATABASE_URL").unwrap();
-
-            let db_connection = Database::connect(conn_string).await.unwrap();
-
-            Migrator::fresh(&db_connection).await.unwrap();
-
-            Box::new(DatabaseContext { db_connection })
-        }
-        DatabaseBackend::Sqlite => {
-            let connection = Database::connect(env::var("TEST_DATABASE_URL").unwrap())
-                .await
-                .unwrap();
-
-            for entity in entities.iter() {
-                entity.create_table_from(&connection, &schema).await;
-            }
-            Box::new(DatabaseContext {
-                db_connection: connection,
-            })
-        }
-        _ => panic!("Database backend not supported"),
-    }
-}
-
-pub enum AnyEntity {
-    User,
-    Model,
-    Access,
-    Session,
-    InUse,
-    Query,
-}
-
-impl AnyEntity {
-    async fn create_table_from(&self, connection: &DatabaseConnection, schema: &Schema) {
-        let stmt = match self {
-            AnyEntity::User => schema.create_table_from_entity(user::Entity),
-            AnyEntity::Model => schema.create_table_from_entity(model::Entity),
-            AnyEntity::Access => schema.create_table_from_entity(access::Entity),
-            AnyEntity::Session => schema.create_table_from_entity(session::Entity),
-            AnyEntity::InUse => schema.create_table_from_entity(in_use::Entity),
-            AnyEntity::Query => schema.create_table_from_entity(query::Entity),
-        };
-        connection
-            .execute(connection.get_database_backend().build(&stmt))
-            .await
-            .unwrap();
-    }
+    db_context.reset().await.unwrap()
 }
 
 ///
@@ -130,18 +75,19 @@ pub fn create_models(amount: i32, user_id: i32) -> Vec<model::Model> {
 pub fn create_accesses(amount: i32, user_id: i32, model_id: i32) -> Vec<access::Model> {
     create_entities(amount, |i| access::Model {
         id: i + 1,
-        role: Role::Commenter,
-        model_id,
-        user_id,
+        role: "Reader".into(),
+        model_id: model_id + i,
+        user_id: user_id + i,
     })
 }
 
 pub fn create_sessions(amount: i32, user_id: i32) -> Vec<session::Model> {
     create_entities(amount, |i| session::Model {
         id: i + 1,
-        token: Uuid::new_v4(),
+        refresh_token: "test_refresh_token".to_string() + format!("{}", i).as_str(),
+        access_token: "test_access_token".to_string() + format!("{}", i).as_str(),
         user_id,
-        created_at: Default::default(),
+        updated_at: Default::default(),
     })
 }
 

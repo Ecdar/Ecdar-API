@@ -1,26 +1,46 @@
-use chrono::Utc;
+use chrono::{Local, Utc};
 use sea_orm::prelude::async_trait::async_trait;
 use sea_orm::ActiveValue::{Set, Unchanged};
-use sea_orm::{ActiveModelTrait, DbErr, EntityTrait};
+use sea_orm::{ActiveModelTrait, ColumnTrait, DbErr, EntityTrait, QueryFilter};
+use std::sync::Arc;
 
 use crate::database::database_context::DatabaseContextTrait;
 use crate::database::entity_context::EntityContextTrait;
 use crate::entities::session;
 
 pub struct SessionContext {
-    db_context: Box<dyn DatabaseContextTrait>,
+    db_context: Arc<dyn DatabaseContextTrait>,
 }
 
-pub trait SessionContextTrait: EntityContextTrait<session::Model> {}
+#[async_trait]
+pub trait SessionContextTrait: EntityContextTrait<session::Model> {
+    async fn get_by_refresh_token(
+        &self,
+        refresh_token: String,
+    ) -> Result<Option<session::Model>, DbErr>;
+}
 
-impl SessionContextTrait for SessionContext {}
+#[async_trait]
+impl SessionContextTrait for SessionContext {
+    async fn get_by_refresh_token(
+        &self,
+        refresh_token: String,
+    ) -> Result<Option<session::Model>, DbErr> {
+        session::Entity::find()
+            .filter(session::Column::RefreshToken.eq(refresh_token))
+            .one(&self.db_context.get_connection())
+            .await
+    }
+}
+
+impl SessionContext {
+    pub fn new(db_context: Arc<dyn DatabaseContextTrait>) -> Self {
+        SessionContext { db_context }
+    }
+}
 
 #[async_trait]
 impl EntityContextTrait<session::Model> for SessionContext {
-    /// Creates a new `SessionContext` for interacting with the database.
-    fn new(db_context: Box<dyn DatabaseContextTrait>) -> Self {
-        SessionContext { db_context }
-    }
     /// Creates a new session in the database based on the provided model.
     /// # Example
     /// ```rust
@@ -34,22 +54,20 @@ impl EntityContextTrait<session::Model> for SessionContext {
     ///     };
     /// let created_session = session_context.create(model).await.unwrap();
     /// ```
-    /// # Note
-    /// The fields `id`, `token` and `user_id` must be unique
     async fn create(&self, entity: session::Model) -> Result<session::Model, DbErr> {
         let session = session::ActiveModel {
             id: Default::default(),
-            token: Set(entity.token),
-            created_at: Set(Utc::now().naive_local()),
+            refresh_token: Set(entity.refresh_token),
+            access_token: Set(entity.access_token),
             user_id: Set(entity.user_id),
+            updated_at: Set(Utc::now().naive_local()),
         };
 
-        session.insert(&self.db_context.get_connection()).await
+        let session = session.insert(&self.db_context.get_connection()).await;
+        session
     }
 
     /// Returns a session by searching for its id.
-    ///
-    /// If no session entity with the given id exists, [Option::None] is returned
     /// # Example
     /// ```rust
     /// let session: Result<Option<Model>, DbErr> = session_context.get_by_id(id).await;
@@ -98,9 +116,10 @@ impl EntityContextTrait<session::Model> for SessionContext {
     async fn update(&self, entity: session::Model) -> Result<session::Model, DbErr> {
         session::ActiveModel {
             id: Unchanged(entity.id),
-            token: Unchanged(entity.token),
-            created_at: Unchanged(entity.created_at),
+            refresh_token: Set(entity.refresh_token),
+            access_token: Set(entity.access_token),
             user_id: Unchanged(entity.user_id),
+            updated_at: Set(Local::now().naive_local()),
         }
         .update(&self.db_context.get_connection())
         .await
