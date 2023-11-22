@@ -1,13 +1,16 @@
 use std::sync::Arc;
 
 use crate::api::server::server::get_auth_token_request::user_credentials;
-use crate::entities::session::Model;
+use crate::entities::session;
 use chrono::Local;
 use regex::Regex;
 use sea_orm::SqlErr;
 use tonic::{Code, Request, Response, Status};
 
-use crate::api::server::server::{ecdar_api_auth_server::EcdarApiAuth, ecdar_api_server::EcdarApi};
+use crate::api::server::server::{
+    ecdar_api_auth_server::EcdarApiAuth, ecdar_api_server::EcdarApi, CreateQueryRequest,
+    DeleteQueryRequest,
+};
 use crate::database::access_context::AccessContextTrait;
 use crate::database::in_use_context::InUseContextTrait;
 use crate::database::model_context::ModelContextTrait;
@@ -20,9 +23,9 @@ use crate::entities::user::Model as User;
 use super::{
     auth,
     server::server::{
-        ecdar_backend_server::EcdarBackend, CreateQueryRequest, CreateUserRequest,
-        DeleteQueryRequest, GetAuthTokenRequest, GetAuthTokenResponse, QueryRequest, QueryResponse,
-        SimulationStartRequest, SimulationStepRequest, SimulationStepResponse, UpdateUserRequest,
+        ecdar_backend_server::EcdarBackend, CreateUserRequest, GetAuthTokenRequest,
+        GetAuthTokenResponse, QueryRequest, QueryResponse, SimulationStartRequest,
+        SimulationStepRequest, SimulationStepResponse, UpdateQueryRequest, UpdateUserRequest,
         UserTokenResponse,
     },
 };
@@ -54,7 +57,7 @@ async fn handle_session(
 ) -> Result<(), Status> {
     if is_new_session {
         session_context
-            .create(Model {
+            .create(session::Model {
                 id: Default::default(),
                 access_token: access_token.clone(),
                 refresh_token: refresh_token.clone(),
@@ -147,26 +150,12 @@ impl EcdarApi for ConcreteEcdarApi {
         todo!()
     }
 
-    async fn create_access(&self, _request: Request<()>) -> Result<Response<()>, Status> {
+    async fn update_model(&self, _request: Request<()>) -> Result<Response<()>, Status> {
         todo!()
     }
 
-    /// Deletes a query record in the database.
-    /// # Errors
-    /// Returns an error if the provided query_id is not found in the database.
-    async fn delete_query(
-        &self,
-        request: tonic::Request<DeleteQueryRequest>,
-    ) -> Result<Response<()>, Status> {
-        match self.query_context.delete(request.get_ref().query_id).await {
-            Ok(_) => Ok(Response::new(())),
-            Err(error) => match error {
-                sea_orm::DbErr::RecordNotFound(message) => {
-                    Err(Status::new(Code::NotFound, message))
-                }
-                _ => Err(Status::new(Code::Internal, error.to_string())),
-            },
-        }
+    async fn delete_model(&self, _request: Request<()>) -> Result<Response<()>, Status> {
+        todo!()
     }
 
     /// Updates a user record in the database.
@@ -213,14 +202,6 @@ impl EcdarApi for ConcreteEcdarApi {
         }
     }
 
-    async fn update_model(&self, _request: Request<()>) -> Result<Response<()>, Status> {
-        todo!()
-    }
-
-    async fn update_access(&self, _request: Request<()>) -> Result<Response<()>, Status> {
-        todo!()
-    }
-
     /// Deletes a user from the database.
     /// # Errors
     /// Returns an error if the database context fails to delete the user or
@@ -234,10 +215,6 @@ impl EcdarApi for ConcreteEcdarApi {
             Ok(_) => Ok(Response::new(())),
             Err(error) => Err(Status::new(Code::Internal, error.to_string())),
         }
-    }
-
-    async fn delete_model(&self, _request: Request<()>) -> Result<Response<()>, Status> {
-        todo!()
     }
 
     async fn delete_access(&self, _request: Request<()>) -> Result<Response<()>, Status> {
@@ -265,9 +242,56 @@ impl EcdarApi for ConcreteEcdarApi {
         };
 
         match self.query_context.create(query).await {
-            Ok(_) => Ok(Response::new("query created".into())),
+            Ok(_) => Ok(Response::new(())),
             Err(error) => Err(Status::new(Code::Internal, error.to_string())),
         }
+    }
+
+    async fn update_query(
+        &self,
+        request: Request<UpdateQueryRequest>,
+    ) -> Result<Response<()>, Status> {
+        let message = request.get_ref().clone();
+
+        let uid = get_uid_from_request(&request).unwrap();
+
+        let string = message.string.map_or("".to_string(), |v| v);
+
+        let model_id = message.model_id.map_or(0, |v| v);
+
+        let result = message
+            .result
+            .map_or(None, |json| Some(json.to_owned().parse().unwrap()));
+
+        let outdated = message.outdated.map_or(true, |v| v);
+
+        let query = query::Model {
+            id: uid,
+            string,
+            model_id,
+            result,
+            outdated,
+        };
+
+        match self.query_context.update(query).await {
+            Ok(_) => Ok(Response::new(())),
+            Err(error) => Err(Status::new(Code::Internal, error.to_string())),
+        }
+    }
+
+    async fn create_access(&self, request: Request<()>) -> Result<Response<()>, Status> {
+        todo!()
+    }
+
+    async fn update_access(&self, request: Request<()>) -> Result<Response<()>, Status> {
+        todo!()
+    }
+
+    async fn delete_query(
+        &self,
+        request: Request<DeleteQueryRequest>,
+    ) -> Result<Response<()>, Status> {
+        todo!()
     }
 }
 
