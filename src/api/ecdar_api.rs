@@ -2,6 +2,7 @@ use std::sync::Arc;
 
 use crate::api::server::server::get_auth_token_request::user_credentials;
 use crate::entities::session::Model;
+use bcrypt::hash;
 use chrono::Local;
 use regex::Regex;
 use sea_orm::SqlErr;
@@ -35,6 +36,8 @@ pub struct ConcreteEcdarApi {
     user_context: Arc<dyn UserContextTrait>,
     reveaal_context: Arc<dyn EcdarBackend>,
 }
+
+const HASH_COST: u32 = 12;
 
 /// Updates or creates a session in the database for a given user.
 ///
@@ -201,7 +204,7 @@ impl EcdarApi for ConcreteEcdarApi {
                 None => user.email,
             },
             password: match message.clone().password {
-                Some(password) => password,
+                Some(password) => hash(password, HASH_COST).unwrap(),
                 None => user.password,
             },
         };
