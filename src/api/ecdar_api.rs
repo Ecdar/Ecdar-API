@@ -118,7 +118,7 @@ fn is_valid_username(username: &str) -> bool {
 }
 
 impl ConcreteEcdarApi {
-    pub async fn new(
+    pub fn new(
         access_context: Arc<dyn AccessContextTrait>,
         in_use_context: Arc<dyn InUseContextTrait>,
         model_context: Arc<dyn ModelContextTrait>,
@@ -173,8 +173,8 @@ impl EcdarApi for ConcreteEcdarApi {
         let access = access::Model {
             id: Default::default(),
             role: access.role.to_string(),
-            model_id: access.model_id as i32,
-            user_id: access.user_id as i32,
+            model_id: access.model_id,
+            user_id: access.user_id,
         };
 
         match self.access_context.create(access).await {
@@ -196,13 +196,9 @@ impl EcdarApi for ConcreteEcdarApi {
     ) -> Result<Response<()>, Status> {
         let message = request.get_ref().clone();
 
-        let uid = get_uid_from_request(&request)?;
-
-        let role = message.role.map_or("".to_string(), |m| m);
-
         let access = access::Model {
-            id: uid,
-            role,
+            id: message.id,
+            role: message.role,
             model_id: Default::default(),
             user_id: Default::default(),
         };
@@ -221,11 +217,7 @@ impl EcdarApi for ConcreteEcdarApi {
         &self,
         request: Request<DeleteAccessRequest>,
     ) -> Result<Response<()>, Status> {
-        match self
-            .access_context
-            .delete(request.get_ref().access_id)
-            .await
-        {
+        match self.access_context.delete(request.get_ref().id).await {
             Ok(_) => Ok(Response::new(())),
             Err(error) => match error {
                 sea_orm::DbErr::RecordNotFound(message) => {
@@ -308,7 +300,7 @@ impl EcdarApi for ConcreteEcdarApi {
             string: query_request.string.to_string(),
             result: Default::default(),
             outdated: Default::default(),
-            model_id: query_request.model_id.clone() as i32,
+            model_id: query_request.model_id.clone(),
         };
 
         match self.query_context.create(query).await {
@@ -328,24 +320,23 @@ impl EcdarApi for ConcreteEcdarApi {
     ) -> Result<Response<()>, Status> {
         let message = request.get_ref().clone();
 
-        let uid = get_uid_from_request(&request).unwrap();
+        let old_query_res = self
+            .query_context
+            .get_by_id(message.id)
+            .await
+            .map_err(|err| Status::new(Code::Internal, err.to_string()))?;
 
-        let string = message.string.map_or("".to_string(), |v| v);
-
-        let model_id = message.model_id.map_or(0, |v| v);
-
-        let result = message
-            .result
-            .map_or(None, |json| Some(json.to_owned().parse().unwrap()));
-
-        let outdated = message.outdated.map_or(true, |v| v);
+        let old_query = match old_query_res {
+            Some(oq) => oq,
+            None => return Err(Status::new(Code::NotFound, "Query not found".to_string())),
+        };
 
         let query = query::Model {
-            id: uid,
-            string,
-            model_id,
-            result,
-            outdated,
+            id: message.id,
+            model_id: Default::default(),
+            string: message.string,
+            result: old_query.result,
+            outdated: old_query.outdated,
         };
 
         match self.query_context.update(query).await {
@@ -361,7 +352,7 @@ impl EcdarApi for ConcreteEcdarApi {
         &self,
         request: Request<DeleteQueryRequest>,
     ) -> Result<Response<()>, Status> {
-        match self.query_context.delete(request.get_ref().query_id).await {
+        match self.query_context.delete(request.get_ref().id).await {
             Ok(_) => Ok(Response::new(())),
             Err(error) => match error {
                 sea_orm::DbErr::RecordNotFound(message) => {
