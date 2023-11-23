@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use crate::api::server::server::get_auth_token_request::user_credentials;
+use crate::entities::access;
 use crate::entities::session::Model;
 use chrono::Local;
 use regex::Regex;
@@ -24,7 +25,7 @@ use super::{
     server::server::{
         ecdar_backend_server::EcdarBackend, CreateUserRequest, GetAuthTokenRequest,
         GetAuthTokenResponse, QueryRequest, QueryResponse, SimulationStartRequest,
-        SimulationStepRequest, SimulationStepResponse, UpdateUserRequest, UserTokenResponse,
+        SimulationStepRequest, SimulationStepResponse, UpdateAccessRequest, UpdateUserRequest, UserTokenResponse,
     },
 };
 
@@ -241,8 +242,31 @@ impl EcdarApi for ConcreteEcdarApi {
         }
     }
 
-    async fn update_access(&self, _request: Request<()>) -> Result<Response<()>, Status> {
-        todo!()
+    /// Endpoint for updating an access record.
+    /// 
+    /// Takes `UpdateAccessRequest` as input
+    /// 
+    /// Returns a `Status` as response
+    /// 
+    /// `model_id` and `user_id` is set to 0 since they won't be updated in the database.
+    async fn update_access(&self, request: Request<UpdateAccessRequest>) -> Result<Response<()>, Status> {
+        let message = request.get_ref().clone();
+        
+        let uid = get_uid_from_request(&request)?;
+
+        let role = message.role.map_or("".to_string(), |m| m);
+
+        let access = access::Model {
+            id: uid,
+            role,
+            model_id: 0,
+            user_id: 0,
+        };
+
+        match self.access_context.update(access).await {
+            Ok(_) => Ok(Response::new(())),
+            Err(error) => Err(Status::new(Code::Internal, error.to_string())),
+        }
     }
 
     async fn delete_access(&self, _request: Request<()>) -> Result<Response<()>, Status> {
