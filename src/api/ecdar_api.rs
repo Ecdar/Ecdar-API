@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use crate::api::server::server::get_auth_token_request::user_credentials;
 use crate::entities::access;
-use crate::entities::session::Model;
+use crate::entities::session;
 use chrono::Local;
 use regex::Regex;
 use sea_orm::SqlErr;
@@ -15,15 +15,17 @@ use crate::database::model_context::ModelContextTrait;
 use crate::database::query_context::QueryContextTrait;
 use crate::database::session_context::SessionContextTrait;
 use crate::database::user_context::UserContextTrait;
+use crate::entities::query;
 use crate::entities::user::Model as User;
 
 use super::{
     auth,
     server::server::{
-        ecdar_backend_server::EcdarBackend, CreateAccessRequest, CreateUserRequest,
-        DeleteAccessRequest, GetAuthTokenRequest, GetAuthTokenResponse, QueryRequest,
-        QueryResponse, SimulationStartRequest, SimulationStepRequest, SimulationStepResponse,
-        UpdateAccessRequest, UpdateUserRequest, UserTokenResponse,
+        ecdar_backend_server::EcdarBackend, CreateAccessRequest, CreateQueryRequest,
+        CreateUserRequest, DeleteAccessRequest, DeleteQueryRequest, GetAuthTokenRequest,
+        GetAuthTokenResponse, QueryRequest, QueryResponse, SimulationStartRequest,
+        SimulationStepRequest, SimulationStepResponse, UpdateAccessRequest, UpdateQueryRequest,
+        UpdateUserRequest, UserTokenResponse,
     },
 };
 
@@ -54,7 +56,7 @@ async fn handle_session(
 ) -> Result<(), Status> {
     if is_new_session {
         session_context
-            .create(Model {
+            .create(session::Model {
                 id: Default::default(),
                 access_token: access_token.clone(),
                 refresh_token: refresh_token.clone(),
@@ -139,10 +141,6 @@ impl ConcreteEcdarApi {
 
 #[tonic::async_trait]
 impl EcdarApi for ConcreteEcdarApi {
-    async fn list_models_info(&self, _request: Request<()>) -> Result<Response<()>, Status> {
-        todo!()
-    }
-
     async fn get_model(&self, _request: Request<()>) -> Result<Response<()>, Status> {
         todo!()
     }
@@ -157,6 +155,85 @@ impl EcdarApi for ConcreteEcdarApi {
 
     async fn delete_model(&self, _request: Request<()>) -> Result<Response<()>, Status> {
         todo!()
+    }
+
+    async fn list_models_info(&self, _request: Request<()>) -> Result<Response<()>, Status> {
+        todo!()
+    }
+
+    /// Creates an access in the database.
+    /// # Errors
+    /// Returns an error if the database context fails to create the access
+    async fn create_access(
+        &self,
+        request: Request<CreateAccessRequest>,
+    ) -> Result<Response<()>, Status> {
+        let access = request.get_ref();
+
+        let access = access::Model {
+            id: Default::default(),
+            role: access.role.to_string(),
+            model_id: access.model_id as i32,
+            user_id: access.user_id as i32,
+        };
+
+        match self.access_context.create(access).await {
+            Ok(_) => Ok(Response::new(())),
+            Err(error) => Err(Status::new(Code::Internal, error.to_string())),
+        }
+    }
+
+    /// Endpoint for updating an access record.
+    ///
+    /// Takes `UpdateAccessRequest` as input
+    ///
+    /// Returns a `Status` as response
+    ///
+    /// `model_id` and `user_id` is set to 'default' since they won't be updated in the database.
+    async fn update_access(
+        &self,
+        request: Request<UpdateAccessRequest>,
+    ) -> Result<Response<()>, Status> {
+        let message = request.get_ref().clone();
+
+        let uid = get_uid_from_request(&request)?;
+
+        let role = message.role.map_or("".to_string(), |m| m);
+
+        let access = access::Model {
+            id: uid,
+            role,
+            model_id: Default::default(),
+            user_id: Default::default(),
+        };
+
+        match self.access_context.update(access).await {
+            Ok(_) => Ok(Response::new(())),
+            Err(error) => Err(Status::new(Code::Internal, error.to_string())),
+        }
+    }
+
+    /// Deletes the an Access from the database. This has no sideeffects.
+    ///
+    /// # Errors
+    /// This function will return an error if the access does not exist in the database.
+    async fn delete_access(
+        &self,
+        request: Request<DeleteAccessRequest>,
+    ) -> Result<Response<()>, Status> {
+        match self
+            .access_context
+            .delete(request.get_ref().access_id)
+            .await
+        {
+            Ok(_) => Ok(Response::new(())),
+            Err(error) => match error {
+                sea_orm::DbErr::RecordNotFound(message) => {
+                    Err(Status::new(Code::NotFound, message))
+                }
+                _ => Err(Status::new(Code::Internal, error.to_string())),
+            },
+        }
     }
 
     /// Updates a user record in the database.
@@ -218,71 +295,73 @@ impl EcdarApi for ConcreteEcdarApi {
         }
     }
 
-    /// Creates an access in the database.
+    /// Creates a query in the database
     /// # Errors
-    /// Returns an error if the database context fails to create the access
-    async fn create_access(
+    /// Returns an error if the database context fails to create the query or
+    async fn create_query(
         &self,
-        request: Request<CreateAccessRequest>,
+        request: Request<CreateQueryRequest>,
     ) -> Result<Response<()>, Status> {
-        let access = request.get_ref();
-
-        let access = access::Model {
+        let query_request = request.get_ref();
+        let query = query::Model {
             id: Default::default(),
-            role: access.role.to_string(),
-            model_id: access.model_id as i32,
-            user_id: access.user_id as i32,
+            string: query_request.string.to_string(),
+            result: Default::default(),
+            outdated: Default::default(),
+            model_id: query_request.model_id.clone() as i32,
         };
 
-        match self.access_context.create(access).await {
+        match self.query_context.create(query).await {
             Ok(_) => Ok(Response::new(())),
             Err(error) => Err(Status::new(Code::Internal, error.to_string())),
         }
     }
 
-    /// Endpoint for updating an access record.
+    /// Endpoint for updating a query record.
     ///
-    /// Takes `UpdateAccessRequest` as input
+    /// Takes `UpdateQueryRequest` as input
     ///
     /// Returns a `Status` as response
-    ///
-    /// `model_id` and `user_id` is set to 0 since they won't be updated in the database.
-    async fn update_access(
+    async fn update_query(
         &self,
-        request: Request<UpdateAccessRequest>,
+        request: Request<UpdateQueryRequest>,
     ) -> Result<Response<()>, Status> {
         let message = request.get_ref().clone();
 
-        let uid = get_uid_from_request(&request)?;
+        let uid = get_uid_from_request(&request).unwrap();
 
-        let role = message.role.map_or("".to_string(), |m| m);
+        let string = message.string.map_or("".to_string(), |v| v);
 
-        let access = access::Model {
+        let model_id = message.model_id.map_or(0, |v| v);
+
+        let result = message
+            .result
+            .map_or(None, |json| Some(json.to_owned().parse().unwrap()));
+
+        let outdated = message.outdated.map_or(true, |v| v);
+
+        let query = query::Model {
             id: uid,
-            role,
-            model_id: 0,
-            user_id: 0,
+            string,
+            model_id,
+            result,
+            outdated,
         };
 
-        match self.access_context.update(access).await {
+        match self.query_context.update(query).await {
             Ok(_) => Ok(Response::new(())),
             Err(error) => Err(Status::new(Code::Internal, error.to_string())),
         }
     }
 
-    /// Deletes the an Access from the database. This has no sideeffects.
-    ///
+    /// Deletes a query record in the database.
     /// # Errors
-    /// This function will return an error if the access does not exist in the database.
-    async fn delete_access(
+    /// Returns an error if the provided query_id is not found in the database.
+    async fn delete_query(
         &self,
-        request: Request<DeleteAccessRequest>,
+        request: Request<DeleteQueryRequest>,
     ) -> Result<Response<()>, Status> {
-        match self
-            .access_context
-            .delete(request.get_ref().access_id)
-            .await
-        {
+        match self.query_context.delete(request.get_ref().query_id).await {
             Ok(_) => Ok(Response::new(())),
             Err(error) => match error {
                 sea_orm::DbErr::RecordNotFound(message) => {
