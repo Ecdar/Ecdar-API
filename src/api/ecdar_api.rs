@@ -8,24 +8,22 @@ use regex::Regex;
 use sea_orm::SqlErr;
 use tonic::{Code, Request, Response, Status};
 
-use crate::api::server::server::{
-    ecdar_api_auth_server::EcdarApiAuth, ecdar_api_server::EcdarApi, CreateAccessRequest,
-};
+use crate::api::server::server::{ecdar_api_auth_server::EcdarApiAuth, ecdar_api_server::EcdarApi};
 use crate::database::access_context::AccessContextTrait;
 use crate::database::in_use_context::InUseContextTrait;
 use crate::database::model_context::ModelContextTrait;
 use crate::database::query_context::QueryContextTrait;
 use crate::database::session_context::SessionContextTrait;
 use crate::database::user_context::UserContextTrait;
-use crate::entities::access;
 use crate::entities::user::Model as User;
 
 use super::{
     auth,
     server::server::{
-        ecdar_backend_server::EcdarBackend, CreateUserRequest, GetAuthTokenRequest,
-        GetAuthTokenResponse, QueryRequest, QueryResponse, SimulationStartRequest,
-        SimulationStepRequest, SimulationStepResponse, UpdateAccessRequest, UpdateUserRequest, UserTokenResponse,
+        ecdar_backend_server::EcdarBackend, CreateAccessRequest, CreateUserRequest,
+        DeleteAccessRequest, GetAuthTokenRequest, GetAuthTokenResponse, QueryRequest,
+        QueryResponse, SimulationStartRequest, SimulationStepRequest, SimulationStepResponse,
+        UpdateAccessRequest, UpdateUserRequest, UserTokenResponse,
     },
 };
 
@@ -243,15 +241,18 @@ impl EcdarApi for ConcreteEcdarApi {
     }
 
     /// Endpoint for updating an access record.
-    /// 
+    ///
     /// Takes `UpdateAccessRequest` as input
-    /// 
+    ///
     /// Returns a `Status` as response
-    /// 
+    ///
     /// `model_id` and `user_id` is set to 0 since they won't be updated in the database.
-    async fn update_access(&self, request: Request<UpdateAccessRequest>) -> Result<Response<()>, Status> {
+    async fn update_access(
+        &self,
+        request: Request<UpdateAccessRequest>,
+    ) -> Result<Response<()>, Status> {
         let message = request.get_ref().clone();
-        
+
         let uid = get_uid_from_request(&request)?;
 
         let role = message.role.map_or("".to_string(), |m| m);
@@ -269,8 +270,27 @@ impl EcdarApi for ConcreteEcdarApi {
         }
     }
 
-    async fn delete_access(&self, _request: Request<()>) -> Result<Response<()>, Status> {
-        todo!()
+    /// Deletes the an Access from the database. This has no sideeffects.
+    ///
+    /// # Errors
+    /// This function will return an error if the access does not exist in the database.
+    async fn delete_access(
+        &self,
+        request: Request<DeleteAccessRequest>,
+    ) -> Result<Response<()>, Status> {
+        match self
+            .access_context
+            .delete(request.get_ref().access_id)
+            .await
+        {
+            Ok(_) => Ok(Response::new(())),
+            Err(error) => match error {
+                sea_orm::DbErr::RecordNotFound(message) => {
+                    Err(Status::new(Code::NotFound, message))
+                }
+                _ => Err(Status::new(Code::Internal, error.to_string())),
+            },
+        }
     }
 }
 
