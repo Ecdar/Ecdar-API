@@ -221,6 +221,13 @@ impl EcdarApi for ConcreteEcdarApi {
         todo!()
     }
 
+    /// Endpoint for updating an access record.
+    /// 
+    /// Takes `UpdateAccessRequest` as input
+    /// 
+    /// Returns a `Status` as response
+    /// 
+    /// `model_id` and `user_id` is set to 0 since they won't be updated in the database.
     async fn update_access(&self, request: Request<UpdateAccessRequest>) -> Result<Response<()>, Status> {
         let message = request.get_ref().clone();
         
