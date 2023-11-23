@@ -19,9 +19,10 @@ use crate::entities::user::Model as User;
 use super::{
     auth,
     server::server::{
-        ecdar_backend_server::EcdarBackend, CreateUserRequest, GetAuthTokenRequest,
-        GetAuthTokenResponse, QueryRequest, QueryResponse, SimulationStartRequest,
-        SimulationStepRequest, SimulationStepResponse, UpdateUserRequest, UserTokenResponse,
+        ecdar_backend_server::EcdarBackend, CreateUserRequest, DeleteAccessRequest,
+        GetAuthTokenRequest, GetAuthTokenResponse, QueryRequest, QueryResponse,
+        SimulationStartRequest, SimulationStepRequest, SimulationStepResponse, UpdateUserRequest,
+        UserTokenResponse,
     },
 };
 
@@ -224,8 +225,27 @@ impl EcdarApi for ConcreteEcdarApi {
         todo!()
     }
 
-    async fn delete_access(&self, _request: Request<()>) -> Result<Response<()>, Status> {
-        todo!()
+    /// Deletes the an Access from the database. This has no sideeffects.
+    ///
+    /// # Errors
+    /// This function will return an error if the access does not exist in the database.
+    async fn delete_access(
+        &self,
+        request: Request<DeleteAccessRequest>,
+    ) -> Result<Response<()>, Status> {
+        match self
+            .access_context
+            .delete(request.get_ref().access_id)
+            .await
+        {
+            Ok(_) => Ok(Response::new(())),
+            Err(error) => match error {
+                sea_orm::DbErr::RecordNotFound(message) => {
+                    Err(Status::new(Code::NotFound, message))
+                }
+                _ => Err(Status::new(Code::Internal, error.to_string())),
+            },
+        }
     }
 }
 
