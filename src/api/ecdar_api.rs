@@ -221,7 +221,7 @@ impl EcdarApi for ConcreteEcdarApi {
 
     /// Creates an access in the database.
     /// # Errors
-    /// Returns an error if the database context fails to delete the access
+    /// Returns an error if the database context fails to create the access
     async fn create_access(
         &self,
         request: Request<CreateAccessRequest>,
