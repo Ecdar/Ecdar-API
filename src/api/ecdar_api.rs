@@ -7,13 +7,16 @@ use regex::Regex;
 use sea_orm::SqlErr;
 use tonic::{Code, Request, Response, Status};
 
-use crate::api::server::server::{ecdar_api_auth_server::EcdarApiAuth, ecdar_api_server::EcdarApi};
+use crate::api::server::server::{
+    ecdar_api_auth_server::EcdarApiAuth, ecdar_api_server::EcdarApi, CreateAccessRequest,
+};
 use crate::database::access_context::AccessContextTrait;
 use crate::database::in_use_context::InUseContextTrait;
 use crate::database::model_context::ModelContextTrait;
 use crate::database::query_context::QueryContextTrait;
 use crate::database::session_context::SessionContextTrait;
 use crate::database::user_context::UserContextTrait;
+use crate::entities::access;
 use crate::entities::user::Model as User;
 
 use super::{
@@ -216,8 +219,26 @@ impl EcdarApi for ConcreteEcdarApi {
         }
     }
 
-    async fn create_access(&self, _request: Request<()>) -> Result<Response<()>, Status> {
-        todo!()
+    /// Creates an access in the database.
+    /// # Errors
+    /// Returns an error if the database context fails to delete the access
+    async fn create_access(
+        &self,
+        request: Request<CreateAccessRequest>,
+    ) -> Result<Response<()>, Status> {
+        let access = request.get_ref();
+
+        let access = access::Model {
+            id: Default::default(),
+            role: access.role.to_string(),
+            model_id: access.model_id as i32,
+            user_id: access.user_id as i32,
+        };
+
+        match self.access_context.create(access).await {
+            Ok(_) => Ok(Response::new(())),
+            Err(error) => Err(Status::new(Code::Internal, error.to_string())),
+        }
     }
 
     async fn update_access(&self, _request: Request<()>) -> Result<Response<()>, Status> {
