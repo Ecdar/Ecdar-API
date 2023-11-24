@@ -1,76 +1,20 @@
 use chrono::{Duration, Utc};
 use jsonwebtoken::{
-    decode, encode,
-    errors::{Error, ErrorKind},
-    Algorithm, DecodingKey, EncodingKey, Header, TokenData, Validation,
+    decode, encode, Algorithm, DecodingKey, EncodingKey, Header, TokenData, Validation,
 };
+use mockall::Any;
 use serde::{Deserialize, Serialize};
-use std::{env, str::FromStr};
-use tonic::{metadata, Code, Request, Status};
-
-#[derive(Debug, Deserialize, Serialize)]
-pub struct Claims {
-    pub sub: String,
-    exp: usize,
-}
-
-pub enum TokenType {
-    AccessToken,
-    RefreshToken,
-}
-
-/// This method is used to create a new access or refresh token based on the token type and uid.
-/// An access token is valid for 20 minutes and a refresh token is valid for 90 days.
-pub fn create_token(token_type: TokenType, uid: &str) -> Result<String, Error> {
-    const ACCESS_TOKEN_DURATION_MINS: i64 = 20;
-    const REFRESH_TOKEN_DURATION_DAYS: i64 = 90;
-
-    let secret: String;
-    let expiration: i64;
-
-    match token_type {
-        TokenType::AccessToken => {
-            secret = env::var("ACCESS_TOKEN_HS512_SECRET")
-                .expect("Expected ACCESS_TOKEN_HS512_SECRET to be set.");
-
-            expiration = Utc::now()
-                .checked_add_signed(Duration::minutes(ACCESS_TOKEN_DURATION_MINS))
-                .expect("valid timestamp")
-                .timestamp();
-        }
-        TokenType::RefreshToken => {
-            secret = env::var("REFRESH_TOKEN_HS512_SECRET")
-                .expect("Expected REFRESH_TOKEN_HS512_SECRET to be set.");
-
-            expiration = Utc::now()
-                .checked_add_signed(Duration::days(REFRESH_TOKEN_DURATION_DAYS))
-                .expect("valid timestamp")
-                .timestamp();
-        }
-    };
-
-    let claims = Claims {
-        sub: uid.to_owned(),
-        exp: expiration as usize,
-    };
-
-    let header = Header::new(Algorithm::HS512);
-    encode(
-        &header,
-        &claims,
-        &EncodingKey::from_secret(secret.as_bytes()),
-    )
-    .map_err(|_| ErrorKind::InvalidToken.into())
-}
+use std::{env, fmt::Display, str::FromStr};
+use tonic::{metadata, Request, Status};
 
 /// This method is used to validate the access token (not refresh).
 pub fn validation_interceptor(mut req: Request<()>) -> Result<Request<()>, Status> {
-    let token = match get_token_from_request(&req) {
-        Ok(token) => token,
-        Err(err) => return Err(err),
+    let token = match req.token_string() {
+        Some(token) => Token::from_str(TokenType::AccessToken, &token),
+        None => return Err(Status::unauthenticated("Token not found")),
     };
 
-    match validate_token(token, false) {
+    match token.validate() {
         Ok(token_data) => {
             req.metadata_mut().insert(
                 "uid",
@@ -78,58 +22,261 @@ pub fn validation_interceptor(mut req: Request<()>) -> Result<Request<()>, Statu
             );
             Ok(req)
         }
-        Err(err) => Err(err),
+        Err(err) => Err(err.into())
     }
 }
 
-/// This method is used to get a token (access or refresh) from the request metadata.
-pub fn get_token_from_request<T>(req: &Request<T>) -> Result<String, Status> {
-    let token = match req.metadata().get("authorization") {
-        Some(token) => token.to_str(),
-        None => return Err(Status::unauthenticated("Token not found")),
-    };
+#[derive(Debug, Deserialize, Serialize)]
+pub struct Claims {
+    pub sub: String,
+    exp: usize,
+}
 
-    if token.is_ok() {
-        Ok(token.unwrap().trim_start_matches("Bearer ").to_string())
-    } else {
-        Err(Status::unauthenticated(
-            "Could not read token from metadata",
-        ))
+#[derive(Clone, Debug, PartialEq)]
+pub enum TokenType {
+    AccessToken,
+    RefreshToken,
+}
+
+impl TokenType {
+    /// Get the duration for the token type.
+    fn duration(&self) -> Duration {
+        match self {
+            TokenType::AccessToken => Duration::minutes(20),
+            TokenType::RefreshToken => Duration::days(90),
+        }
+    }
+    /// Get the secret for the token type.
+    ///
+    /// # Panics
+    /// This method will panic if the token secret environment variable is not set.
+    fn secret(&self) -> String {
+        match self {
+            TokenType::AccessToken => env::var("ACCESS_TOKEN_HS512_SECRET")
+                .expect("env variable `ACCESS_TOKEN_HS512_SECRET` is not set"),
+            TokenType::RefreshToken => env::var("REFRESH_TOKEN_HS512_SECRET")
+                .expect("env variable `REFRESH_TOKEN_HS512_SECRET` is not set"),
+        }
     }
 }
 
-/// This method is used to validate a token (access or refresh).
-/// It returns the token data if the token is valid.
-pub fn validate_token(token: String, is_refresh_token: bool) -> Result<TokenData<Claims>, Status> {
-    let secret: String;
+/// This struct is used to create, validate and extract a token.
+///
+/// # Examples
+///
+/// ```
+/// use ecdar_api::api::auth::{Token, TokenType};
+///
+/// let token = Token::new(TokenType::AccessToken, "1").unwrap();
+///
+/// let token_data = token.validate().unwrap();
+///
+/// assert_eq!(token_data.claims.sub, "1");
+/// assert_eq!(token.token_type(), TokenType::AccessToken);
+/// assert_eq!(token.to_string(), token.as_str());
+/// ```
+pub struct Token {
+    token_type: TokenType,
+    token: String,
+}
 
-    if is_refresh_token {
-        secret = env::var("REFRESH_TOKEN_HS512_SECRET").expect("Expected HS512_SECRET to be set.");
-    } else {
-        secret = env::var("ACCESS_TOKEN_HS512_SECRET").expect("Expected HS512_SECRET to be set.");
+impl Token {
+    /// Creates a new Json Web Token.
+    ///
+    /// # Arguments
+    /// * `token_type` - The type of token to create.
+    /// * `uid` - The user id to create the token for.
+    ///
+    /// # Examples
+    /// ```
+    /// use ecdar_api::api::auth::{Token, TokenType};
+    ///
+    /// let token = Token::new(TokenType::AccessToken, "1").unwrap();
+    /// ```
+    pub fn new(token_type: TokenType, uid: &str) -> Result<Token, TokenError> {
+        let now = Utc::now();
+        let expiration = now
+            .checked_add_signed(token_type.duration())
+            .expect("valid timestamp")
+            .timestamp();
+
+        let claims = Claims {
+            sub: uid.to_owned(),
+            exp: expiration as usize,
+        };
+
+        let header = Header::new(Algorithm::HS512);
+
+        let token = encode(
+            &header,
+            &claims,
+            &EncodingKey::from_secret(token_type.secret().as_bytes()),
+        )?;
+
+        Ok(Token { token_type, token })
+    }
+    /// Create a token from a string.
+    ///
+    /// # Arguments
+    /// * `token_type` - The type of token to create.
+    /// * `token` - The token string.
+    ///
+    /// # Examples
+    /// ```
+    /// use ecdar_api::api::auth::{Token, TokenType};
+    ///
+    /// let token = Token::from_str(TokenType::AccessToken, "token").unwrap();
+    /// ```
+    pub fn from_str(token_type: TokenType, token: &str) -> Token {
+        Token {
+            token_type,
+            token: token.to_string(),
+        }
+    }
+    /// Validate the token. Returns the token data if the token is valid.
+    ///
+    /// # Examples
+    /// ```
+    /// use ecdar_api::api::auth::{Token, TokenType};
+    ///
+    /// let token = Token::new(TokenType::AccessToken, "1").unwrap();
+    /// let token_data = token.validate().unwrap();
+    ///
+    /// assert_eq!(token_data.claims.sub, "1");
+    /// ```
+    pub fn validate(&self) -> Result<TokenData<Claims>, TokenError> {
+        let mut validation = Validation::new(Algorithm::HS512);
+
+        validation.validate_exp = true; // This might be redundant as this should be default, however, it doesn't seem to work without it.
+
+        match decode::<Claims>(
+            &self.token,
+            &DecodingKey::from_secret(self.token_type.secret().as_bytes()),
+            &validation,
+        ) {
+            Ok(c) => Ok(c),
+            Err(err) => Err(err.into()),
+        }
     }
 
-    let mut validation = Validation::new(Algorithm::HS512);
+    /// Returns the token as a string.
+    pub fn to_string(&self) -> String {
+        self.token.clone()
+    }
+    /// Extracts the token as a string slice.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use ecdar_api::api::auth::{Token, TokenType};
+    ///
+    /// let token = Token::new(TokenType::AccessToken, "1").unwrap();
+    ///
+    /// assert_eq!(token.as_str(), "token");
+    /// ```
+    pub fn as_str(&self) -> &str {
+        &self.token
+    }
+    /// Returns the token type.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use ecdar_api::api::auth::{Token, TokenType};
+    ///
+    /// let token = Token::new(TokenType::AccessToken, "1").unwrap();
+    ///
+    /// assert_eq!(token.token_type(), TokenType::AccessToken);
+    /// ```
+    pub fn token_type(&self) -> TokenType {
+        self.token_type.clone()
+    }
+}
 
-    validation.validate_exp = true; // This might be redundant as this should be defualt, however, it doesn't seem to work without it.
+#[derive(Debug)]
+pub enum TokenError {
+    InvalidToken,
+    InvalidSignature,
+    ExpiredSignature,
+    Custom(String),
+}
 
-    match decode::<Claims>(
-        &token,
-        &DecodingKey::from_secret(secret.as_bytes()),
-        &validation,
-    ) {
-        Ok(c) => Ok(c),
-        Err(err) => match *err.kind() {
-            ErrorKind::InvalidToken => Err(Status::new(Code::Unauthenticated, "Token is invalid!")),
-            ErrorKind::InvalidSignature => Err(Status::new(
-                Code::Unauthenticated,
-                "Token signature is invalid!",
-            )),
-            ErrorKind::ExpiredSignature => {
-                Err(Status::new(Code::Unauthenticated, "Token is expired!"))
-            }
-            _ => Err(Status::new(Code::Internal, err.to_string())),
-        },
+/// This is used to get the token error as a string.
+impl Display for TokenError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            TokenError::InvalidToken => write!(f, "Invalid token"),
+            TokenError::InvalidSignature => write!(f, "Invalid signature"),
+            TokenError::ExpiredSignature => write!(f, "Expired signature"),
+            TokenError::Custom(message) => write!(f, "{}", message),
+        }
+    }
+}
+
+/// This is used to convert the jsonwebtoken error kind to a [TokenError].
+impl From<jsonwebtoken::errors::ErrorKind> for TokenError {
+    fn from(error: jsonwebtoken::errors::ErrorKind) -> Self {
+        match error {
+            jsonwebtoken::errors::ErrorKind::InvalidToken => TokenError::InvalidToken,
+            jsonwebtoken::errors::ErrorKind::InvalidSignature => TokenError::InvalidSignature,
+            jsonwebtoken::errors::ErrorKind::ExpiredSignature => TokenError::ExpiredSignature,
+            _ => TokenError::Custom("Failed to validate token".to_string()),
+        }
+    }
+}
+
+/// This is used to convert the jsonwebtoken error to a [TokenError].
+impl From<jsonwebtoken::errors::Error> for TokenError {
+    fn from(error: jsonwebtoken::errors::Error) -> Self {
+        TokenError::from(error.kind().clone())
+    }
+}
+
+/// This is used to convert the [TokenError] to a [Status].
+impl From<TokenError> for Status {
+    fn from(error: TokenError) -> Self {
+        Status::unauthenticated(error.to_string())
+    }
+}
+
+/// This trait is used to add auth related methods to the tonic request.
+pub trait RequestTrait {
+    fn token_string(&self) -> Option<String>;
+    fn token_str(&self) -> Option<&str>;
+
+    fn uid(&self) -> Option<i32>;
+}
+
+impl<T> RequestTrait for Request<T> {
+    /// Returns the token string from the request metadata.
+    fn token_string(&self) -> Option<String> {
+        match self.metadata().get("authorization") {
+            Some(token) => Some(
+                token
+                    .to_str()
+                    .unwrap()
+                    .trim_start_matches("Bearer ")
+                    .to_string(),
+            ),
+            None => None,
+        }
+    }
+    /// Returns the token string slice from the request metadata.
+    fn token_str(&self) -> Option<&str> {
+        match self.metadata().get("authorization") {
+            Some(token) => Some(token.to_str().unwrap().trim_start_matches("Bearer ")),
+            None => None,
+        }
+    }
+
+    /// Returns the uid from the request metadata.
+    fn uid(&self) -> Option<i32> {
+        let uid = match self.metadata().get("uid").unwrap().to_str() {
+            Ok(uid) => uid,
+            Err(_) => return None,
+        };
+
+        Some(uid.parse().unwrap())
     }
 }
 
