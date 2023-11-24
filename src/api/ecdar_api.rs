@@ -454,16 +454,9 @@ impl EcdarApiAuth for ConcreteEcdarApi {
         // Create new access and refresh token with user id
         let access_token = auth::create_token(auth::TokenType::AccessToken, &uid)
             .map_err(|err| Status::new(Code::Internal, err.to_string()))?;
-        // let access_token = match auth::create_token(auth::TokenType::AccessToken, &uid) {
-        //     Ok(token) => token.to_owned(),
-        //     Err(e) => return Err(Status::new(Code::Internal, e.to_string())),
-        // };
+        
         let refresh_token = auth::create_token(auth::TokenType::RefreshToken, &uid)
             .map_err(|err| Status::new(Code::Internal, err.to_string()))?;
-        // let refresh_token = match auth::create_token(auth::TokenType::RefreshToken, &uid) {
-        //     Ok(token) => token.to_owned(),
-        //     Err(e) => return Err(Status::new(Code::Internal, e.to_string())),
-        // };
 
         // Update or create session in database
         handle_session(
