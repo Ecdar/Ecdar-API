@@ -1,5 +1,7 @@
+use std::fmt::Display;
 use std::sync::Arc;
 
+use crate::api::auth::{RequestTrait, Token, TokenType};
 use crate::api::server::server::get_auth_token_request::user_credentials;
 use crate::entities::session::Model;
 use chrono::Local;
@@ -63,7 +65,7 @@ async fn handle_session(
             .unwrap();
     } else {
         let mut session = match session_context
-            .get_by_refresh_token(auth::get_token_from_request(request)?)
+            .get_by_refresh_token(request.token_string().unwrap())
             .await
         {
             Ok(Some(session)) => session,
@@ -71,7 +73,7 @@ async fn handle_session(
                 return Err(Status::new(
                     Code::Unauthenticated,
                     "No session found with given refresh token",
-                ))
+                ));
             }
             Err(err) => return Err(Status::new(Code::Internal, err.to_string())),
         };
@@ -167,8 +169,9 @@ impl EcdarApi for ConcreteEcdarApi {
     ) -> Result<Response<()>, Status> {
         let message = request.get_ref().clone();
 
-        // Get uid from request metadata
-        let uid = get_uid_from_request(&request)?;
+        let uid = request
+            .uid()
+            .ok_or(Status::internal("Could not get uid from request metadata"))?;
 
         // Get new values from request message. Empty string means the value will remain unchanged in the database.
         let new_username = match message.username {
@@ -206,13 +209,14 @@ impl EcdarApi for ConcreteEcdarApi {
     /// Returns an error if the database context fails to delete the user or
     /// if the uid could not be parsed from the request metadata.
     async fn delete_user(&self, request: Request<()>) -> Result<Response<()>, Status> {
-        // Get uid from request metadata
-        let uid = get_uid_from_request(&request)?;
+        let uid = request
+            .uid()
+            .ok_or(Status::internal("Could not get uid from request metadata"))?;
 
         // Delete user from database
         match self.user_context.delete(uid).await {
             Ok(_) => Ok(Response::new(())),
-            Err(error) => Err(Status::new(Code::Internal, error.to_string())),
+            Err(error) => Err(Status::internal(error.to_string())),
         }
     }
 
@@ -258,7 +262,7 @@ impl EcdarApiAuth for ConcreteEcdarApi {
                                 return Err(Status::new(
                                     Code::Internal,
                                     "No user found with given username",
-                                ))
+                                ));
                             }
                             Err(err) => return Err(Status::new(Code::Internal, err.to_string())),
                         }
@@ -271,7 +275,7 @@ impl EcdarApiAuth for ConcreteEcdarApi {
                                 return Err(Status::new(
                                     Code::Internal,
                                     "No user found with given email",
-                                ))
+                                ));
                             }
                             Err(err) => return Err(Status::new(Code::Internal, err.to_string())),
                         }
@@ -289,24 +293,28 @@ impl EcdarApiAuth for ConcreteEcdarApi {
             } else {
                 return Err(Status::new(Code::Internal, "No user provided"));
             }
-        // Get user from refresh_token
+            // Get user from refresh_token
         } else {
-            let refresh_token = auth::get_token_from_request(&request)?;
-            let token_data = auth::validate_token(refresh_token, true)?;
+            let refresh_token = match request.token_str() {
+                Some(token) => Token::from_str(TokenType::RefreshToken, token),
+                None => {
+                    return Err(Status::new(Code::Internal, "No refresh token provided"));
+                }
+            };
+            let token_data = refresh_token.validate()?;
             uid = token_data.claims.sub;
 
             // Since the user does have a refresh_token, a session already exists
             is_new_session = false;
         }
 
-        // Create new access and refresh token with user id
-        let access_token = match auth::create_token(auth::TokenType::AccessToken, &uid) {
-            Ok(token) => token.to_owned(),
-            Err(e) => return Err(Status::new(Code::Internal, e.to_string())),
+        let access_token = match Token::new(TokenType::AccessToken, &uid) {
+            Ok(token) => token.to_string(),
+            Err(e) => return Err(Status::internal(e.to_string())),
         };
-        let refresh_token = match auth::create_token(auth::TokenType::RefreshToken, &uid) {
-            Ok(token) => token.to_owned(),
-            Err(e) => return Err(Status::new(Code::Internal, e.to_string())),
+        let refresh_token = match Token::new(TokenType::RefreshToken, &uid) {
+            Ok(token) => token.to_string(),
+            Err(e) => return Err(Status::internal(e.to_string())),
         };
 
         // Update or create session in database
@@ -337,7 +345,7 @@ impl EcdarApiAuth for ConcreteEcdarApi {
         }
 
         if !is_valid_email(message.clone().email.as_str()) {
-            return Err(Status::new(Code::InvalidArgument, "Invalid email"));
+            return Err(Status::invalid_argument("Invalid email"));
         }
 
         let user = User {
@@ -356,9 +364,9 @@ impl EcdarApiAuth for ConcreteEcdarApi {
                         _ if e.contains("email") => "A user with that email already exists",
                         _ => "User already exists",
                     };
-                    Err(Status::new(Code::AlreadyExists, error_msg))
+                    Err(Status::already_exists(error_msg))
                 }
-                _ => Err(Status::new(Code::Internal, "Could not create user")),
+                _ => Err(Status::internal("Could not create user")),
             },
         }
     }
