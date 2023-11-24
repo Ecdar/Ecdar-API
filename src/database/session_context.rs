@@ -64,7 +64,6 @@ impl EntityContextTrait<session::Model> for SessionContext {
         };
 
         session.insert(&self.db_context.get_connection()).await
-        
     }
 
     /// Returns a session by searching for its id.

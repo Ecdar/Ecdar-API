@@ -101,8 +101,6 @@ pub fn get_token_from_request<T>(req: &Request<T>) -> Result<String, Status> {
 /// This method is used to validate a token (access or refresh).
 /// It returns the token data if the token is valid.
 pub fn validate_token(token: String, is_refresh_token: bool) -> Result<TokenData<Claims>, Status> {
-    
-
     let secret = if is_refresh_token {
         env::var("REFRESH_TOKEN_HS512_SECRET").expect("Expected HS512_SECRET to be set.")
     } else {
