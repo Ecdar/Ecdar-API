@@ -89,8 +89,8 @@ pub fn get_token_from_request<T>(req: &Request<T>) -> Result<String, Status> {
         None => return Err(Status::unauthenticated("Token not found")),
     };
 
-    if token.is_ok() {
-        Ok(token.unwrap().trim_start_matches("Bearer ").to_string())
+    if let Ok(tok) = token {
+        Ok(tok.trim_start_matches("Bearer ").to_string())
     } else {
         Err(Status::unauthenticated(
             "Could not read token from metadata",
