@@ -1,10 +1,8 @@
-use std::sync::Arc;
-
 use crate::api::server::server::get_auth_token_request::user_credentials;
 use crate::entities::session::Model;
-use chrono::Local;
 use regex::Regex;
 use sea_orm::SqlErr;
+use std::sync::Arc;
 use tonic::{Code, Request, Response, Status};
 
 use crate::api::server::server::{ecdar_api_auth_server::EcdarApiAuth, ecdar_api_server::EcdarApi};
@@ -42,7 +40,7 @@ pub struct ConcreteEcdarApi {
 /// # Errors
 /// This function will return an error if the database context returns an error
 /// or if a session is not found when trying to update an existing one.
-async fn handle_session(
+pub async fn handle_session(
     session_context: Arc<dyn SessionContextTrait>,
     request: &Request<GetAuthTokenRequest>,
     is_new_session: bool,
@@ -51,16 +49,19 @@ async fn handle_session(
     uid: String,
 ) -> Result<(), Status> {
     if is_new_session {
-        session_context
+        let res = session_context
             .create(Model {
                 id: Default::default(),
                 access_token: access_token.clone(),
                 refresh_token: refresh_token.clone(),
-                updated_at: Local::now().naive_local(),
+                updated_at: Default::default(),
                 user_id: uid.parse().unwrap(),
             })
-            .await
-            .unwrap();
+            .await;
+        return match res {
+            Ok(_) => Ok(()),
+            Err(e) => Err(Status::new(Code::Internal, e.to_string())),
+        };
     } else {
         let mut session = match session_context
             .get_by_refresh_token(auth::get_token_from_request(request)?)
@@ -399,3 +400,11 @@ impl EcdarBackend for ConcreteEcdarApi {
 #[cfg(test)]
 #[path = "../tests/api/ecdar_api.rs"]
 mod tests;
+
+#[cfg(test)]
+#[path = "../tests/api/user_logic.rs"]
+mod user_logic;
+
+#[cfg(test)]
+#[path = "../tests/api/session_logic.rs"]
+mod session_logic;

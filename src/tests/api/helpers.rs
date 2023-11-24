@@ -1,7 +1,6 @@
 #![cfg(test)]
 
 use crate::api::ecdar_api::ConcreteEcdarApi;
-use crate::api::reveaal_context::ReveaalContext;
 use crate::api::server::server::ecdar_backend_server::EcdarBackend;
 use crate::api::server::server::{
     QueryRequest, QueryResponse, SimulationStartRequest, SimulationStepRequest,

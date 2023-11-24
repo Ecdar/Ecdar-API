@@ -1,7 +1,7 @@
-use chrono::{Local, Utc};
+use chrono::Local;
 use sea_orm::prelude::async_trait::async_trait;
 use sea_orm::ActiveValue::{Set, Unchanged};
-use sea_orm::{ActiveModelTrait, ColumnTrait, DbErr, EntityTrait, QueryFilter};
+use sea_orm::{ActiveModelTrait, ColumnTrait, DbErr, EntityTrait, NotSet, QueryFilter};
 use std::sync::Arc;
 
 use crate::database::database_context::DatabaseContextTrait;
@@ -60,7 +60,7 @@ impl EntityContextTrait<session::Model> for SessionContext {
             refresh_token: Set(entity.refresh_token),
             access_token: Set(entity.access_token),
             user_id: Set(entity.user_id),
-            updated_at: Set(Utc::now().naive_local()),
+            updated_at: NotSet,
         };
 
         let session = session.insert(&self.db_context.get_connection()).await;
