@@ -7,19 +7,48 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
-  TEST_DATABASE_URL: "sqlite::memory:"
 
 jobs:
-  test:
+  # Label of the container job
+  container-job:
+    # Containers must run in Linux based operating systems
     runs-on: ubuntu-latest
+    # Docker Hub image that `container-job` executes in
+    container: rust
+
+    # Service containers to run with `container-job`
+    services:
+      # Label used to access the service container
+      postgres:
+        # Docker Hub image
+        image: postgres
+        ports:
+          - 5432:5432
+        # Provide the password and db name for postgres
+        env:
+          POSTGRES_PASSWORD: 1234
+          POSTGRES_DB: ecdar_api
+        # Set health checks to wait until postgres has started
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
     steps:
-      - uses: actions/checkout@v3
+      - name: Check out repository code
+        uses: actions/checkout@v4
         with:
-          submodules: true
-      - name: Install Protoc
+          submodules: 'true'
+
+      - name: Install dependencies
         uses: arduino/setup-protoc@v2
+
       - uses: Swatinem/rust-cache@v2
         with:
           cache-on-failure: true
+
       - name: Run tests
-        run: cargo test --verbose
+        env:
+          TEST_DATABASE_URL: "postgresql://postgres:1234@postgres:5432/ecdar_api"
+        run: cargo test -- --test-threads=1
