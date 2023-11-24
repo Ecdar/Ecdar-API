@@ -300,7 +300,7 @@ impl EcdarApi for ConcreteEcdarApi {
             string: query_request.string.to_string(),
             result: Default::default(),
             outdated: Default::default(),
-            model_id: query_request.model_id.clone(),
+            model_id: query_request.model_id,
         };
 
         match self.query_context.create(query).await {
