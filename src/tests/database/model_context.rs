@@ -260,7 +260,7 @@ mod database_tests {
             .unwrap()
             .unwrap();
 
-        assert_eq!(fetched_query.outdated, true);
+        assert!(fetched_query.outdated);
     }
 
     #[tokio::test]

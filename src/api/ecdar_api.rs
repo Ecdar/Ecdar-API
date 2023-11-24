@@ -1,4 +1,3 @@
-use std::fmt::Display;
 use std::sync::Arc;
 
 use crate::api::auth::{RequestTrait, Token, TokenType};
@@ -18,13 +17,10 @@ use crate::database::session_context::SessionContextTrait;
 use crate::database::user_context::UserContextTrait;
 use crate::entities::user::Model as User;
 
-use super::{
-    auth,
-    server::server::{
-        ecdar_backend_server::EcdarBackend, CreateUserRequest, GetAuthTokenRequest,
-        GetAuthTokenResponse, QueryRequest, QueryResponse, SimulationStartRequest,
-        SimulationStepRequest, SimulationStepResponse, UpdateUserRequest, UserTokenResponse,
-    },
+use super::server::server::{
+    ecdar_backend_server::EcdarBackend, CreateUserRequest, GetAuthTokenRequest,
+    GetAuthTokenResponse, QueryRequest, QueryResponse, SimulationStartRequest,
+    SimulationStepRequest, SimulationStepResponse, UpdateUserRequest, UserTokenResponse,
 };
 
 #[derive(Clone)]

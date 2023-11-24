@@ -2,7 +2,7 @@ use chrono::{Duration, Utc};
 use jsonwebtoken::{
     decode, encode, Algorithm, DecodingKey, EncodingKey, Header, TokenData, Validation,
 };
-use mockall::Any;
+
 use serde::{Deserialize, Serialize};
 use std::{env, fmt::Display, str::FromStr};
 use tonic::{metadata, Request, Status};
@@ -22,7 +22,7 @@ pub fn validation_interceptor(mut req: Request<()>) -> Result<Request<()>, Statu
             );
             Ok(req)
         }
-        Err(err) => Err(err.into())
+        Err(err) => Err(err.into()),
     }
 }
 
@@ -250,16 +250,13 @@ pub trait RequestTrait {
 impl<T> RequestTrait for Request<T> {
     /// Returns the token string from the request metadata.
     fn token_string(&self) -> Option<String> {
-        match self.metadata().get("authorization") {
-            Some(token) => Some(
-                token
-                    .to_str()
-                    .unwrap()
-                    .trim_start_matches("Bearer ")
-                    .to_string(),
-            ),
-            None => None,
-        }
+        self.metadata().get("authorization").map(|token| {
+            token
+                .to_str()
+                .unwrap()
+                .trim_start_matches("Bearer ")
+                .to_string()
+        })
     }
     /// Returns the token string slice from the request metadata.
     fn token_str(&self) -> Option<&str> {

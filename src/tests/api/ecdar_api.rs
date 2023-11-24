@@ -1,26 +1,15 @@
 #[cfg(test)]
 mod ecdar_api {
-    use crate::api::ecdar_api::handle_session;
-    use crate::api::server::server::ecdar_api_auth_server::EcdarApiAuth;
-    use crate::api::server::server::get_auth_token_request::user_credentials;
-    use crate::api::server::server::get_auth_token_request::UserCredentials;
-    use crate::api::server::server::{CreateUserRequest, GetAuthTokenRequest, UpdateUserRequest};
-    use crate::{
-        api::server::server::ecdar_api_server::EcdarApi, entities::session::Model as Session,
-        entities::user::Model as User,
-    };
-    use async_trait::async_trait;
+
+    use crate::api::server::server::ecdar_api_server::EcdarApi;
+
     use futures::SinkExt;
     use mockall::predicate;
     use sea_orm::DbErr;
     use std::str::FromStr;
 
-    use crate::database::database_context::DatabaseContextTrait;
-    use crate::database::entity_context::EntityContextTrait;
-    use crate::database::user_context::{UserContext, UserContextTrait};
-    use crate::entities::user;
     use crate::tests::api::helpers::{get_mock_concrete_ecdar_api, get_mock_services};
-    use tonic::{metadata, Code, Request, Response, Status};
+    use tonic::{metadata, Code, Request};
 
     #[tokio::test]
     async fn delete_user_nonexistent_user_returns_err() {
@@ -34,7 +23,7 @@ mod ecdar_api {
 
         let api = get_mock_concrete_ecdar_api(mock_services).await;
 
-        let mut delete_request = Request::new({});
+        let mut delete_request = Request::new(());
 
         // Insert uid into request metadata
         delete_request
