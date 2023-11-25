@@ -16,7 +16,7 @@ use crate::database::query_context::QueryContextTrait;
 use crate::database::session_context::SessionContextTrait;
 use crate::database::user_context::UserContextTrait;
 use crate::entities::query;
-use crate::entities::user::Model as User;
+use crate::entities::user::Model as UserEntity;
 
 use super::server::server::get_auth_token_request::UserCredentials;
 use super::{
@@ -259,7 +259,7 @@ impl EcdarApi for ConcreteEcdarApi {
         };
 
         // Record to be inserted in database
-        let user = User {
+        let user = UserEntity {
             id: uid,
             username: new_username.clone(),
             password: new_password.clone(),
@@ -364,51 +364,29 @@ impl EcdarApi for ConcreteEcdarApi {
         }
     }
 }
-async fn auth_helper(
+async fn get_auth_find_user_helper(
     user_context: Arc<dyn UserContextTrait>,
     user_credentials: UserCredentials,
-) -> Result<User, Status> {
-    let res: Result<User, Status>;
+) -> Result<UserEntity, Status> {
     if let Some(user) = user_credentials.user {
-        res = match user {
-            // Get user from database by username given in request
-            user_credentials::User::Username(username) => {
-                match user_context.get_by_username(username).await {
-                    Ok(Some(user)) => Ok(user),
-                    Ok(None) => {
-                        return Err(Status::new(
-                            Code::Internal,
-                            "No user found with given username",
-                        ))
-                    }
-                    Err(err) => return Err(Status::new(Code::Internal, err.to_string())),
-                }
-            }
-            // Get user from database by email given in request
-            user_credentials::User::Email(email) => match user_context.get_by_email(email).await {
-                Ok(Some(user)) => Ok(user),
-                Ok(None) => {
-                    return Err(Status::new(
-                        Code::Internal,
-                        "No user found with given email",
-                    ))
-                }
-                Err(err) => return Err(Status::new(Code::Internal, err.to_string())),
-            },
-        };
-    // // Check if password in request matches users password
-    // if user_credentials.password != user_from_db.password {
-    //     return Err(Status::new(Code::Unauthenticated, "Wrong password"));
-    // }
+        match user {
+            user_credentials::User::Username(username) => Ok(user_context
+                .get_by_username(username)
+                .await
+                .map_err(|err| Status::new(Code::Internal, err.to_string()))?
+                .ok_or_else(|| Status::new(Code::NotFound, "No user found with given username"))?),
 
-    // uid = user_from_db.id.to_string();
-
-    // // Since the user does not have a refresh_token, a new session has to be made
-    // is_new_session = true;
+            user_credentials::User::Email(email) => Ok(user_context
+                .get_by_email(email)
+                .await
+                .map_err(|err| Status::new(Code::Internal, err.to_string()))?
+                .ok_or_else(|| {
+                    Status::new(Code::NotFound, "No user found with the given email")
+                })?),
+        }
     } else {
-        res = Err(Status::new(Code::Internal, "No user provided"));
+        Err(Status::new(Code::InvalidArgument, "No user provided"))
     }
-    return res;
 }
 
 #[tonic::async_trait]
@@ -425,12 +403,13 @@ impl EcdarApiAuth for ConcreteEcdarApi {
     ) -> Result<Response<GetAuthTokenResponse>, Status> {
         let message = request.get_ref().clone();
         let uid: String;
-        let user_from_db: User;
+        let user_from_db: UserEntity;
         let is_new_session: bool;
         // Get user from credentials
         if let Some(user_credentials) = message.user_credentials {
             let input_password = user_credentials.password.clone();
-            user_from_db = auth_helper(Arc::clone(&self.user_context), user_credentials).await?;
+            user_from_db =
+                get_auth_find_user_helper(Arc::clone(&self.user_context), user_credentials).await?;
 
             // Check if password in request matches users password
             if input_password != user_from_db.password {
@@ -489,7 +468,7 @@ impl EcdarApiAuth for ConcreteEcdarApi {
             return Err(Status::new(Code::InvalidArgument, "Invalid email"));
         }
 
-        let user = User {
+        let user = UserEntity {
             id: Default::default(),
             username: message.clone().username,
             password: message.clone().password,
