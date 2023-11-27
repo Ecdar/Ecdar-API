@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use crate::api::auth::{RequestTrait, Token, TokenType};
+use crate::api::auth::{RequestExt, Token, TokenType};
 use crate::api::server::server::get_auth_token_request::user_credentials;
 use crate::entities::session::Model;
 use chrono::Local;

@@ -160,9 +160,9 @@ impl Token {
     }
 
     /// Returns the token as a string.
-    pub fn to_string(&self) -> String {
-        self.token.clone()
-    }
+    // pub fn to_string(&self) -> String {
+    //     self.token.clone()
+    // }
     /// Extracts the token as a string slice.
     ///
     /// # Examples
@@ -190,6 +190,12 @@ impl Token {
     /// ```
     pub fn token_type(&self) -> TokenType {
         self.token_type.clone()
+    }
+}
+
+impl Display for Token {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.token)
     }
 }
 
@@ -239,15 +245,16 @@ impl From<TokenError> for Status {
     }
 }
 
-/// This trait is used to add auth related methods to the tonic request.
-pub trait RequestTrait {
+/// An extension trait for [Request]`s that provides a variety of convenient
+/// auth related methods.
+pub trait RequestExt {
     fn token_string(&self) -> Option<String>;
     fn token_str(&self) -> Option<&str>;
 
     fn uid(&self) -> Option<i32>;
 }
 
-impl<T> RequestTrait for Request<T> {
+impl<T> RequestExt for Request<T> {
     /// Returns the token string from the request metadata.
     fn token_string(&self) -> Option<String> {
         self.metadata().get("authorization").map(|token| {
