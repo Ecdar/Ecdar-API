@@ -155,6 +155,11 @@ impl EcdarApi for ConcreteEcdarApi {
         todo!()
     }
 
+    /// Deletes a Model from the database.
+    ///
+    /// # Errors
+    /// This function will return an error if the model does not exist in the database
+    /// or if the user is not the model owner.
     async fn delete_model(
         &self, 
         request: Request<DeleteModelRequest>
