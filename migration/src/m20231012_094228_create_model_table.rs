@@ -23,6 +23,7 @@ impl MigrationTrait for Migration {
                     .col(ColumnDef::new(Model::Name).string().not_null())
                     .col(ColumnDef::new(Model::ComponentsInfo).json().not_null())
                     .col(ColumnDef::new(Model::OwnerId).integer().not_null())
+                    .index(Index::create().col(Model::OwnerId).col(Model::Name).unique())
                     .foreign_key(
                         ForeignKey::create()
                             .from(Model::Table, Model::OwnerId)
