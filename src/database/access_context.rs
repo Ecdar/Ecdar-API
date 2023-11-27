@@ -3,9 +3,7 @@ use crate::database::entity_context::EntityContextTrait;
 use crate::entities::access;
 use sea_orm::prelude::async_trait::async_trait;
 use sea_orm::ActiveValue::{Set, Unchanged};
-use sea_orm::{
-    ActiveModelTrait, ColumnTrait, Condition, DbErr, EntityTrait, QueryFilter, QuerySelect,
-};
+use sea_orm::{ActiveModelTrait, ColumnTrait, Condition, DbErr, EntityTrait, QueryFilter};
 use std::sync::Arc;
 
 pub struct AccessContext {
