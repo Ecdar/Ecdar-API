@@ -44,8 +44,8 @@ pub async fn get_reset_database_context() -> Arc<dyn DatabaseContextTrait> {
 /// ```
 
 pub fn create_entities<M, F>(amount: i32, model_creator: F) -> Vec<M>
-    where
-        F: Fn(i32) -> M,
+where
+    F: Fn(i32) -> M,
 {
     let mut vector: Vec<M> = vec![];
     for i in 0..amount {
