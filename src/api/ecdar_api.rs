@@ -1,34 +1,29 @@
-use std::sync::Arc;
-
-use crate::api::auth::{RequestExt, Token, TokenType};
-use crate::api::server::server::get_auth_token_request::user_credentials;
-use crate::entities::access;
-use crate::entities::session;
 use chrono::Local;
 use regex::Regex;
 use sea_orm::SqlErr;
+use std::sync::Arc;
 use tonic::{Code, Request, Response, Status};
 
-use crate::api::server::server::{ecdar_api_auth_server::EcdarApiAuth, ecdar_api_server::EcdarApi};
-use crate::database::access_context::AccessContextTrait;
-use crate::database::in_use_context::InUseContextTrait;
-use crate::database::model_context::ModelContextTrait;
-use crate::database::query_context::QueryContextTrait;
-use crate::database::session_context::SessionContextTrait;
-use crate::database::user_context::UserContextTrait;
-use crate::entities::query;
-use crate::entities::user::Model as UserEntity;
+use crate::api::auth::{RequestExt, Token, TokenType};
+use crate::database::{
+    access_context::AccessContextTrait, in_use_context::InUseContextTrait,
+    model_context::ModelContextTrait, query_context::QueryContextTrait,
+    session_context::SessionContextTrait, user_context::UserContextTrait,
+};
 
-use super::server::server::get_auth_token_request::UserCredentials;
-use super::{
-    auth,
-    server::server::{
-        ecdar_backend_server::EcdarBackend, CreateAccessRequest, CreateQueryRequest,
-        CreateUserRequest, DeleteAccessRequest, DeleteQueryRequest, GetAuthTokenRequest,
-        GetAuthTokenResponse, QueryRequest, QueryResponse, SimulationStartRequest,
-        SimulationStepRequest, SimulationStepResponse, UpdateAccessRequest, UpdateQueryRequest,
-        UpdateUserRequest, UserTokenResponse,
-    },
+use super::server::server::{
+    ecdar_api_auth_server::EcdarApiAuth,
+    ecdar_api_server::EcdarApi,
+    ecdar_backend_server::EcdarBackend,
+    get_auth_token_request::{user_credentials, UserCredentials},
+    CreateAccessRequest, CreateQueryRequest, CreateUserRequest, DeleteAccessRequest,
+    DeleteQueryRequest, GetAuthTokenRequest, GetAuthTokenResponse, QueryRequest, QueryResponse,
+    SimulationStartRequest, SimulationStepRequest, SimulationStepResponse, UpdateAccessRequest,
+    UpdateQueryRequest, UpdateUserRequest, UserTokenResponse,
+};
+use crate::entities::{
+    access::Model as AccessEntity, in_use::Model as InUseEntity, model::Model as ModelEntity,
+    query::Model as QueryEntity, session::Model as SessionEntity, user::Model as UserEntity,
 };
 
 #[derive(Clone)]
@@ -58,7 +53,7 @@ async fn handle_session(
 ) -> Result<(), Status> {
     if is_new_session {
         session_context
-            .create(session::Model {
+            .create(SessionEntity {
                 id: Default::default(),
                 access_token: access_token.clone(),
                 refresh_token: refresh_token.clone(),
@@ -158,7 +153,7 @@ impl EcdarApi for ConcreteEcdarApi {
     ) -> Result<Response<()>, Status> {
         let access = request.get_ref();
 
-        let access = access::Model {
+        let access = AccessEntity {
             id: Default::default(),
             role: access.role.to_string(),
             model_id: access.model_id,
@@ -184,7 +179,7 @@ impl EcdarApi for ConcreteEcdarApi {
     ) -> Result<Response<()>, Status> {
         let message = request.get_ref().clone();
 
-        let access = access::Model {
+        let access = AccessEntity {
             id: message.id,
             role: message.role,
             model_id: Default::default(),
@@ -285,7 +280,7 @@ impl EcdarApi for ConcreteEcdarApi {
         request: Request<CreateQueryRequest>,
     ) -> Result<Response<()>, Status> {
         let query_request = request.get_ref();
-        let query = query::Model {
+        let query = QueryEntity {
             id: Default::default(),
             string: query_request.string.to_string(),
             result: Default::default(),
@@ -321,7 +316,7 @@ impl EcdarApi for ConcreteEcdarApi {
             None => return Err(Status::new(Code::NotFound, "Query not found".to_string())),
         };
 
-        let query = query::Model {
+        let query = QueryEntity {
             id: message.id,
             model_id: Default::default(),
             string: message.string,
