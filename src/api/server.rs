@@ -5,6 +5,7 @@ use tonic::transport::Server;
 
 use crate::api::auth;
 use crate::api::ecdar_api::ConcreteEcdarApi;
+use crate::api::hashing_context::HashingContextTrait;
 use crate::api::server::server::ecdar_api_auth_server::EcdarApiAuthServer;
 use crate::api::server::server::ecdar_api_server::EcdarApiServer;
 use crate::api::server::server::ecdar_backend_server::{EcdarBackend, EcdarBackendServer};
@@ -27,6 +28,7 @@ pub async fn start_grpc_server(
     session_context: Arc<dyn SessionContextTrait>,
     user_context: Arc<dyn UserContextTrait>,
     reveaal_context: Arc<dyn EcdarBackend>,
+    hashing_context: Arc<dyn HashingContextTrait>,
 ) -> Result<(), Box<dyn std::error::Error>> {
     // defining address for our service
     let addr = env::var("API_ADDRESS")
@@ -44,6 +46,7 @@ pub async fn start_grpc_server(
         session_context,
         user_context,
         reveaal_context,
+        hashing_context,
     );
 
     // adding services to our server.

@@ -1,7 +1,7 @@
+use crate::api::hashing_context::HashingContextTrait;
 use crate::api::server::server::get_auth_token_request::user_credentials;
 use crate::entities::access;
 use crate::entities::session;
-use bcrypt::hash;
 use regex::Regex;
 use sea_orm::SqlErr;
 use std::sync::Arc;
@@ -38,9 +38,8 @@ pub struct ConcreteEcdarApi {
     session_context: Arc<dyn SessionContextTrait>,
     user_context: Arc<dyn UserContextTrait>,
     reveaal_context: Arc<dyn EcdarBackend>,
+    hashing_context: Arc<dyn HashingContextTrait>,
 }
-
-const HASH_COST: u32 = 12;
 
 /// Updates or creates a session in the database for a given user.
 ///
@@ -131,6 +130,7 @@ impl ConcreteEcdarApi {
         session_context: Arc<dyn SessionContextTrait>,
         user_context: Arc<dyn UserContextTrait>,
         reveaal_context: Arc<dyn EcdarBackend>,
+        hashing_context: Arc<dyn HashingContextTrait>,
     ) -> Self {
         ConcreteEcdarApi {
             access_context,
@@ -140,6 +140,7 @@ impl ConcreteEcdarApi {
             session_context,
             user_context,
             reveaal_context,
+            hashing_context,
         }
     }
 }
@@ -256,7 +257,7 @@ impl EcdarApi for ConcreteEcdarApi {
 
         // Record to be inserted in database
         let new_user = user::Model {
-            id: Default::default(),
+            id: uid,
             username: match message.clone().username {
                 Some(username) => {
                     if is_valid_username(username.as_str()) {
@@ -278,7 +279,7 @@ impl EcdarApi for ConcreteEcdarApi {
                 None => user.email,
             },
             password: match message.clone().password {
-                Some(password) => hash(password, HASH_COST).unwrap(),
+                Some(password) => self.hashing_context.hash_password(password),
                 None => user.password,
             },
         };
@@ -384,7 +385,7 @@ impl EcdarApi for ConcreteEcdarApi {
 async fn get_auth_find_user_helper(
     user_context: Arc<dyn UserContextTrait>,
     user_credentials: UserCredentials,
-) -> Result<UserEntity, Status> {
+) -> Result<user::Model, Status> {
     if let Some(user) = user_credentials.user {
         match user {
             user_credentials::User::Username(username) => Ok(user_context
@@ -485,7 +486,7 @@ impl EcdarApiAuth for ConcreteEcdarApi {
             return Err(Status::new(Code::InvalidArgument, "Invalid email"));
         }
 
-        let user = UserEntity {
+        let user = user::Model {
             id: Default::default(),
             username: message.clone().username,
             password: message.clone().password,

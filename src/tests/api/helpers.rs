@@ -1,6 +1,7 @@
 #![cfg(test)]
 
 use crate::api::ecdar_api::ConcreteEcdarApi;
+use crate::api::hashing_context::HashingContextTrait;
 use crate::api::server::server::ecdar_backend_server::EcdarBackend;
 use crate::api::server::server::{
     QueryRequest, QueryResponse, SimulationStartRequest, SimulationStepRequest,
@@ -29,6 +30,7 @@ pub fn get_mock_concrete_ecdar_api(mock_services: MockServices) -> ConcreteEcdar
         Arc::new(mock_services.session_context_mock),
         Arc::new(mock_services.user_context_mock),
         Arc::new(mock_services.reveaal_context_mock),
+        Arc::new(mock_services.hashing_context_mock),
     )
 }
 
@@ -41,6 +43,7 @@ pub fn get_mock_services() -> MockServices {
         session_context_mock: MockSessionContext::new(),
         user_context_mock: MockUserContext::new(),
         reveaal_context_mock: MockReveaalContext::new(),
+        hashing_context_mock: MockHashingContext::new(),
     }
 }
 
@@ -52,6 +55,7 @@ pub struct MockServices {
     pub(crate) session_context_mock: MockSessionContext,
     pub(crate) user_context_mock: MockUserContext,
     pub(crate) reveaal_context_mock: MockReveaalContext,
+    pub(crate) hashing_context_mock: MockHashingContext,
 }
 
 mock! {
@@ -151,5 +155,13 @@ mock! {
         async fn send_query(&self,request: Request<QueryRequest>) -> Result<Response<QueryResponse>, Status>;
         async fn start_simulation(&self, request: Request<SimulationStartRequest>) -> Result<Response<SimulationStepResponse>, Status>;
         async fn take_simulation_step(&self, request: Request<SimulationStepRequest>) -> Result<Response<SimulationStepResponse>, Status>;
+    }
+}
+
+mock! {
+    pub HashingContext {}
+    impl HashingContextTrait for HashingContext {
+        fn hash_password(&self, password: String) -> String;
+        fn verify_password(&self, password: String, hash: &str) -> bool;
     }
 }

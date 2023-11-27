@@ -214,21 +214,20 @@ async fn test_create_user_valid_request_returns_ok() {
 
 #[tokio::test]
 async fn update_user_returns_ok() {
-    //todo!(update user implementation should be changed to populate unchanged fields with existing values)
     let mut mock_services = get_mock_services();
 
     let old_user = user::Model {
         id: 1,
-        email: "newuser@example.com".to_string(),
+        email: "olduser@example.com".to_string(),
         username: "old_username".to_string(),
         password: "StrongPassword123".to_string(),
     };
 
-    let user = user::Model {
+    let new_user = user::Model {
         id: 1,
         email: "newuser@example.com".to_string(),
         username: "new_username".to_string(),
-        password: "StrongPassword123".to_string(),
+        password: "g76df2gd7hd837g8hjd8723hd8gd823d82d3".to_string(),
     };
 
     mock_services
@@ -238,10 +237,16 @@ async fn update_user_returns_ok() {
         .returning(move |_| Ok(Some(old_user.clone())));
 
     mock_services
+        .hashing_context_mock
+        .expect_hash_password()
+        .with(predicate::eq("StrongPassword123".to_string()))
+        .returning(move |_| "g76df2gd7hd837g8hjd8723hd8gd823d82d3".to_string());
+
+    mock_services
         .user_context_mock
         .expect_update()
-        .with(predicate::eq(user.clone()))
-        .returning(move |_| Ok(user.clone()));
+        .with(predicate::eq(new_user.clone()))
+        .returning(move |_| Ok(new_user.clone()));
 
     let api = get_mock_concrete_ecdar_api(mock_services);
 
@@ -264,17 +269,10 @@ async fn update_user_returns_ok() {
 async fn update_user_non_existant_user_returns_err() {
     let mut mock_services = get_mock_services();
 
-    let user = user::Model {
-        id: 1,
-        email: "new_test@test".to_string(),
-        username: "new_test_user".to_string(),
-        password: "new_test_pass".to_string(),
-    };
-
     mock_services
         .user_context_mock
-        .expect_update()
-        .with(predicate::eq(user.clone()))
+        .expect_get_by_id()
+        .with(predicate::eq(1))
         .returning(move |_| Err(DbErr::RecordNotFound("".to_string())));
 
     let api = get_mock_concrete_ecdar_api(mock_services);
@@ -289,7 +287,7 @@ async fn update_user_non_existant_user_returns_err() {
         .metadata_mut()
         .insert("uid", metadata::MetadataValue::from_str("1").unwrap());
 
-    let update_user_response = api.update_user(update_user_request).await;
+    let res = api.update_user(update_user_request).await;
 
-    assert!(update_user_response.is_err())
+    assert_eq!(res.unwrap_err().code(), Code::Internal);
 }

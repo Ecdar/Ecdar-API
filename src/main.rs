@@ -3,6 +3,7 @@ mod database;
 mod entities;
 mod tests;
 
+use crate::api::hashing_context::HashingContext;
 use crate::api::reveaal_context::ReveaalContext;
 use crate::database::access_context::AccessContext;
 use crate::database::database_context::{PostgresDatabaseContext, SQLiteDatabaseContext};
@@ -39,6 +40,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let session_context = Arc::new(SessionContext::new(db_context.clone()));
     let in_use_context = Arc::new(InUseContext::new(db_context.clone()));
     let reveaal_context = Arc::new(ReveaalContext);
+    let hashing_context = Arc::new(HashingContext);
 
     start_grpc_server(
         access_context,
@@ -48,6 +50,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         session_context,
         user_context,
         reveaal_context,
+        hashing_context,
     )
     .await
     .unwrap();
