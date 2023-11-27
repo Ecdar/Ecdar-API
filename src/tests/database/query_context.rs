@@ -178,7 +178,7 @@ mod database_tests {
             .unwrap();
 
         let new_query = query::Model {
-            string: query.clone().string + "123".into(),
+            string: query.clone().string + "123",
             ..query.clone()
         };
 
