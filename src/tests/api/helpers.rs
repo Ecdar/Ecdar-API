@@ -1,5 +1,6 @@
 #![cfg(test)]
 
+use crate::api::context_collection::ContextCollection;
 use crate::api::ecdar_api::ConcreteEcdarApi;
 use crate::api::hashing_context::HashingContextTrait;
 use crate::api::server::server::ecdar_backend_server::EcdarBackend;
@@ -22,16 +23,17 @@ use std::sync::Arc;
 use tonic::{Request, Response, Status};
 
 pub fn get_mock_concrete_ecdar_api(mock_services: MockServices) -> ConcreteEcdarApi {
-    ConcreteEcdarApi::new(
-        Arc::new(mock_services.access_context_mock),
-        Arc::new(mock_services.in_use_context_mock),
-        Arc::new(mock_services.model_context_mock),
-        Arc::new(mock_services.query_context_mock),
-        Arc::new(mock_services.session_context_mock),
-        Arc::new(mock_services.user_context_mock),
-        Arc::new(mock_services.reveaal_context_mock),
-        Arc::new(mock_services.hashing_context_mock),
-    )
+    let contexts = ContextCollection {
+        access_context: Arc::new(mock_services.access_context_mock),
+        in_use_context: Arc::new(mock_services.in_use_context_mock),
+        model_context: Arc::new(mock_services.model_context_mock),
+        query_context: Arc::new(mock_services.query_context_mock),
+        session_context: Arc::new(mock_services.session_context_mock),
+        user_context: Arc::new(mock_services.user_context_mock),
+        reveaal_context: Arc::new(mock_services.reveaal_context_mock),
+        hashing_context: Arc::new(mock_services.hashing_context_mock),
+    };
+    ConcreteEcdarApi::new(contexts)
 }
 
 pub fn get_mock_services() -> MockServices {
