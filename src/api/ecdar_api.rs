@@ -21,10 +21,7 @@ use super::server::server::{
     SimulationStartRequest, SimulationStepRequest, SimulationStepResponse, UpdateAccessRequest,
     UpdateQueryRequest, UpdateUserRequest, UserTokenResponse,
 };
-use crate::entities::{
-    access::Model as AccessEntity, query::Model as QueryEntity, session::Model as SessionEntity,
-    user::Model as UserEntity,
-};
+use crate::entities::{access, model, query, session, user};
 
 #[derive(Clone)]
 pub struct ConcreteEcdarApi {
@@ -53,7 +50,7 @@ async fn handle_session(
 ) -> Result<(), Status> {
     if is_new_session {
         session_context
-            .create(SessionEntity {
+            .create(session::Model {
                 id: Default::default(),
                 access_token: access_token.clone(),
                 refresh_token: refresh_token.clone(),
@@ -153,7 +150,7 @@ impl EcdarApi for ConcreteEcdarApi {
     ) -> Result<Response<()>, Status> {
         let access = request.get_ref();
 
-        let access = AccessEntity {
+        let access = access::Model {
             id: Default::default(),
             role: access.role.to_string(),
             model_id: access.model_id,
@@ -179,7 +176,7 @@ impl EcdarApi for ConcreteEcdarApi {
     ) -> Result<Response<()>, Status> {
         let message = request.get_ref().clone();
 
-        let access = AccessEntity {
+        let access = access::Model {
             id: message.id,
             role: message.role,
             model_id: Default::default(),
@@ -242,7 +239,7 @@ impl EcdarApi for ConcreteEcdarApi {
         };
 
         // Record to be inserted in database
-        let user = UserEntity {
+        let user = user::Model {
             id: uid,
             username: new_username.clone(),
             password: new_password.clone(),
@@ -280,7 +277,7 @@ impl EcdarApi for ConcreteEcdarApi {
         request: Request<CreateQueryRequest>,
     ) -> Result<Response<()>, Status> {
         let query_request = request.get_ref();
-        let query = QueryEntity {
+        let query = query::Model {
             id: Default::default(),
             string: query_request.string.to_string(),
             result: Default::default(),
@@ -316,7 +313,7 @@ impl EcdarApi for ConcreteEcdarApi {
             None => return Err(Status::new(Code::NotFound, "Query not found".to_string())),
         };
 
-        let query = QueryEntity {
+        let query = query::Model {
             id: message.id,
             model_id: Default::default(),
             string: message.string,
@@ -352,7 +349,7 @@ impl EcdarApi for ConcreteEcdarApi {
 async fn get_auth_find_user_helper(
     user_context: Arc<dyn UserContextTrait>,
     user_credentials: UserCredentials,
-) -> Result<UserEntity, Status> {
+) -> Result<user::Model, Status> {
     if let Some(user) = user_credentials.user {
         match user {
             user_credentials::User::Username(username) => Ok(user_context
@@ -388,7 +385,7 @@ impl EcdarApiAuth for ConcreteEcdarApi {
     ) -> Result<Response<GetAuthTokenResponse>, Status> {
         let message = request.get_ref().clone();
         let uid: String;
-        let user_from_db: UserEntity;
+        let user_from_db: user::Model;
         let is_new_session: bool;
 
         // Get user from credentials
@@ -456,7 +453,7 @@ impl EcdarApiAuth for ConcreteEcdarApi {
             return Err(Status::new(Code::InvalidArgument, "Invalid email"));
         }
 
-        let user = UserEntity {
+        let user = user::Model {
             id: Default::default(),
             username: message.clone().username,
             password: message.clone().password,
