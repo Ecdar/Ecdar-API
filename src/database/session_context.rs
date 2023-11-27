@@ -63,8 +63,7 @@ impl EntityContextTrait<session::Model> for SessionContext {
             updated_at: Set(Utc::now().naive_local()),
         };
 
-        let session = session.insert(&self.db_context.get_connection()).await;
-        session
+        session.insert(&self.db_context.get_connection()).await
     }
 
     /// Returns a session by searching for its id.
