@@ -21,7 +21,7 @@ mod ecdar_api {
             .with(predicate::eq(1))
             .returning(|_| Err(DbErr::RecordNotFound("".into())));
 
-        let api = get_mock_concrete_ecdar_api(mock_services).await;
+        let api = get_mock_concrete_ecdar_api(mock_services);
 
         let mut delete_request = Request::new(());
 

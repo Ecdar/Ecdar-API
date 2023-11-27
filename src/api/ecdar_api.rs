@@ -2,7 +2,8 @@ use std::sync::Arc;
 
 use crate::api::auth::{RequestExt, Token, TokenType};
 use crate::api::server::server::get_auth_token_request::user_credentials;
-use crate::entities::session::Model;
+use crate::entities::access;
+use crate::entities::session;
 use chrono::Local;
 use regex::Regex;
 use sea_orm::SqlErr;
@@ -15,12 +16,19 @@ use crate::database::model_context::ModelContextTrait;
 use crate::database::query_context::QueryContextTrait;
 use crate::database::session_context::SessionContextTrait;
 use crate::database::user_context::UserContextTrait;
-use crate::entities::user::Model as User;
+use crate::entities::query;
+use crate::entities::user::Model as UserEntity;
 
-use super::server::server::{
-    ecdar_backend_server::EcdarBackend, CreateUserRequest, GetAuthTokenRequest,
-    GetAuthTokenResponse, QueryRequest, QueryResponse, SimulationStartRequest,
-    SimulationStepRequest, SimulationStepResponse, UpdateUserRequest, UserTokenResponse,
+use super::server::server::get_auth_token_request::UserCredentials;
+use super::{
+    auth,
+    server::server::{
+        ecdar_backend_server::EcdarBackend, CreateAccessRequest, CreateQueryRequest,
+        CreateUserRequest, DeleteAccessRequest, DeleteQueryRequest, GetAuthTokenRequest,
+        GetAuthTokenResponse, QueryRequest, QueryResponse, SimulationStartRequest,
+        SimulationStepRequest, SimulationStepResponse, UpdateAccessRequest, UpdateQueryRequest,
+        UpdateUserRequest, UserTokenResponse,
+    },
 };
 
 #[derive(Clone)]
@@ -50,7 +58,7 @@ async fn handle_session(
 ) -> Result<(), Status> {
     if is_new_session {
         session_context
-            .create(Model {
+            .create(session::Model {
                 id: Default::default(),
                 access_token: access_token.clone(),
                 refresh_token: refresh_token.clone(),
@@ -98,7 +106,7 @@ fn is_valid_username(username: &str) -> bool {
 }
 
 impl ConcreteEcdarApi {
-    pub async fn new(
+    pub fn new(
         access_context: Arc<dyn AccessContextTrait>,
         in_use_context: Arc<dyn InUseContextTrait>,
         model_context: Arc<dyn ModelContextTrait>,
@@ -121,10 +129,6 @@ impl ConcreteEcdarApi {
 
 #[tonic::async_trait]
 impl EcdarApi for ConcreteEcdarApi {
-    async fn list_models_info(&self, _request: Request<()>) -> Result<Response<()>, Status> {
-        todo!()
-    }
-
     async fn get_model(&self, _request: Request<()>) -> Result<Response<()>, Status> {
         todo!()
     }
@@ -139,6 +143,77 @@ impl EcdarApi for ConcreteEcdarApi {
 
     async fn delete_model(&self, _request: Request<()>) -> Result<Response<()>, Status> {
         todo!()
+    }
+
+    async fn list_models_info(&self, _request: Request<()>) -> Result<Response<()>, Status> {
+        todo!()
+    }
+
+    /// Creates an access in the database.
+    /// # Errors
+    /// Returns an error if the database context fails to create the access
+    async fn create_access(
+        &self,
+        request: Request<CreateAccessRequest>,
+    ) -> Result<Response<()>, Status> {
+        let access = request.get_ref();
+
+        let access = access::Model {
+            id: Default::default(),
+            role: access.role.to_string(),
+            model_id: access.model_id,
+            user_id: access.user_id,
+        };
+
+        match self.access_context.create(access).await {
+            Ok(_) => Ok(Response::new(())),
+            Err(error) => Err(Status::new(Code::Internal, error.to_string())),
+        }
+    }
+
+    /// Endpoint for updating an access record.
+    ///
+    /// Takes `UpdateAccessRequest` as input
+    ///
+    /// Returns a `Status` as response
+    ///
+    /// `model_id` and `user_id` is set to 'default' since they won't be updated in the database.
+    async fn update_access(
+        &self,
+        request: Request<UpdateAccessRequest>,
+    ) -> Result<Response<()>, Status> {
+        let message = request.get_ref().clone();
+
+        let access = access::Model {
+            id: message.id,
+            role: message.role,
+            model_id: Default::default(),
+            user_id: Default::default(),
+        };
+
+        match self.access_context.update(access).await {
+            Ok(_) => Ok(Response::new(())),
+            Err(error) => Err(Status::new(Code::Internal, error.to_string())),
+        }
+    }
+
+    /// Deletes the an Access from the database. This has no sideeffects.
+    ///
+    /// # Errors
+    /// This function will return an error if the access does not exist in the database.
+    async fn delete_access(
+        &self,
+        request: Request<DeleteAccessRequest>,
+    ) -> Result<Response<()>, Status> {
+        match self.access_context.delete(request.get_ref().id).await {
+            Ok(_) => Ok(Response::new(())),
+            Err(error) => match error {
+                sea_orm::DbErr::RecordNotFound(message) => {
+                    Err(Status::new(Code::NotFound, message))
+                }
+                _ => Err(Status::new(Code::Internal, error.to_string())),
+            },
+        }
     }
 
     /// Updates a user record in the database.
@@ -172,7 +247,7 @@ impl EcdarApi for ConcreteEcdarApi {
         };
 
         // Record to be inserted in database
-        let user = User {
+        let user = UserEntity {
             id: uid,
             username: new_username.clone(),
             password: new_password.clone(),
@@ -198,20 +273,109 @@ impl EcdarApi for ConcreteEcdarApi {
         // Delete user from database
         match self.user_context.delete(uid).await {
             Ok(_) => Ok(Response::new(())),
-            Err(error) => Err(Status::internal(error.to_string())),
+            Err(error) => Err(Status::new(Code::Internal, error.to_string())),
         }
     }
 
-    async fn create_access(&self, _request: Request<()>) -> Result<Response<()>, Status> {
-        todo!()
+    /// Creates a query in the database
+    /// # Errors
+    /// Returns an error if the database context fails to create the query or
+    async fn create_query(
+        &self,
+        request: Request<CreateQueryRequest>,
+    ) -> Result<Response<()>, Status> {
+        let query_request = request.get_ref();
+        let query = query::Model {
+            id: Default::default(),
+            string: query_request.string.to_string(),
+            result: Default::default(),
+            outdated: Default::default(),
+            model_id: query_request.model_id,
+        };
+
+        match self.query_context.create(query).await {
+            Ok(_) => Ok(Response::new(())),
+            Err(error) => Err(Status::new(Code::Internal, error.to_string())),
+        }
     }
 
-    async fn update_access(&self, _request: Request<()>) -> Result<Response<()>, Status> {
-        todo!()
+    /// Endpoint for updating a query record.
+    ///
+    /// Takes `UpdateQueryRequest` as input
+    ///
+    /// Returns a `Status` as response
+    async fn update_query(
+        &self,
+        request: Request<UpdateQueryRequest>,
+    ) -> Result<Response<()>, Status> {
+        let message = request.get_ref().clone();
+
+        let old_query_res = self
+            .query_context
+            .get_by_id(message.id)
+            .await
+            .map_err(|err| Status::new(Code::Internal, err.to_string()))?;
+
+        let old_query = match old_query_res {
+            Some(oq) => oq,
+            None => return Err(Status::new(Code::NotFound, "Query not found".to_string())),
+        };
+
+        let query = query::Model {
+            id: message.id,
+            model_id: Default::default(),
+            string: message.string,
+            result: old_query.result,
+            outdated: old_query.outdated,
+        };
+
+        match self.query_context.update(query).await {
+            Ok(_) => Ok(Response::new(())),
+            Err(error) => Err(Status::new(Code::Internal, error.to_string())),
+        }
     }
 
-    async fn delete_access(&self, _request: Request<()>) -> Result<Response<()>, Status> {
-        todo!()
+    /// Deletes a query record in the database.
+    /// # Errors
+    /// Returns an error if the provided query_id is not found in the database.
+    async fn delete_query(
+        &self,
+        request: Request<DeleteQueryRequest>,
+    ) -> Result<Response<()>, Status> {
+        match self.query_context.delete(request.get_ref().id).await {
+            Ok(_) => Ok(Response::new(())),
+            Err(error) => match error {
+                sea_orm::DbErr::RecordNotFound(message) => {
+                    Err(Status::new(Code::NotFound, message))
+                }
+                _ => Err(Status::new(Code::Internal, error.to_string())),
+            },
+        }
+    }
+}
+
+async fn get_auth_find_user_helper(
+    user_context: Arc<dyn UserContextTrait>,
+    user_credentials: UserCredentials,
+) -> Result<UserEntity, Status> {
+    if let Some(user) = user_credentials.user {
+        match user {
+            user_credentials::User::Username(username) => Ok(user_context
+                .get_by_username(username)
+                .await
+                .map_err(|err| Status::new(Code::Internal, err.to_string()))?
+                .ok_or_else(|| Status::new(Code::NotFound, "No user found with given username"))?),
+
+            user_credentials::User::Email(email) => Ok(user_context
+                .get_by_email(email)
+                .await
+                .map_err(|err| Status::new(Code::Internal, err.to_string()))?
+                .ok_or_else(|| {
+                    Status::new(Code::NotFound, "No user found with the given email")
+                })?),
+        }
+    } else {
+        Err(Status::new(Code::InvalidArgument, "No user provided"))
     }
 }
 
@@ -229,75 +393,37 @@ impl EcdarApiAuth for ConcreteEcdarApi {
     ) -> Result<Response<GetAuthTokenResponse>, Status> {
         let message = request.get_ref().clone();
         let uid: String;
-        let user_from_db: User;
+        let user_from_db: UserEntity;
         let is_new_session: bool;
 
         // Get user from credentials
         if let Some(user_credentials) = message.user_credentials {
-            if let Some(user) = user_credentials.user {
-                user_from_db = match user {
-                    // Get user from database by username given in request
-                    user_credentials::User::Username(username) => {
-                        match self.user_context.get_by_username(username).await {
-                            Ok(Some(user)) => user,
-                            Ok(None) => {
-                                return Err(Status::new(
-                                    Code::Internal,
-                                    "No user found with given username",
-                                ));
-                            }
-                            Err(err) => return Err(Status::new(Code::Internal, err.to_string())),
-                        }
-                    }
-                    // Get user from database by email given in request
-                    user_credentials::User::Email(email) => {
-                        match self.user_context.get_by_email(email).await {
-                            Ok(Some(user)) => user,
-                            Ok(None) => {
-                                return Err(Status::new(
-                                    Code::Internal,
-                                    "No user found with given email",
-                                ));
-                            }
-                            Err(err) => return Err(Status::new(Code::Internal, err.to_string())),
-                        }
-                    }
-                };
-                // Check if password in request matches users password
-                if user_credentials.password != user_from_db.password {
-                    return Err(Status::new(Code::Unauthenticated, "Wrong password"));
-                }
+            let input_password = user_credentials.password.clone();
+            user_from_db =
+                get_auth_find_user_helper(Arc::clone(&self.user_context), user_credentials).await?;
 
-                uid = user_from_db.id.to_string();
-
-                // Since the user does not have a refresh_token, a new session has to be made
-                is_new_session = true;
-            } else {
-                return Err(Status::new(Code::Internal, "No user provided"));
+            // Check if password in request matches users password
+            if input_password != user_from_db.password {
+                return Err(Status::new(Code::Unauthenticated, "Wrong password"));
             }
+
+            uid = user_from_db.id.to_string();
+
+            // Since the user does not have a refresh_token, a new session has to be made
+            is_new_session = true;
+
             // Get user from refresh_token
         } else {
-            let refresh_token = match request.token_str() {
-                Some(token) => Token::from_str(TokenType::RefreshToken, token),
-                None => {
-                    return Err(Status::new(Code::Internal, "No refresh token provided"));
-                }
-            };
+            let refresh_token = Token::from_str(TokenType::RefreshToken, request.token_str().ok_or(Status::unauthenticated("No refresh token provided"))?);
             let token_data = refresh_token.validate()?;
             uid = token_data.claims.sub;
 
             // Since the user does have a refresh_token, a session already exists
             is_new_session = false;
         }
-
-        let access_token = match Token::new(TokenType::AccessToken, &uid) {
-            Ok(token) => token.to_string(),
-            Err(e) => return Err(Status::internal(e.to_string())),
-        };
-        let refresh_token = match Token::new(TokenType::RefreshToken, &uid) {
-            Ok(token) => token.to_string(),
-            Err(e) => return Err(Status::internal(e.to_string())),
-        };
+        // Create new access and refresh token with user id
+        let access_token = Token::new(TokenType::AccessToken, &uid)?.to_string();
+        let refresh_token = Token::new(TokenType::RefreshToken, &uid)?.to_string();
 
         // Update or create session in database
         handle_session(
@@ -308,7 +434,7 @@ impl EcdarApiAuth for ConcreteEcdarApi {
             refresh_token.clone(),
             uid,
         )
-        .await?;
+            .await?;
 
         Ok(Response::new(GetAuthTokenResponse {
             access_token,
@@ -327,10 +453,10 @@ impl EcdarApiAuth for ConcreteEcdarApi {
         }
 
         if !is_valid_email(message.clone().email.as_str()) {
-            return Err(Status::invalid_argument("Invalid email"));
+            return Err(Status::new(Code::InvalidArgument, "Invalid email"));
         }
 
-        let user = User {
+        let user = UserEntity {
             id: Default::default(),
             username: message.clone().username,
             password: message.clone().password,
@@ -346,9 +472,9 @@ impl EcdarApiAuth for ConcreteEcdarApi {
                         _ if e.contains("email") => "A user with that email already exists",
                         _ => "User already exists",
                     };
-                    Err(Status::already_exists(error_msg))
+                    Err(Status::new(Code::AlreadyExists, error_msg))
                 }
-                _ => Err(Status::internal("Could not create user")),
+                _ => Err(Status::new(Code::Internal, "Could not create user")),
             },
         }
     }
@@ -387,5 +513,12 @@ impl EcdarBackend for ConcreteEcdarApi {
 }
 
 #[cfg(test)]
+#[path = "../tests/api/access_logic.rs"]
+mod access_logic;
+#[cfg(test)]
 #[path = "../tests/api/ecdar_api.rs"]
 mod tests;
+
+#[cfg(test)]
+#[path = "../tests/api/query_logic.rs"]
+mod query_logic;
