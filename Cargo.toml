@@ -29,3 +29,9 @@ bcrypt = "0.15.0"
 [build-dependencies]
 tonic-build = "0.10.2"
 
+[lints.clippy]
+complexity = "deny"
+correctness = "deny"
+perf = "deny"
+suspicious = "warn"
+enum_variant_names = "allow"
