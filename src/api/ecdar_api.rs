@@ -1,9 +1,9 @@
+use bcrypt::hash;
 use chrono::Local;
 use regex::Regex;
 use sea_orm::SqlErr;
 use std::sync::Arc;
 use tonic::{Code, Request, Response, Status};
-use bcrypt::hash;
 
 use crate::api::auth::{RequestExt, Token, TokenType};
 use crate::database::{
@@ -447,7 +447,7 @@ impl EcdarApiAuth for ConcreteEcdarApi {
             refresh_token.clone(),
             uid,
         )
-            .await?;
+        .await?;
 
         Ok(Response::new(GetAuthTokenResponse {
             access_token,
