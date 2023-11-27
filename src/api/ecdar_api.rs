@@ -414,7 +414,12 @@ impl EcdarApiAuth for ConcreteEcdarApi {
 
             // Get user from refresh_token
         } else {
-            let refresh_token = Token::from_str(TokenType::RefreshToken, request.token_str().ok_or(Status::unauthenticated("No refresh token provided"))?);
+            let refresh_token = Token::from_str(
+                TokenType::RefreshToken,
+                request
+                    .token_str()
+                    .ok_or(Status::unauthenticated("No refresh token provided"))?,
+            );
             let token_data = refresh_token.validate()?;
             uid = token_data.claims.sub;
 
@@ -434,7 +439,7 @@ impl EcdarApiAuth for ConcreteEcdarApi {
             refresh_token.clone(),
             uid,
         )
-            .await?;
+        .await?;
 
         Ok(Response::new(GetAuthTokenResponse {
             access_token,
