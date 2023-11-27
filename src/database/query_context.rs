@@ -3,7 +3,7 @@ use crate::database::entity_context::EntityContextTrait;
 use crate::entities::query;
 use sea_orm::prelude::async_trait::async_trait;
 use sea_orm::ActiveValue::{Set, Unchanged};
-use sea_orm::{ActiveModelTrait, DbErr, EntityTrait};
+use sea_orm::{ActiveModelTrait, DbErr, EntityTrait, NotSet};
 use std::sync::Arc;
 
 pub struct QueryContext {
@@ -40,8 +40,8 @@ impl EntityContextTrait<query::Model> for QueryContext {
             id: Default::default(),
             string: Set(entity.string),
             model_id: Set(entity.model_id),
-            result: Set(entity.result),
-            outdated: Set(entity.outdated),
+            result: NotSet,
+            outdated: NotSet,
         };
         let query = query.insert(&self.db_context.get_connection()).await?;
         Ok(query)

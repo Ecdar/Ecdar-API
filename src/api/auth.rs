@@ -89,8 +89,8 @@ pub fn get_token_from_request<T>(req: &Request<T>) -> Result<String, Status> {
         None => return Err(Status::unauthenticated("Token not found")),
     };
 
-    if token.is_ok() {
-        Ok(token.unwrap().trim_start_matches("Bearer ").to_string())
+    if let Ok(tok) = token {
+        Ok(tok.trim_start_matches("Bearer ").to_string())
     } else {
         Err(Status::unauthenticated(
             "Could not read token from metadata",
@@ -101,13 +101,11 @@ pub fn get_token_from_request<T>(req: &Request<T>) -> Result<String, Status> {
 /// This method is used to validate a token (access or refresh).
 /// It returns the token data if the token is valid.
 pub fn validate_token(token: String, is_refresh_token: bool) -> Result<TokenData<Claims>, Status> {
-    let secret: String;
-
-    if is_refresh_token {
-        secret = env::var("REFRESH_TOKEN_HS512_SECRET").expect("Expected HS512_SECRET to be set.");
+    let secret = if is_refresh_token {
+        env::var("REFRESH_TOKEN_HS512_SECRET").expect("Expected HS512_SECRET to be set.")
     } else {
-        secret = env::var("ACCESS_TOKEN_HS512_SECRET").expect("Expected HS512_SECRET to be set.");
-    }
+        env::var("ACCESS_TOKEN_HS512_SECRET").expect("Expected HS512_SECRET to be set.")
+    };
 
     let mut validation = Validation::new(Algorithm::HS512);
 

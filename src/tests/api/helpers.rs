@@ -20,7 +20,7 @@ use sea_orm::DbErr;
 use std::sync::Arc;
 use tonic::{Request, Response, Status};
 
-pub async fn get_mock_concrete_ecdar_api(mock_services: MockServices) -> ConcreteEcdarApi {
+pub fn get_mock_concrete_ecdar_api(mock_services: MockServices) -> ConcreteEcdarApi {
     ConcreteEcdarApi::new(
         Arc::new(mock_services.access_context_mock),
         Arc::new(mock_services.in_use_context_mock),
@@ -30,7 +30,6 @@ pub async fn get_mock_concrete_ecdar_api(mock_services: MockServices) -> Concret
         Arc::new(mock_services.user_context_mock),
         Arc::new(mock_services.reveaal_context_mock),
     )
-    .await
 }
 
 pub fn get_mock_services() -> MockServices {

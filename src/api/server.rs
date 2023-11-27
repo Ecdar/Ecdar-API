@@ -44,8 +44,7 @@ pub async fn start_grpc_server(
         session_context,
         user_context,
         reveaal_context,
-    )
-    .await;
+    );
 
     // adding services to our server.
     Server::builder()

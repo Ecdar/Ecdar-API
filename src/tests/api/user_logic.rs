@@ -18,7 +18,7 @@ async fn delete_user_nonexistent_user_returns_err() {
         .with(predicate::eq(1))
         .returning(|_| Err(DbErr::RecordNotFound("".into())));
 
-    let api = get_mock_concrete_ecdar_api(mock_services).await;
+    let api = get_mock_concrete_ecdar_api(mock_services);
 
     let mut delete_request = Request::new(());
 
@@ -50,7 +50,7 @@ async fn delete_user_existing_user_returns_ok() {
         .with(predicate::eq(1))
         .returning(move |_| Ok(user.clone()));
 
-    let api = get_mock_concrete_ecdar_api(mock_services).await;
+    let api = get_mock_concrete_ecdar_api(mock_services);
 
     let mut delete_request = Request::new(());
 
@@ -81,7 +81,7 @@ async fn create_user_nonexistent_user_returns_ok() {
         .with(predicate::eq(user.clone()))
         .returning(move |_| Ok(user.clone()));
 
-    let api = get_mock_concrete_ecdar_api(mock_services).await;
+    let api = get_mock_concrete_ecdar_api(mock_services);
 
     let create_user_request = Request::new(CreateUserRequest {
         email: "anders21@student.aau.dk".to_string(),
@@ -110,7 +110,7 @@ async fn create_user_duplicate_email_returns_error() {
         .with(predicate::eq(user.clone()))
         .returning(move |_| Err(DbErr::RecordNotInserted)); //todo!("Needs to be a SqlError with UniqueConstraintViolation with 'email' in message)
 
-    let api = get_mock_concrete_ecdar_api(mock_services).await;
+    let api = get_mock_concrete_ecdar_api(mock_services);
 
     let create_user_request = Request::new(CreateUserRequest {
         email: "anders21@student.aau.dk".to_string(),
@@ -126,7 +126,7 @@ async fn create_user_duplicate_email_returns_error() {
 async fn create_user_invalid_email_returns_error() {
     let mock_services = get_mock_services();
 
-    let api = get_mock_concrete_ecdar_api(mock_services).await;
+    let api = get_mock_concrete_ecdar_api(mock_services);
 
     let create_user_request = Request::new(CreateUserRequest {
         email: "invalid-email".to_string(),
@@ -155,7 +155,7 @@ async fn create_user_duplicate_username_returns_error() {
         .with(predicate::eq(user.clone()))
         .returning(move |_| Err(DbErr::RecordNotInserted)); //todo!("Needs to be a SqlError with UniqueConstraintViolation with 'username' in message)
 
-    let api = get_mock_concrete_ecdar_api(mock_services).await;
+    let api = get_mock_concrete_ecdar_api(mock_services);
 
     let create_user_request = Request::new(CreateUserRequest {
         email: "anders21@student.aau.dk".to_string(),
@@ -171,7 +171,7 @@ async fn create_user_duplicate_username_returns_error() {
 async fn create_user_invalid_username_returns_error() {
     let mock_services = get_mock_services();
 
-    let api = get_mock_concrete_ecdar_api(mock_services).await;
+    let api = get_mock_concrete_ecdar_api(mock_services);
 
     let create_user_request = Request::new(CreateUserRequest {
         email: "valid@email.com".to_string(),
@@ -200,7 +200,7 @@ async fn test_create_user_valid_request_returns_ok() {
         .with(predicate::eq(user.clone()))
         .returning(move |_| Ok(user.clone()));
 
-    let api = get_mock_concrete_ecdar_api(mock_services).await;
+    let api = get_mock_concrete_ecdar_api(mock_services);
 
     let create_user_request = Request::new(CreateUserRequest {
         email: "newuser@example.com".to_string(),
@@ -243,7 +243,7 @@ async fn update_user_returns_ok() {
         .with(predicate::eq(user.clone()))
         .returning(move |_| Ok(user.clone()));
 
-    let api = get_mock_concrete_ecdar_api(mock_services).await;
+    let api = get_mock_concrete_ecdar_api(mock_services);
 
     let mut update_user_request = Request::new(UpdateUserRequest {
         email: Some("newuser@example.com".to_string()),
@@ -277,7 +277,7 @@ async fn update_user_non_existant_user_returns_err() {
         .with(predicate::eq(user.clone()))
         .returning(move |_| Err(DbErr::RecordNotFound("".to_string())));
 
-    let api = get_mock_concrete_ecdar_api(mock_services).await;
+    let api = get_mock_concrete_ecdar_api(mock_services);
 
     let mut update_user_request = Request::new(UpdateUserRequest {
         email: Some("new_test@test".to_string()),
