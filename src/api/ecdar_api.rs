@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use crate::api::server::server::get_auth_token_request::user_credentials;
+use crate::api::server::server::Query;
 use crate::entities::access;
 use crate::entities::session;
 use chrono::Local;
@@ -172,6 +173,17 @@ impl EcdarApi for ConcreteEcdarApi {
             .get_all_by_model_id(model_id)
             .await
             .map_err(|err| Status::new(Code::Internal, err.to_string()))?;
+
+        let queries = queries
+            .into_iter()
+            .map(|query| Query {
+                id: query.id,
+                model_id: query.model_id,
+                query: query.string,
+                result: "Hej".to_owned(),
+                outdated: query.outdated,
+            })
+            .collect::<Vec<Query>>();
 
         todo!()
     }
