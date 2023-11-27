@@ -258,7 +258,7 @@ async fn update_check_query_outdated_test() {
         .unwrap()
         .unwrap();
 
-    assert_eq!(fetched_query.outdated, true);
+    assert!(fetched_query.outdated);
 }
 
 #[tokio::test]

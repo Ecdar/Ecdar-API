@@ -20,7 +20,7 @@ async fn delete_user_nonexistent_user_returns_err() {
 
     let api = get_mock_concrete_ecdar_api(mock_services).await;
 
-    let mut delete_request = Request::new({});
+    let mut delete_request = Request::new(());
 
     // Insert uid into request metadata
     delete_request
@@ -52,7 +52,7 @@ async fn delete_user_existing_user_returns_ok() {
 
     let api = get_mock_concrete_ecdar_api(mock_services).await;
 
-    let mut delete_request = Request::new({});
+    let mut delete_request = Request::new(());
 
     // Insert uid into request metadata
     delete_request
