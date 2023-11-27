@@ -1,35 +1,28 @@
-use std::sync::Arc;
-
-use crate::api::server::server::get_auth_token_request::user_credentials;
-use crate::entities::access;
-use crate::entities::session;
 use bcrypt::hash;
 use chrono::Local;
 use regex::Regex;
 use sea_orm::SqlErr;
+use std::sync::Arc;
 use tonic::{Code, Request, Response, Status};
 
-use crate::api::server::server::{ecdar_api_auth_server::EcdarApiAuth, ecdar_api_server::EcdarApi};
-use crate::database::access_context::AccessContextTrait;
-use crate::database::in_use_context::InUseContextTrait;
-use crate::database::model_context::ModelContextTrait;
-use crate::database::query_context::QueryContextTrait;
-use crate::database::session_context::SessionContextTrait;
-use crate::database::user_context::UserContextTrait;
-use crate::entities::query;
-use crate::entities::user::Model as UserEntity;
-
-use super::server::server::get_auth_token_request::UserCredentials;
-use super::{
-    auth,
-    server::server::{
-        ecdar_backend_server::EcdarBackend, CreateAccessRequest, CreateQueryRequest,
-        CreateUserRequest, DeleteAccessRequest, DeleteQueryRequest, GetAuthTokenRequest,
-        GetAuthTokenResponse, QueryRequest, QueryResponse, SimulationStartRequest,
-        SimulationStepRequest, SimulationStepResponse, UpdateAccessRequest, UpdateQueryRequest,
-        UpdateUserRequest, UserTokenResponse,
-    },
+use crate::api::auth::{RequestExt, Token, TokenType};
+use crate::database::{
+    access_context::AccessContextTrait, in_use_context::InUseContextTrait,
+    model_context::ModelContextTrait, query_context::QueryContextTrait,
+    session_context::SessionContextTrait, user_context::UserContextTrait,
 };
+
+use super::server::server::{
+    ecdar_api_auth_server::EcdarApiAuth,
+    ecdar_api_server::EcdarApi,
+    ecdar_backend_server::EcdarBackend,
+    get_auth_token_request::{user_credentials, UserCredentials},
+    CreateAccessRequest, CreateQueryRequest, CreateUserRequest, DeleteAccessRequest,
+    DeleteQueryRequest, GetAuthTokenRequest, GetAuthTokenResponse, QueryRequest, QueryResponse,
+    SimulationStartRequest, SimulationStepRequest, SimulationStepResponse, UpdateAccessRequest,
+    UpdateQueryRequest, UpdateUserRequest, UserTokenResponse,
+};
+use crate::entities::{access, model, query, session, user};
 
 #[derive(Clone)]
 pub struct ConcreteEcdarApi {
@@ -71,7 +64,7 @@ async fn handle_session(
             .unwrap();
     } else {
         let mut session = match session_context
-            .get_by_refresh_token(auth::get_token_from_request(request)?)
+            .get_by_refresh_token(request.token_string().unwrap())
             .await
         {
             Ok(Some(session)) => session,
@@ -79,7 +72,7 @@ async fn handle_session(
                 return Err(Status::new(
                     Code::Unauthenticated,
                     "No session found with given refresh token",
-                ))
+                ));
             }
             Err(err) => return Err(Status::new(Code::Internal, err.to_string())),
         };
@@ -93,20 +86,6 @@ async fn handle_session(
         };
     }
     Ok(())
-}
-
-fn get_uid_from_request<T>(request: &Request<T>) -> Result<i32, Status> {
-    let uid = match request.metadata().get("uid").unwrap().to_str() {
-        Ok(uid) => uid,
-        Err(_) => {
-            return Err(Status::new(
-                Code::Internal,
-                "Could not get uid from request metadata",
-            ));
-        }
-    };
-
-    Ok(uid.parse().unwrap())
 }
 
 fn is_valid_email(email: &str) -> bool {
@@ -242,8 +221,9 @@ impl EcdarApi for ConcreteEcdarApi {
     ) -> Result<Response<()>, Status> {
         let message = request.get_ref().clone();
 
-        // Get uid from request metadata
-        let uid = get_uid_from_request(&request)?;
+        let uid = request
+            .uid()
+            .ok_or(Status::internal("Could not get uid from request metadata"))?;
 
         // Get user from database
         let user = self
@@ -254,7 +234,7 @@ impl EcdarApi for ConcreteEcdarApi {
             .ok_or_else(|| Status::new(Code::Internal, "No user found with given uid"))?;
 
         // Record to be inserted in database
-        let new_user = UserEntity {
+        let new_user = user::Model {
             id: Default::default(),
             username: match message.clone().username {
                 Some(username) => {
@@ -294,8 +274,9 @@ impl EcdarApi for ConcreteEcdarApi {
     /// Returns an error if the database context fails to delete the user or
     /// if the uid could not be parsed from the request metadata.
     async fn delete_user(&self, request: Request<()>) -> Result<Response<()>, Status> {
-        // Get uid from request metadata
-        let uid = get_uid_from_request(&request)?;
+        let uid = request
+            .uid()
+            .ok_or(Status::internal("Could not get uid from request metadata"))?;
 
         // Delete user from database
         match self.user_context.delete(uid).await {
@@ -380,10 +361,11 @@ impl EcdarApi for ConcreteEcdarApi {
         }
     }
 }
+
 async fn get_auth_find_user_helper(
     user_context: Arc<dyn UserContextTrait>,
     user_credentials: UserCredentials,
-) -> Result<UserEntity, Status> {
+) -> Result<user::Model, Status> {
     if let Some(user) = user_credentials.user {
         match user {
             user_credentials::User::Username(username) => Ok(user_context
@@ -419,8 +401,9 @@ impl EcdarApiAuth for ConcreteEcdarApi {
     ) -> Result<Response<GetAuthTokenResponse>, Status> {
         let message = request.get_ref().clone();
         let uid: String;
-        let user_from_db: UserEntity;
+        let user_from_db: user::Model;
         let is_new_session: bool;
+
         // Get user from credentials
         if let Some(user_credentials) = message.user_credentials {
             let input_password = user_credentials.password.clone();
@@ -439,19 +422,21 @@ impl EcdarApiAuth for ConcreteEcdarApi {
 
             // Get user from refresh_token
         } else {
-            let refresh_token = auth::get_token_from_request(&request)?;
-            let token_data = auth::validate_token(refresh_token, true)?;
+            let refresh_token = Token::from_str(
+                TokenType::RefreshToken,
+                request
+                    .token_str()
+                    .ok_or(Status::unauthenticated("No refresh token provided"))?,
+            );
+            let token_data = refresh_token.validate()?;
             uid = token_data.claims.sub;
 
             // Since the user does have a refresh_token, a session already exists
             is_new_session = false;
         }
         // Create new access and refresh token with user id
-        let access_token = auth::create_token(auth::TokenType::AccessToken, &uid)
-            .map_err(|err| Status::new(Code::Internal, err.to_string()))?;
-
-        let refresh_token = auth::create_token(auth::TokenType::RefreshToken, &uid)
-            .map_err(|err| Status::new(Code::Internal, err.to_string()))?;
+        let access_token = Token::new(TokenType::AccessToken, &uid)?.to_string();
+        let refresh_token = Token::new(TokenType::RefreshToken, &uid)?.to_string();
 
         // Update or create session in database
         handle_session(
@@ -484,7 +469,7 @@ impl EcdarApiAuth for ConcreteEcdarApi {
             return Err(Status::new(Code::InvalidArgument, "Invalid email"));
         }
 
-        let user = UserEntity {
+        let user = user::Model {
             id: Default::default(),
             username: message.clone().username,
             password: message.clone().password,
