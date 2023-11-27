@@ -18,6 +18,7 @@ use crate::database::user_context::UserContextTrait;
 use crate::entities::query;
 use crate::entities::user::Model as UserEntity;
 
+use super::server::server::DeleteModelRequest;
 use super::server::server::get_auth_token_request::UserCredentials;
 use super::{
     auth,
@@ -154,8 +155,33 @@ impl EcdarApi for ConcreteEcdarApi {
         todo!()
     }
 
-    async fn delete_model(&self, _request: Request<()>) -> Result<Response<()>, Status> {
-        todo!()
+    async fn delete_model(
+        &self, 
+        request: Request<DeleteModelRequest>
+    ) -> Result<Response<()>, Status> {
+        let uid = get_uid_from_request(&request)?;
+        let model_id = request.get_ref().id;
+
+        let model = match self.model_context.get_by_id(model_id).await {
+            Ok(Some(model)) => model,
+            Ok(None) => return Err(Status::new(Code::NotFound, "No model found with given id")),
+            Err(err) => return Err(Status::new(Code::Internal, err.to_string())),
+        };
+
+        // Check if user is owner and thereby has permission to delete model
+        if model.owner_id != uid {
+            return Err(Status::new(Code::PermissionDenied, "You do not have permission to delete this model"));   
+        }
+
+        match self.model_context.delete(model_id).await {
+            Ok(_) => Ok(Response::new(())),
+            Err(error) => match error {
+                sea_orm::DbErr::RecordNotFound(message) => {
+                    Err(Status::new(Code::NotFound, message))
+                }
+                _ => Err(Status::new(Code::Internal, error.to_string())),
+            },
+        }
     }
 
     async fn list_models_info(&self, _request: Request<()>) -> Result<Response<()>, Status> {
