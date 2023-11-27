@@ -3,6 +3,7 @@ use regex::Regex;
 use sea_orm::SqlErr;
 use std::sync::Arc;
 use tonic::{Code, Request, Response, Status};
+use bcrypt::hash;
 
 use crate::api::auth::{RequestExt, Token, TokenType};
 use crate::database::{
@@ -33,6 +34,8 @@ pub struct ConcreteEcdarApi {
     user_context: Arc<dyn UserContextTrait>,
     reveaal_context: Arc<dyn EcdarBackend>,
 }
+
+const HASH_COST: u32 = 12;
 
 /// Updates or creates a session in the database for a given user.
 ///
@@ -222,32 +225,45 @@ impl EcdarApi for ConcreteEcdarApi {
             .uid()
             .ok_or(Status::internal("Could not get uid from request metadata"))?;
 
-        // Get new values from request message. Empty string means the value will remain unchanged in the database.
-        let new_username = match message.username {
-            Some(username) => username,
-            None => "".to_string(),
-        };
-
-        let new_password = match message.password {
-            Some(password) => password,
-            None => "".to_string(),
-        };
-
-        let new_email = match message.email {
-            Some(email) => email,
-            None => "".to_string(),
-        };
+        // Get user from database
+        let user = self
+            .user_context
+            .get_by_id(uid)
+            .await
+            .map_err(|err| Status::new(Code::Internal, err.to_string()))?
+            .ok_or_else(|| Status::new(Code::Internal, "No user found with given uid"))?;
 
         // Record to be inserted in database
-        let user = user::Model {
-            id: uid,
-            username: new_username.clone(),
-            password: new_password.clone(),
-            email: new_email.clone(),
+        let new_user = user::Model {
+            id: Default::default(),
+            username: match message.clone().username {
+                Some(username) => {
+                    if is_valid_username(username.as_str()) {
+                        username
+                    } else {
+                        return Err(Status::new(Code::InvalidArgument, "Invalid username"));
+                    }
+                }
+                None => user.username,
+            },
+            email: match message.clone().email {
+                Some(email) => {
+                    if is_valid_email(email.as_str()) {
+                        email
+                    } else {
+                        return Err(Status::new(Code::InvalidArgument, "Invalid email"));
+                    }
+                }
+                None => user.email,
+            },
+            password: match message.clone().password {
+                Some(password) => hash(password, HASH_COST).unwrap(),
+                None => user.password,
+            },
         };
 
         // Update user in database
-        match self.user_context.update(user).await {
+        match self.user_context.update(new_user).await {
             Ok(_) => Ok(Response::new(())),
             Err(error) => Err(Status::new(Code::Internal, error.to_string())),
         }
@@ -431,7 +447,7 @@ impl EcdarApiAuth for ConcreteEcdarApi {
             refresh_token.clone(),
             uid,
         )
-        .await?;
+            .await?;
 
         Ok(Response::new(GetAuthTokenResponse {
             access_token,
