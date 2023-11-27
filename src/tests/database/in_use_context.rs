@@ -114,7 +114,7 @@ mod database_tests {
 
     #[tokio::test]
     async fn get_all_test() {
-        let (in_use_context, _in_use, session, model, user) = seed_db().await;
+        let (in_use_context, _in_use, session, model, _user) = seed_db().await;
 
         let in_uses = create_in_uses(1, model.id, session.id);
 
