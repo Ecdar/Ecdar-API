@@ -24,9 +24,9 @@ use super::{
     server::server::{
         ecdar_backend_server::EcdarBackend, CreateAccessRequest, CreateQueryRequest,
         CreateUserRequest, DeleteAccessRequest, DeleteQueryRequest, GetAuthTokenRequest,
-        GetAuthTokenResponse, QueryRequest, QueryResponse, SimulationStartRequest,
-        SimulationStepRequest, SimulationStepResponse, UpdateAccessRequest, UpdateQueryRequest,
-        UpdateUserRequest, UserTokenResponse,
+        GetAuthTokenResponse, GetModelRequest, GetModelResponse, QueryRequest, QueryResponse,
+        SimulationStartRequest, SimulationStepRequest, SimulationStepResponse, UpdateAccessRequest,
+        UpdateQueryRequest, UpdateUserRequest, UserTokenResponse,
     },
 };
 
@@ -142,7 +142,37 @@ impl ConcreteEcdarApi {
 
 #[tonic::async_trait]
 impl EcdarApi for ConcreteEcdarApi {
-    async fn get_model(&self, _request: Request<()>) -> Result<Response<()>, Status> {
+    async fn get_model(
+        &self,
+        request: Request<GetModelRequest>,
+    ) -> Result<Response<GetModelResponse>, Status> {
+        let message = request.get_ref().clone();
+
+        let model_id = message.id;
+
+        let uid = get_uid_from_request(&request)?;
+
+        self.access_context
+            .get_access_by_uid_and_model_id(uid, model_id)
+            .await
+            .map_err(|err| Status::new(Code::Internal, err.to_string()))?
+            .ok_or_else(|| {
+                Status::new(Code::PermissionDenied, "User does not have access to model")
+            })?;
+
+        let model = self
+            .model_context
+            .get_by_id(model_id)
+            .await
+            .map_err(|err| Status::new(Code::Internal, err.to_string()))?
+            .ok_or_else(|| Status::new(Code::Internal, "Model not found"))?;
+
+        let queries = self
+            .query_context
+            .get_all_by_model_id(model_id)
+            .await
+            .map_err(|err| Status::new(Code::Internal, err.to_string()))?;
+
         todo!()
     }
 
