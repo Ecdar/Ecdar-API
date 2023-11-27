@@ -16,10 +16,11 @@ use super::server::server::{
     ecdar_api_server::EcdarApi,
     ecdar_backend_server::EcdarBackend,
     get_auth_token_request::{user_credentials, UserCredentials},
-    CreateAccessRequest, CreateQueryRequest, CreateUserRequest, DeleteAccessRequest,
-    DeleteQueryRequest, GetAuthTokenRequest, GetAuthTokenResponse, QueryRequest, QueryResponse,
-    SimulationStartRequest, SimulationStepRequest, SimulationStepResponse, UpdateAccessRequest,
-    UpdateQueryRequest, UpdateUserRequest, UserTokenResponse,
+    AccessInfo, CreateAccessRequest, CreateQueryRequest, CreateUserRequest, DeleteAccessRequest,
+    DeleteQueryRequest, GetAuthTokenRequest, GetAuthTokenResponse, ListAccessInfoResponse,
+    QueryRequest, QueryResponse, SimulationStartRequest, SimulationStepRequest,
+    SimulationStepResponse, UpdateAccessRequest, UpdateQueryRequest, UpdateUserRequest,
+    UserTokenResponse,
 };
 use crate::entities::{
     access::Model as AccessEntity, query::Model as QueryEntity, session::Model as SessionEntity,
@@ -140,8 +141,31 @@ impl EcdarApi for ConcreteEcdarApi {
         todo!()
     }
 
-    async fn list_models_info(&self, _request: Request<()>) -> Result<Response<()>, Status> {
-        todo!()
+    async fn list_access_info(
+        &self,
+        request: Request<()>,
+    ) -> Result<Response<ListAccessInfoResponse>, Status> {
+        let uid = request
+            .uid()
+            .ok_or(Status::internal("Could not get uid from request metadata"))?;
+
+        let mut access_info_list: Vec<AccessInfo> = Vec::new(); // Initialize the Vec
+
+        match self.access_context.get_access_by_uid(uid).await {
+            Ok(accesses) => {
+                for access in accesses {
+                    let access_info = AccessInfo {
+                        id: access.id,
+                        role: access.role,
+                        model_id: access.model_id,
+                        user_id: access.user_id,
+                    };
+                    access_info_list.push(access_info);
+                }
+                Ok(Response::new(ListAccessInfoResponse { access_info_list }))
+            }
+            Err(error) => Err(Status::new(Code::Internal, error.to_string())),
+        }
     }
 
     /// Creates an access in the database.
