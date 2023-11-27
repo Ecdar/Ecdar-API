@@ -1,8 +1,9 @@
+use bcrypt::hash;
 use chrono::Local;
 use regex::Regex;
 use sea_orm::SqlErr;
 use std::sync::Arc;
-use tonic::{Code, IntoRequest, Request, Response, Status};
+use tonic::{Code, Request, Response, Status};
 use serde_json;
 
 use crate::api::auth::{RequestExt, Token, TokenType};
@@ -12,11 +13,17 @@ use crate::database::{
     session_context::SessionContextTrait, user_context::UserContextTrait,
 };
 
-use super::server::server::{ecdar_api_auth_server::EcdarApiAuth, ecdar_api_server::EcdarApi, ecdar_backend_server::EcdarBackend, get_auth_token_request::{user_credentials, UserCredentials}, CreateAccessRequest, CreateQueryRequest, CreateUserRequest, DeleteAccessRequest, DeleteQueryRequest, GetAuthTokenRequest, GetAuthTokenResponse, QueryRequest, QueryResponse, SimulationStartRequest, SimulationStepRequest, SimulationStepResponse, UpdateAccessRequest, UpdateQueryRequest, UpdateUserRequest, UserTokenResponse, CreateModelRequest, CreateModelResponse, ComponentsInfo, Component, component};
-use crate::entities::{
-    access::Model as AccessEntity, query::Model as QueryEntity, session::Model as SessionEntity,
-    user::Model as UserEntity, model::Model as ModelEntity,
+use super::server::server::{
+    ecdar_api_auth_server::EcdarApiAuth,
+    ecdar_api_server::EcdarApi,
+    ecdar_backend_server::EcdarBackend,
+    get_auth_token_request::{user_credentials, UserCredentials},
+    CreateAccessRequest, CreateQueryRequest, CreateUserRequest, DeleteAccessRequest,
+    DeleteQueryRequest, GetAuthTokenRequest, GetAuthTokenResponse, QueryRequest, QueryResponse,
+    SimulationStartRequest, SimulationStepRequest, SimulationStepResponse, UpdateAccessRequest,
+    UpdateQueryRequest, UpdateUserRequest, UserTokenResponse, CreateModelRequest, CreateModelResponse, DeleteModelRequest,
 };
+use crate::entities::{access, model, query, session, user};
 
 #[derive(Clone)]
 pub struct ConcreteEcdarApi {
@@ -28,6 +35,8 @@ pub struct ConcreteEcdarApi {
     user_context: Arc<dyn UserContextTrait>,
     reveaal_context: Arc<dyn EcdarBackend>,
 }
+
+const HASH_COST: u32 = 12;
 
 /// Updates or creates a session in the database for a given user.
 ///
@@ -45,7 +54,7 @@ async fn handle_session(
 ) -> Result<(), Status> {
     if is_new_session {
         session_context
-            .create(SessionEntity {
+            .create(session::Model {
                 id: Default::default(),
                 access_token: access_token.clone(),
                 refresh_token: refresh_token.clone(),
@@ -132,7 +141,7 @@ impl EcdarApi for ConcreteEcdarApi {
         };
 
 
-        let model = ModelEntity {
+        let model = model::Model {
             id: Default::default(),
             name: message.clone().name,
             components_info: components_info.into(),
@@ -151,7 +160,7 @@ impl EcdarApi for ConcreteEcdarApi {
         todo!()
     }
 
-    async fn delete_model(&self, _request: Request<()>) -> Result<Response<()>, Status> {
+    async fn delete_model(&self, _request: Request<DeleteModelRequest>) -> Result<Response<()>, Status> {
         todo!()
     }
 
@@ -168,7 +177,7 @@ impl EcdarApi for ConcreteEcdarApi {
     ) -> Result<Response<()>, Status> {
         let access = request.get_ref();
 
-        let access = AccessEntity {
+        let access = access::Model {
             id: Default::default(),
             role: access.role.to_string(),
             model_id: access.model_id,
@@ -194,7 +203,7 @@ impl EcdarApi for ConcreteEcdarApi {
     ) -> Result<Response<()>, Status> {
         let message = request.get_ref().clone();
 
-        let access = AccessEntity {
+        let access = access::Model {
             id: message.id,
             role: message.role,
             model_id: Default::default(),
@@ -240,32 +249,45 @@ impl EcdarApi for ConcreteEcdarApi {
             .uid()
             .ok_or(Status::internal("Could not get uid from request metadata"))?;
 
-        // Get new values from request message. Empty string means the value will remain unchanged in the database.
-        let new_username = match message.username {
-            Some(username) => username,
-            None => "".to_string(),
-        };
-
-        let new_password = match message.password {
-            Some(password) => password,
-            None => "".to_string(),
-        };
-
-        let new_email = match message.email {
-            Some(email) => email,
-            None => "".to_string(),
-        };
+        // Get user from database
+        let user = self
+            .user_context
+            .get_by_id(uid)
+            .await
+            .map_err(|err| Status::new(Code::Internal, err.to_string()))?
+            .ok_or_else(|| Status::new(Code::Internal, "No user found with given uid"))?;
 
         // Record to be inserted in database
-        let user = UserEntity {
-            id: uid,
-            username: new_username.clone(),
-            password: new_password.clone(),
-            email: new_email.clone(),
+        let new_user = user::Model {
+            id: Default::default(),
+            username: match message.clone().username {
+                Some(username) => {
+                    if is_valid_username(username.as_str()) {
+                        username
+                    } else {
+                        return Err(Status::new(Code::InvalidArgument, "Invalid username"));
+                    }
+                }
+                None => user.username,
+            },
+            email: match message.clone().email {
+                Some(email) => {
+                    if is_valid_email(email.as_str()) {
+                        email
+                    } else {
+                        return Err(Status::new(Code::InvalidArgument, "Invalid email"));
+                    }
+                }
+                None => user.email,
+            },
+            password: match message.clone().password {
+                Some(password) => hash(password, HASH_COST).unwrap(),
+                None => user.password,
+            },
         };
 
         // Update user in database
-        match self.user_context.update(user).await {
+        match self.user_context.update(new_user).await {
             Ok(_) => Ok(Response::new(())),
             Err(error) => Err(Status::new(Code::Internal, error.to_string())),
         }
@@ -295,7 +317,7 @@ impl EcdarApi for ConcreteEcdarApi {
         request: Request<CreateQueryRequest>,
     ) -> Result<Response<()>, Status> {
         let query_request = request.get_ref();
-        let query = QueryEntity {
+        let query = query::Model {
             id: Default::default(),
             string: query_request.string.to_string(),
             result: Default::default(),
@@ -331,7 +353,7 @@ impl EcdarApi for ConcreteEcdarApi {
             None => return Err(Status::new(Code::NotFound, "Query not found".to_string())),
         };
 
-        let query = QueryEntity {
+        let query = query::Model {
             id: message.id,
             model_id: Default::default(),
             string: message.string,
@@ -367,7 +389,7 @@ impl EcdarApi for ConcreteEcdarApi {
 async fn get_auth_find_user_helper(
     user_context: Arc<dyn UserContextTrait>,
     user_credentials: UserCredentials,
-) -> Result<UserEntity, Status> {
+) -> Result<user::Model, Status> {
     if let Some(user) = user_credentials.user {
         match user {
             user_credentials::User::Username(username) => Ok(user_context
@@ -403,7 +425,7 @@ impl EcdarApiAuth for ConcreteEcdarApi {
     ) -> Result<Response<GetAuthTokenResponse>, Status> {
         let message = request.get_ref().clone();
         let uid: String;
-        let user_from_db: UserEntity;
+        let user_from_db: user::Model;
         let is_new_session: bool;
 
         // Get user from credentials
@@ -471,7 +493,7 @@ impl EcdarApiAuth for ConcreteEcdarApi {
             return Err(Status::new(Code::InvalidArgument, "Invalid email"));
         }
 
-        let user = UserEntity {
+        let user = user::Model {
             id: Default::default(),
             username: message.clone().username,
             password: message.clone().password,
