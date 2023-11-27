@@ -22,8 +22,8 @@ use super::server::server::{
     UpdateQueryRequest, UpdateUserRequest, UserTokenResponse,
 };
 use crate::entities::{
-    access::Model as AccessEntity, in_use::Model as InUseEntity, model::Model as ModelEntity,
-    query::Model as QueryEntity, session::Model as SessionEntity, user::Model as UserEntity,
+    access::Model as AccessEntity, query::Model as QueryEntity, session::Model as SessionEntity,
+    user::Model as UserEntity,
 };
 
 #[derive(Clone)]
