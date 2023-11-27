@@ -246,11 +246,12 @@ impl EcdarApi for ConcreteEcdarApi {
         let uid = get_uid_from_request(&request)?;
 
         // Get user from database
-        let user = match self.user_context.get_by_id(uid).await {
-            Ok(Some(user)) => user,
-            Ok(None) => return Err(Status::new(Code::Internal, "No user found with given uid")),
-            Err(error) => return Err(Status::new(Code::Internal, error.to_string())),
-        };
+        let user = self
+            .user_context
+            .get_by_id(uid)
+            .await
+            .map_err(|err| Status::new(Code::Internal, err.to_string()))?
+            .ok_or_else(|| Status::new(Code::Internal, "No user found with given uid"))?;
 
         // Record to be inserted in database
         let new_user = UserEntity {
