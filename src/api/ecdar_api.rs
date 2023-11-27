@@ -2,9 +2,9 @@ use bcrypt::hash;
 use chrono::Local;
 use regex::Regex;
 use sea_orm::SqlErr;
+use serde_json;
 use std::sync::Arc;
 use tonic::{Code, Request, Response, Status};
-use serde_json;
 
 use crate::api::auth::{RequestExt, Token, TokenType};
 use crate::database::{
@@ -18,10 +18,11 @@ use super::server::server::{
     ecdar_api_server::EcdarApi,
     ecdar_backend_server::EcdarBackend,
     get_auth_token_request::{user_credentials, UserCredentials},
-    CreateAccessRequest, CreateQueryRequest, CreateUserRequest, DeleteAccessRequest,
-    DeleteQueryRequest, GetAuthTokenRequest, GetAuthTokenResponse, QueryRequest, QueryResponse,
-    SimulationStartRequest, SimulationStepRequest, SimulationStepResponse, UpdateAccessRequest,
-    UpdateQueryRequest, UpdateUserRequest, UserTokenResponse, CreateModelRequest, CreateModelResponse, DeleteModelRequest,
+    CreateAccessRequest, CreateModelRequest, CreateModelResponse, CreateQueryRequest,
+    CreateUserRequest, DeleteAccessRequest, DeleteModelRequest, DeleteQueryRequest,
+    GetAuthTokenRequest, GetAuthTokenResponse, QueryRequest, QueryResponse, SimulationStartRequest,
+    SimulationStepRequest, SimulationStepResponse, UpdateAccessRequest, UpdateQueryRequest,
+    UpdateUserRequest, UserTokenResponse,
 };
 use crate::entities::{access, model, query, session, user};
 
@@ -101,7 +102,6 @@ fn is_valid_username(username: &str) -> bool {
         .is_match(username)
 }
 
-
 impl ConcreteEcdarApi {
     pub fn new(
         access_context: Arc<dyn AccessContextTrait>,
@@ -124,34 +124,35 @@ impl ConcreteEcdarApi {
     }
 }
 
-
 #[tonic::async_trait]
 impl EcdarApi for ConcreteEcdarApi {
     async fn get_model(&self, _request: Request<()>) -> Result<Response<()>, Status> {
         todo!()
     }
 
-    async fn create_model(&self, request: Request<CreateModelRequest>) -> Result<Response<CreateModelResponse>, Status> {
+    async fn create_model(
+        &self,
+        request: Request<CreateModelRequest>,
+    ) -> Result<Response<CreateModelResponse>, Status> {
         let message = request.get_ref().clone();
-        let uid = request.uid().ok_or(Status::internal("Could not get uid from request metadata"))?;
+        let uid = request
+            .uid()
+            .ok_or(Status::internal("Could not get uid from request metadata"))?;
 
         let components_info = match message.clone().components_info {
             Some(components_info) => serde_json::to_value(components_info).unwrap(),
             None => return Err(Status::invalid_argument("No components info provided")),
         };
 
-
         let model = model::Model {
             id: Default::default(),
             name: message.clone().name,
-            components_info: components_info.into(),
+            components_info,
             owner_id: uid,
         };
 
         match self.model_context.create(model).await {
-            Ok(model) => Ok(Response::new(CreateModelResponse {
-                id: model.id
-            })),
+            Ok(model) => Ok(Response::new(CreateModelResponse { id: model.id })),
             Err(error) => Err(Status::internal(error.to_string())),
         }
     }
@@ -160,7 +161,10 @@ impl EcdarApi for ConcreteEcdarApi {
         todo!()
     }
 
-    async fn delete_model(&self, _request: Request<DeleteModelRequest>) -> Result<Response<()>, Status> {
+    async fn delete_model(
+        &self,
+        _request: Request<DeleteModelRequest>,
+    ) -> Result<Response<()>, Status> {
         todo!()
     }
 
@@ -471,7 +475,7 @@ impl EcdarApiAuth for ConcreteEcdarApi {
             refresh_token.clone(),
             uid,
         )
-            .await?;
+        .await?;
 
         Ok(Response::new(GetAuthTokenResponse {
             access_token,

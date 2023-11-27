@@ -1,7 +1,13 @@
 fn main() {
     tonic_build::configure()
-        .type_attribute("ComponentsInfo", "#[derive(serde::Serialize, serde::Deserialize)]")
-        .type_attribute("Component", "#[derive(serde::Serialize, serde::Deserialize)]")
+        .type_attribute(
+            "ComponentsInfo",
+            "#[derive(serde::Serialize, serde::Deserialize)]",
+        )
+        .type_attribute(
+            "Component",
+            "#[derive(serde::Serialize, serde::Deserialize)]",
+        )
         .enum_attribute("rep", "#[derive(serde::Serialize, serde::Deserialize)]")
         .compile(&["Ecdar-ProtoBuf/services.proto"], &["Ecdar-ProtoBuf/"])
         .unwrap();
