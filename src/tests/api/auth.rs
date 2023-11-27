@@ -1,87 +1,138 @@
-use crate::api::auth;
-use std::{env, str::FromStr};
-use tonic::{metadata::MetadataValue, Request};
+#[cfg(test)]
+mod auth {
+    use crate::api::auth::{RequestExt, Token, TokenType};
+    use std::{env, str::FromStr};
+    use tonic::{metadata::MetadataValue, Request};
 
-#[tokio::test]
-async fn gtfr_bearer_token_trims_token() {
-    let token = "Bearer 1234567890";
-    let mut request = Request::new(());
-    request
-        .metadata_mut()
-        .insert("authorization", MetadataValue::from_str(token).unwrap());
+    #[tokio::test]
+    async fn request_token_trims_bearer() {
+        let token = "Bearer 1234567890";
+        let mut request = Request::new(());
+        request
+            .metadata_mut()
+            .insert("authorization", MetadataValue::from_str(token).unwrap());
 
-    let result = auth::get_token_from_request(&request).unwrap();
+        let result = request.token_str().unwrap();
 
-    assert_eq!(result, token.trim_start_matches("Bearer "));
-}
+        assert_eq!(result, token.trim_start_matches("Bearer "));
+    }
 
-#[tokio::test]
-async fn gtfr_no_token_returns_err() {
-    let request = Request::new(());
+    #[tokio::test]
+    async fn request_token_no_token_returns_none() {
+        let request = Request::new(());
+        let result = request.token_str();
 
-    let result = auth::get_token_from_request(&request);
+        assert!(result.is_none());
+    }
 
-    assert!(result.is_err());
-}
+    #[tokio::test]
+    async fn token_new_access_returns_token() {
+        env::set_var("ACCESS_TOKEN_HS512_SECRET", "access_secret");
 
-#[tokio::test]
-async fn create_token_access_returns_token() {
-    env::set_var("ACCESS_TOKEN_HS512_SECRET", "access_secret");
+        let uid = "1";
+        let result = Token::new(TokenType::AccessToken, uid);
 
-    let uid = "1";
-    let result = auth::create_token(auth::TokenType::AccessToken, uid);
+        assert!(result.is_ok());
+    }
 
-    assert!(result.is_ok());
-}
+    #[tokio::test]
+    async fn token_new_refresh_returns_token() {
+        env::set_var("REFRESH_TOKEN_HS512_SECRET", "refresh_secret");
 
-#[tokio::test]
-async fn create_token_refresh_returns_token() {
-    env::set_var("REFRESH_TOKEN_HS512_SECRET", "refresh_secret");
+        let uid = "1";
+        let result = Token::new(TokenType::RefreshToken, uid);
 
-    let uid = "1";
-    let result = auth::create_token(auth::TokenType::RefreshToken, uid);
+        assert!(result.is_ok());
+    }
 
-    assert!(result.is_ok());
-}
+    #[tokio::test]
+    async fn validate_token_valid_access_returns_tokendata() {
+        env::set_var("ACCESS_TOKEN_HS512_SECRET", "access_secret");
 
-#[tokio::test]
-async fn validate_token_valid_access_returns_tokendata() {
-    env::set_var("ACCESS_TOKEN_HS512_SECRET", "access_secret");
+        let token = Token::new(TokenType::AccessToken, "1").unwrap();
+        let result = token.validate();
 
-    let token = auth::create_token(auth::TokenType::AccessToken, "1").unwrap();
-    let result = auth::validate_token(token, false);
-    assert!(result.is_ok());
-}
+        assert!(result.is_ok());
+    }
 
-#[tokio::test]
-async fn validate_token_valid_refresh_returns_tokendata() {
-    env::set_var("REFRESH_TOKEN_HS512_SECRET", "refresh_secret");
+    #[tokio::test]
+    async fn validate_token_valid_refresh_returns_tokendata() {
+        env::set_var("REFRESH_TOKEN_HS512_SECRET", "refresh_secret");
 
-    let token = auth::create_token(auth::TokenType::RefreshToken, "1").unwrap();
-    let result = auth::validate_token(token, true);
-    assert!(result.is_ok());
-}
+        let token = Token::new(TokenType::RefreshToken, "1").unwrap();
+        let result = token.validate();
 
-#[tokio::test]
-async fn validate_token_invalid_returns_err() {
-    env::set_var("ACCESS_TOKEN_HS512_SECRET", "access_secret");
-    env::set_var("REFRESH_TOKEN_HS512_SECRET", "refresh_secret");
+        assert!(result.is_ok());
+    }
 
-    let result_access = auth::validate_token("invalid_token".to_string(), false);
-    let result_refresh = auth::validate_token("invalid_token".to_string(), true);
-    assert!(result_access.is_err() && result_refresh.is_err());
-}
+    #[tokio::test]
+    async fn validate_token_invalid_returns_err() {
+        env::set_var("ACCESS_TOKEN_HS512_SECRET", "access_secret");
+        env::set_var("REFRESH_TOKEN_HS512_SECRET", "refresh_secret");
 
-#[tokio::test]
-async fn validate_token_wrong_signature_returns_err() {
-    env::set_var("ACCESS_TOKEN_HS512_SECRET", "access_secret");
-    env::set_var("REFRESH_TOKEN_HS512_SECRET", "refresh_secret");
+        let result_access = Token::from_str(TokenType::AccessToken, "invalid_token").validate();
+        let result_refresh = Token::from_str(TokenType::RefreshToken, "invalid_token").validate();
 
-    let token = auth::create_token(auth::TokenType::AccessToken, "1").unwrap();
-    let result_access = auth::validate_token(token, true);
+        assert!(result_access.is_err() && result_refresh.is_err());
+    }
 
-    let token = auth::create_token(auth::TokenType::RefreshToken, "1").unwrap();
-    let result_refresh = auth::validate_token(token, false);
+    #[tokio::test]
+    async fn token_type_access_returns_access() {
+        env::set_var("ACCESS_TOKEN_HS512_SECRET", "access_secret");
 
-    assert!(result_access.is_err() && result_refresh.is_err());
+        let token = Token::new(TokenType::AccessToken, "1").unwrap();
+        let result = token.token_type();
+
+        assert_eq!(result, TokenType::AccessToken);
+    }
+
+    #[tokio::test]
+    async fn token_type_refresh_returns_refresh() {
+        env::set_var("REFRESH_TOKEN_HS512_SECRET", "refresh_secret");
+
+        let token = Token::new(TokenType::RefreshToken, "1").unwrap();
+        let result = token.token_type();
+
+        assert_eq!(result, TokenType::RefreshToken);
+    }
+
+    #[tokio::test]
+    async fn token_to_string_returns_string() {
+        env::set_var("ACCESS_TOKEN_HS512_SECRET", "access_secret");
+
+        let token = Token::new(TokenType::AccessToken, "1").unwrap();
+        let result = token.to_string();
+
+        assert_eq!(result, token.as_str());
+    }
+
+    #[tokio::test]
+    async fn token_as_str_returns_string() {
+        env::set_var("ACCESS_TOKEN_HS512_SECRET", "access_secret");
+
+        let token = Token::new(TokenType::AccessToken, "1").unwrap();
+        let result = token.as_str();
+
+        assert_eq!(result, token.to_string());
+    }
+
+    #[tokio::test]
+    async fn token_from_str_returns_token() {
+        env::set_var("ACCESS_TOKEN_HS512_SECRET", "access_secret");
+
+        let token = Token::new(TokenType::AccessToken, "1").unwrap();
+        let token_from_str = Token::from_str(TokenType::AccessToken, token.as_str());
+
+        let result = token_from_str.validate();
+
+        assert!(result.is_ok());
+    }
+
+    #[tokio::test]
+    async fn token_from_str_invalid_returns_err() {
+        let token = Token::from_str(TokenType::AccessToken, "invalid_token");
+        let result = token.validate();
+
+        assert!(result.is_err());
+    }
 }
