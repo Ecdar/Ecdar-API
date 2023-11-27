@@ -3,7 +3,6 @@ use std::sync::Arc;
 use crate::api::server::server::get_auth_token_request::user_credentials;
 use crate::entities::access;
 use crate::entities::session;
-use crate::entities::session::Model;
 use bcrypt::hash;
 use chrono::Local;
 use regex::Regex;
@@ -254,7 +253,7 @@ impl EcdarApi for ConcreteEcdarApi {
         };
 
         // Record to be inserted in database
-        let new_user = User {
+        let new_user = UserEntity {
             id: Default::default(),
             username: match message.clone().username {
                 Some(username) => {
