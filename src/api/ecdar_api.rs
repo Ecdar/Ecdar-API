@@ -398,13 +398,9 @@ impl EcdarBackend for ConcreteEcdarApi {
 }
 
 #[cfg(test)]
-#[path = "../tests/api/ecdar_api.rs"]
-mod tests;
-
-#[cfg(test)]
 #[path = "../tests/api/user_logic.rs"]
-mod user_logic;
+mod user_logic_tests;
 
 #[cfg(test)]
 #[path = "../tests/api/session_logic.rs"]
-mod session_logic;
+mod session_logic_tests;
