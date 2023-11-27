@@ -44,8 +44,8 @@ pub async fn get_reset_database_context() -> Arc<dyn DatabaseContextTrait> {
 /// ```
 
 pub fn create_entities<M, F>(amount: i32, model_creator: F) -> Vec<M>
-where
-    F: Fn(i32) -> M,
+    where
+        F: Fn(i32) -> M,
 {
     let mut vector: Vec<M> = vec![];
     for i in 0..amount {
@@ -66,7 +66,7 @@ pub fn create_users(amount: i32) -> Vec<user::Model> {
 pub fn create_models(amount: i32, user_id: i32) -> Vec<model::Model> {
     create_entities(amount, |i| model::Model {
         id: i + 1,
-        name: "name".to_string(),
+        name: format!("name {}", i),
         components_info: "{}".to_owned().parse().unwrap(),
         owner_id: user_id,
     })
