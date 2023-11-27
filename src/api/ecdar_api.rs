@@ -143,10 +143,12 @@ impl EcdarApi for ConcreteEcdarApi {
     /// This function will return an error if the model does not exist in the database
     /// or if the user is not the model owner.
     async fn delete_model(
-        &self, 
-        request: Request<DeleteModelRequest>
+        &self,
+        request: Request<DeleteModelRequest>,
     ) -> Result<Response<()>, Status> {
-        let uid = get_uid_from_request(&request)?;
+        let uid = request
+            .uid()
+            .ok_or(Status::internal("Could not get uid from request metadata"))?;
         let model_id = request.get_ref().id;
 
         let model = match self.model_context.get_by_id(model_id).await {
@@ -157,7 +159,10 @@ impl EcdarApi for ConcreteEcdarApi {
 
         // Check if user is owner and thereby has permission to delete model
         if model.owner_id != uid {
-            return Err(Status::new(Code::PermissionDenied, "You do not have permission to delete this model"));   
+            return Err(Status::new(
+                Code::PermissionDenied,
+                "You do not have permission to delete this model",
+            ));
         }
 
         match self.model_context.delete(model_id).await {
