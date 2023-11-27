@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod auth {
-    use crate::api::auth::{RequestTrait, Token, TokenType};
+    use crate::api::auth::{RequestExt, Token, TokenType};
     use std::{env, str::FromStr};
     use tonic::{metadata::MetadataValue, Request};
 
