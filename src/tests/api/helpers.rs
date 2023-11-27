@@ -58,7 +58,9 @@ mock! {
         async fn delete(&self, entity_id: i32) -> Result<access::Model, DbErr>;
     }
     #[async_trait]
-    impl AccessContextTrait for AccessContext {}
+    impl AccessContextTrait for AccessContext {
+        async fn get_access_by_uid(&self, uid: i32) -> Result<Vec<access::Model>, DbErr>;
+    }
 }
 
 mock! {

@@ -17,12 +17,13 @@ use super::server::server::{
     ecdar_api_server::EcdarApi,
     ecdar_backend_server::EcdarBackend,
     get_auth_token_request::{user_credentials, UserCredentials},
-    AccessInfo, CreateAccessRequest, CreateQueryRequest, CreateUserRequest, DeleteAccessRequest,
-    DeleteQueryRequest, GetAuthTokenRequest, GetAuthTokenResponse, ListAccessInfoResponse,
-    QueryRequest, QueryResponse, SimulationStartRequest, SimulationStepRequest,
-    SimulationStepResponse, UpdateAccessRequest, UpdateQueryRequest, UpdateUserRequest,
-    UserTokenResponse,
+    AccessInfo, CreateAccessRequest, CreateModelResponse, CreateQueryRequest, CreateUserRequest,
+    DeleteAccessRequest, DeleteQueryRequest, GetAuthTokenRequest, GetAuthTokenResponse,
+    ListAccessInfoResponse, QueryRequest, QueryResponse, SimulationStartRequest,
+    SimulationStepRequest, SimulationStepResponse, UpdateAccessRequest, UpdateQueryRequest,
+    UpdateUserRequest, UserTokenResponse,
 };
+use super::server::server::{CreateModelRequest, DeleteModelRequest};
 use crate::entities::{access, model, query, session, user};
 
 #[derive(Clone)]
@@ -129,7 +130,10 @@ impl EcdarApi for ConcreteEcdarApi {
         todo!()
     }
 
-    async fn create_model(&self, _request: Request<()>) -> Result<Response<()>, Status> {
+    async fn create_model(
+        &self,
+        _request: Request<CreateModelRequest>,
+    ) -> Result<Response<CreateModelResponse>, Status> {
         todo!()
     }
 
@@ -137,7 +141,10 @@ impl EcdarApi for ConcreteEcdarApi {
         todo!()
     }
 
-    async fn delete_model(&self, _request: Request<()>) -> Result<Response<()>, Status> {
+    async fn delete_model(
+        &self,
+        _request: Request<DeleteModelRequest>,
+    ) -> Result<Response<()>, Status> {
         todo!()
     }
 
