@@ -58,7 +58,22 @@ mock! {
         async fn delete(&self, entity_id: i32) -> Result<access::Model, DbErr>;
     }
     #[async_trait]
-    impl AccessContextTrait for AccessContext {}
+    impl AccessContextTrait for AccessContext {
+        async fn get_access_by_uid_and_model_id(
+            &self,
+            uid: i32,
+            model_id: i32,
+        ) -> Result<Option<access::Model>, DbErr> {
+            access::Entity::find()
+                .filter(
+                    Condition::all()
+                        .add(access::Column::UserId.eq(uid))
+                        .add(access::Column::ModelId.eq(model_id)),
+                )
+                .one(&self.db_context.get_connection())
+                .await
+        }
+    }
 }
 
 mock! {
@@ -100,7 +115,14 @@ mock! {
         async fn delete(&self, entity_id: i32) -> Result<query::Model, DbErr>;
     }
     #[async_trait]
-    impl QueryContextTrait for QueryContext {}
+    impl QueryContextTrait for QueryContext {
+        async fn get_all_by_model_id(&self, model_id: i32) -> Result<Vec<query::Model>, DbErr> {
+            query::Entity::find()
+                .filter(query::Column::ModelId.eq(model_id))
+                .all(&self.db_context.get_connection())
+                .await
+        }
+    }
 }
 
 mock! {

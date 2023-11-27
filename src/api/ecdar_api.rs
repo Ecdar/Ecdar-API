@@ -1,6 +1,9 @@
 use std::sync::Arc;
 
-use crate::api::auth::{RequestExt, Token, TokenType};
+use crate::api::{
+    auth::{RequestExt, Token, TokenType},
+    server::server::Model,
+};
 use bcrypt::hash;
 use chrono::Local;
 use regex::Regex;
@@ -155,6 +158,13 @@ impl EcdarApi for ConcreteEcdarApi {
             .map_err(|err| Status::new(Code::Internal, err.to_string()))?
             .ok_or_else(|| Status::new(Code::Internal, "Model not found"))?;
 
+        let model = Model {
+            id: model.id,
+            name: model.name,
+            components_info: serde_json::from_value(model.components_info).unwrap(),
+            owner_id: model.owner_id,
+        };
+
         let queries = self
             .query_context
             .get_all_by_model_id(model_id)
@@ -167,12 +177,18 @@ impl EcdarApi for ConcreteEcdarApi {
                 id: query.id,
                 model_id: query.model_id,
                 query: query.string,
-                result: "Hej".to_owned(),
+                result: match query.result {
+                    Some(result) => serde_json::from_value(result).unwrap(),
+                    None => "".to_owned(),
+                },
                 outdated: query.outdated,
             })
             .collect::<Vec<Query>>();
 
-        todo!()
+        Ok(Response::new(GetModelResponse {
+            model: Some(model),
+            queries,
+        }))
     }
 
     async fn create_model(
