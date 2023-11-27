@@ -1,6 +1,7 @@
 use crate::api::server::server::get_auth_token_request::user_credentials;
 use crate::entities::access;
 use crate::entities::session;
+use bcrypt::hash;
 use regex::Regex;
 use sea_orm::SqlErr;
 use std::sync::Arc;
@@ -38,6 +39,8 @@ pub struct ConcreteEcdarApi {
     user_context: Arc<dyn UserContextTrait>,
     reveaal_context: Arc<dyn EcdarBackend>,
 }
+
+const HASH_COST: u32 = 12;
 
 /// Updates or creates a session in the database for a given user.
 ///
@@ -243,32 +246,45 @@ impl EcdarApi for ConcreteEcdarApi {
         // Get uid from request metadata
         let uid = get_uid_from_request(&request)?;
 
-        // Get new values from request message. Empty string means the value will remain unchanged in the database.
-        let new_username = match message.username {
-            Some(username) => username,
-            None => "".to_string(),
-        };
-
-        let new_password = match message.password {
-            Some(password) => password,
-            None => "".to_string(),
-        };
-
-        let new_email = match message.email {
-            Some(email) => email,
-            None => "".to_string(),
-        };
+        // Get user from database
+        let user = self
+            .user_context
+            .get_by_id(uid)
+            .await
+            .map_err(|err| Status::new(Code::Internal, err.to_string()))?
+            .ok_or_else(|| Status::new(Code::Internal, "No user found with given uid"))?;
 
         // Record to be inserted in database
-        let user = user::Model {
-            id: uid,
-            username: new_username.clone(),
-            password: new_password.clone(),
-            email: new_email.clone(),
+        let new_user = user::Model {
+            id: Default::default(),
+            username: match message.clone().username {
+                Some(username) => {
+                    if is_valid_username(username.as_str()) {
+                        username
+                    } else {
+                        return Err(Status::new(Code::InvalidArgument, "Invalid username"));
+                    }
+                }
+                None => user.username,
+            },
+            email: match message.clone().email {
+                Some(email) => {
+                    if is_valid_email(email.as_str()) {
+                        email
+                    } else {
+                        return Err(Status::new(Code::InvalidArgument, "Invalid email"));
+                    }
+                }
+                None => user.email,
+            },
+            password: match message.clone().password {
+                Some(password) => hash(password, HASH_COST).unwrap(),
+                None => user.password,
+            },
         };
 
         // Update user in database
-        match self.user_context.update(user).await {
+        match self.user_context.update(new_user).await {
             Ok(_) => Ok(Response::new(())),
             Err(error) => Err(Status::new(Code::Internal, error.to_string())),
         }
@@ -368,7 +384,7 @@ impl EcdarApi for ConcreteEcdarApi {
 async fn get_auth_find_user_helper(
     user_context: Arc<dyn UserContextTrait>,
     user_credentials: UserCredentials,
-) -> Result<user::Model, Status> {
+) -> Result<UserEntity, Status> {
     if let Some(user) = user_credentials.user {
         match user {
             user_credentials::User::Username(username) => Ok(user_context
@@ -406,7 +422,6 @@ impl EcdarApiAuth for ConcreteEcdarApi {
         let uid: String;
         let user_from_db: user::Model;
         let is_new_session: bool;
-
         // Get user from credentials
         if let Some(user_credentials) = message.user_credentials {
             let input_password = user_credentials.password.clone();
@@ -470,7 +485,7 @@ impl EcdarApiAuth for ConcreteEcdarApi {
             return Err(Status::new(Code::InvalidArgument, "Invalid email"));
         }
 
-        let user = user::Model {
+        let user = UserEntity {
             id: Default::default(),
             username: message.clone().username,
             password: message.clone().password,
