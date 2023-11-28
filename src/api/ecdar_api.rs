@@ -179,7 +179,31 @@ impl EcdarApi for ConcreteEcdarApi {
             Err(error) => return Err(Status::internal(error.to_string())),
         };
 
+        // Get user session
+        let session = match self
+            .contexts
+            .session_context
+            .get_by_access_token(request.token_string().unwrap()).await 
+        {
+            Ok(Some(session)) => session,
+            Ok(None) => return Err(Status::unauthenticated("No session found with given access token")),
+            Err(error) => return Err(Status::internal(error.to_string())),
+        };
+        
+
         // TODO: Check if the model is in use
+        let in_use = match self
+            .contexts
+            .in_use_context
+            .get_by_id(model.id)
+            .await
+        {
+            Ok(Some(in_use)) => {
+
+            },
+            Ok(None) => return Err(Status::not_found("No model found with given id")),
+            Err(error) => return Err(Status::internal(error.to_string())),  
+        };
 
         let new_model = model::Model {
             id: model.id,

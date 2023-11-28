@@ -14,6 +14,10 @@ pub struct SessionContext {
 
 #[async_trait]
 pub trait SessionContextTrait: EntityContextTrait<session::Model> {
+    async fn get_by_access_token(
+        &self,
+        access_token: String,
+    ) -> Result<Option<session::Model>, DbErr>;
     async fn get_by_refresh_token(
         &self,
         refresh_token: String,
@@ -22,6 +26,16 @@ pub trait SessionContextTrait: EntityContextTrait<session::Model> {
 
 #[async_trait]
 impl SessionContextTrait for SessionContext {
+    async fn get_by_access_token(
+        &self,
+        access_token: String,
+    ) -> Result<Option<session::Model>, DbErr> {
+        session::Entity::find()
+            .filter(session::Column::AccessToken.eq(access_token))
+            .one(&self.db_context.get_connection())
+            .await
+    }
+    
     async fn get_by_refresh_token(
         &self,
         refresh_token: String,
