@@ -1,16 +1,11 @@
-use bcrypt::hash;
-use chrono::Local;
+use crate::api::context_collection::ContextCollection;
 use regex::Regex;
 use sea_orm::SqlErr;
 use std::sync::Arc;
 use tonic::{Code, Request, Response, Status};
 
 use crate::api::auth::{RequestExt, Token, TokenType};
-use crate::database::{
-    access_context::AccessContextTrait, in_use_context::InUseContextTrait,
-    model_context::ModelContextTrait, query_context::QueryContextTrait,
-    session_context::SessionContextTrait, user_context::UserContextTrait,
-};
+use crate::database::{session_context::SessionContextTrait, user_context::UserContextTrait};
 
 use super::server::server::{
     ecdar_api_auth_server::EcdarApiAuth,
@@ -22,20 +17,12 @@ use super::server::server::{
     SimulationStartRequest, SimulationStepRequest, SimulationStepResponse, UpdateAccessRequest,
     UpdateQueryRequest, UpdateUserRequest, UserTokenResponse,
 };
-use crate::entities::{access, model, query, session, user};
+use crate::entities::{access, query, session, user};
 
 #[derive(Clone)]
 pub struct ConcreteEcdarApi {
-    access_context: Arc<dyn AccessContextTrait>,
-    in_use_context: Arc<dyn InUseContextTrait>,
-    model_context: Arc<dyn ModelContextTrait>,
-    query_context: Arc<dyn QueryContextTrait>,
-    session_context: Arc<dyn SessionContextTrait>,
-    user_context: Arc<dyn UserContextTrait>,
-    reveaal_context: Arc<dyn EcdarBackend>,
+    contexts: ContextCollection,
 }
-
-const HASH_COST: u32 = 12;
 
 /// Updates or creates a session in the database for a given user.
 ///
@@ -43,7 +30,7 @@ const HASH_COST: u32 = 12;
 /// # Errors
 /// This function will return an error if the database context returns an error
 /// or if a session is not found when trying to update an existing one.
-async fn handle_session(
+pub async fn handle_session(
     session_context: Arc<dyn SessionContextTrait>,
     request: &Request<GetAuthTokenRequest>,
     is_new_session: bool,
@@ -52,16 +39,19 @@ async fn handle_session(
     uid: String,
 ) -> Result<(), Status> {
     if is_new_session {
-        session_context
+        let res = session_context
             .create(session::Model {
                 id: Default::default(),
                 access_token: access_token.clone(),
                 refresh_token: refresh_token.clone(),
-                updated_at: Local::now().naive_local(),
+                updated_at: Default::default(),
                 user_id: uid.parse().unwrap(),
             })
-            .await
-            .unwrap();
+            .await;
+        return match res {
+            Ok(_) => Ok(()),
+            Err(e) => Err(Status::new(Code::Internal, e.to_string())),
+        };
     } else {
         let mut session = match session_context
             .get_by_refresh_token(request.token_string().unwrap())
@@ -101,24 +91,8 @@ fn is_valid_username(username: &str) -> bool {
 }
 
 impl ConcreteEcdarApi {
-    pub fn new(
-        access_context: Arc<dyn AccessContextTrait>,
-        in_use_context: Arc<dyn InUseContextTrait>,
-        model_context: Arc<dyn ModelContextTrait>,
-        query_context: Arc<dyn QueryContextTrait>,
-        session_context: Arc<dyn SessionContextTrait>,
-        user_context: Arc<dyn UserContextTrait>,
-        reveaal_context: Arc<dyn EcdarBackend>,
-    ) -> Self {
-        ConcreteEcdarApi {
-            access_context,
-            in_use_context,
-            model_context,
-            query_context,
-            session_context,
-            user_context,
-            reveaal_context,
-        }
+    pub fn new(contexts: ContextCollection) -> Self {
+        ConcreteEcdarApi { contexts }
     }
 }
 
@@ -160,7 +134,7 @@ impl EcdarApi for ConcreteEcdarApi {
             user_id: access.user_id,
         };
 
-        match self.access_context.create(access).await {
+        match self.contexts.access_context.create(access).await {
             Ok(_) => Ok(Response::new(())),
             Err(error) => Err(Status::new(Code::Internal, error.to_string())),
         }
@@ -186,7 +160,7 @@ impl EcdarApi for ConcreteEcdarApi {
             user_id: Default::default(),
         };
 
-        match self.access_context.update(access).await {
+        match self.contexts.access_context.update(access).await {
             Ok(_) => Ok(Response::new(())),
             Err(error) => Err(Status::new(Code::Internal, error.to_string())),
         }
@@ -200,7 +174,12 @@ impl EcdarApi for ConcreteEcdarApi {
         &self,
         request: Request<DeleteAccessRequest>,
     ) -> Result<Response<()>, Status> {
-        match self.access_context.delete(request.get_ref().id).await {
+        match self
+            .contexts
+            .access_context
+            .delete(request.get_ref().id)
+            .await
+        {
             Ok(_) => Ok(Response::new(())),
             Err(error) => match error {
                 sea_orm::DbErr::RecordNotFound(message) => {
@@ -227,6 +206,7 @@ impl EcdarApi for ConcreteEcdarApi {
 
         // Get user from database
         let user = self
+            .contexts
             .user_context
             .get_by_id(uid)
             .await
@@ -235,7 +215,7 @@ impl EcdarApi for ConcreteEcdarApi {
 
         // Record to be inserted in database
         let new_user = user::Model {
-            id: Default::default(),
+            id: uid,
             username: match message.clone().username {
                 Some(username) => {
                     if is_valid_username(username.as_str()) {
@@ -257,13 +237,13 @@ impl EcdarApi for ConcreteEcdarApi {
                 None => user.email,
             },
             password: match message.clone().password {
-                Some(password) => hash(password, HASH_COST).unwrap(),
+                Some(password) => self.contexts.hashing_context.hash_password(password),
                 None => user.password,
             },
         };
 
         // Update user in database
-        match self.user_context.update(new_user).await {
+        match self.contexts.user_context.update(new_user).await {
             Ok(_) => Ok(Response::new(())),
             Err(error) => Err(Status::new(Code::Internal, error.to_string())),
         }
@@ -279,7 +259,7 @@ impl EcdarApi for ConcreteEcdarApi {
             .ok_or(Status::internal("Could not get uid from request metadata"))?;
 
         // Delete user from database
-        match self.user_context.delete(uid).await {
+        match self.contexts.user_context.delete(uid).await {
             Ok(_) => Ok(Response::new(())),
             Err(error) => Err(Status::new(Code::Internal, error.to_string())),
         }
@@ -301,7 +281,7 @@ impl EcdarApi for ConcreteEcdarApi {
             model_id: query_request.model_id,
         };
 
-        match self.query_context.create(query).await {
+        match self.contexts.query_context.create(query).await {
             Ok(_) => Ok(Response::new(())),
             Err(error) => Err(Status::new(Code::Internal, error.to_string())),
         }
@@ -319,6 +299,7 @@ impl EcdarApi for ConcreteEcdarApi {
         let message = request.get_ref().clone();
 
         let old_query_res = self
+            .contexts
             .query_context
             .get_by_id(message.id)
             .await
@@ -337,7 +318,7 @@ impl EcdarApi for ConcreteEcdarApi {
             outdated: old_query.outdated,
         };
 
-        match self.query_context.update(query).await {
+        match self.contexts.query_context.update(query).await {
             Ok(_) => Ok(Response::new(())),
             Err(error) => Err(Status::new(Code::Internal, error.to_string())),
         }
@@ -350,7 +331,12 @@ impl EcdarApi for ConcreteEcdarApi {
         &self,
         request: Request<DeleteQueryRequest>,
     ) -> Result<Response<()>, Status> {
-        match self.query_context.delete(request.get_ref().id).await {
+        match self
+            .contexts
+            .query_context
+            .delete(request.get_ref().id)
+            .await
+        {
             Ok(_) => Ok(Response::new(())),
             Err(error) => match error {
                 sea_orm::DbErr::RecordNotFound(message) => {
@@ -407,8 +393,11 @@ impl EcdarApiAuth for ConcreteEcdarApi {
         // Get user from credentials
         if let Some(user_credentials) = message.user_credentials {
             let input_password = user_credentials.password.clone();
-            user_from_db =
-                get_auth_find_user_helper(Arc::clone(&self.user_context), user_credentials).await?;
+            user_from_db = get_auth_find_user_helper(
+                Arc::clone(&self.contexts.user_context),
+                user_credentials,
+            )
+            .await?;
 
             // Check if password in request matches users password
             if input_password != user_from_db.password {
@@ -440,7 +429,7 @@ impl EcdarApiAuth for ConcreteEcdarApi {
 
         // Update or create session in database
         handle_session(
-            self.session_context.clone(),
+            self.contexts.session_context.clone(),
             &request,
             is_new_session,
             access_token.clone(),
@@ -476,7 +465,7 @@ impl EcdarApiAuth for ConcreteEcdarApi {
             email: message.clone().email,
         };
 
-        match self.user_context.create(user).await {
+        match self.contexts.user_context.create(user).await {
             Ok(_) => Ok(Response::new(())),
             Err(e) => match e.sql_err() {
                 Some(SqlErr::UniqueConstraintViolation(e)) => {
@@ -500,38 +489,49 @@ impl EcdarBackend for ConcreteEcdarApi {
         &self,
         _request: Request<()>,
     ) -> Result<Response<UserTokenResponse>, Status> {
-        self.reveaal_context.get_user_token(_request).await
+        self.contexts.reveaal_context.get_user_token(_request).await
     }
 
     async fn send_query(
         &self,
         request: Request<QueryRequest>,
     ) -> Result<Response<QueryResponse>, Status> {
-        self.reveaal_context.send_query(request).await
+        self.contexts.reveaal_context.send_query(request).await
     }
 
     async fn start_simulation(
         &self,
         request: Request<SimulationStartRequest>,
     ) -> Result<Response<SimulationStepResponse>, Status> {
-        self.reveaal_context.start_simulation(request).await
+        self.contexts
+            .reveaal_context
+            .start_simulation(request)
+            .await
     }
 
     async fn take_simulation_step(
         &self,
         request: Request<SimulationStepRequest>,
     ) -> Result<Response<SimulationStepResponse>, Status> {
-        self.reveaal_context.take_simulation_step(request).await
+        self.contexts
+            .reveaal_context
+            .take_simulation_step(request)
+            .await
     }
 }
 
 #[cfg(test)]
-#[path = "../tests/api/access_logic.rs"]
-mod access_logic;
-#[cfg(test)]
-#[path = "../tests/api/ecdar_api.rs"]
-mod tests;
+#[path = "../tests/api/query_logic.rs"]
+mod query_logic_tests;
 
 #[cfg(test)]
-#[path = "../tests/api/query_logic.rs"]
-mod query_logic;
+#[path = "../tests/api/access_logic.rs"]
+mod access_logic_tests;
+
+#[cfg(test)]
+#[path = "../tests/api/user_logic.rs"]
+mod user_logic_tests;
+
+#[cfg(test)]
+#[path = "../tests/api/session_logic.rs"]
+mod session_logic_tests;
