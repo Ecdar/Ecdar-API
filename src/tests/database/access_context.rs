@@ -83,6 +83,7 @@ mod database_tests {
 
         let mut model_2 = create_models(1, user.id)[0].clone();
         model_2.id = model_1.id + 1;
+        model_2.name = "model_2".into();
 
         model::Entity::insert(model_2.into_active_model())
             .exec(&access_context.db_context.get_connection())
