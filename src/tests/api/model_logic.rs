@@ -1,9 +1,8 @@
 use mockall::predicate;
-use sea_orm::DbErr;
 use tonic::{Code, Request};
 
 use crate::{
-    api::server::server::{ecdar_api_server::EcdarApi, ComponentsInfo, GetModelRequest},
+    api::server::server::{ecdar_api_server::EcdarApi, GetModelRequest},
     entities::{access, in_use, model, query},
     tests::api::helpers::{get_mock_concrete_ecdar_api, get_mock_services},
 };
@@ -261,22 +260,6 @@ async fn get_model_model_has_no_queries_queries_are_empty() {
         model_id: Default::default(),
         session_id: 0,
         latest_activity: Default::default(),
-    };
-
-    let query1 = query::Model {
-        id: 0,
-        model_id: 1,
-        string: "query".to_owned(),
-        result: None,
-        outdated: false,
-    };
-
-    let query2 = query::Model {
-        id: 1,
-        model_id: 1,
-        string: "query".to_owned(),
-        result: Some(serde_json::to_value("result").unwrap()),
-        outdated: false,
     };
 
     let queries: Vec<query::Model> = vec![];

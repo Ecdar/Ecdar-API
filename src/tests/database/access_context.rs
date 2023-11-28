@@ -1,5 +1,6 @@
 #[cfg(test)]
 mod database_tests {
+    use crate::database::access_context::AccessContextTrait;
     use crate::tests::database::helpers::{
         create_accesses, create_models, create_users, get_reset_database_context,
     };
@@ -344,5 +345,18 @@ mod database_tests {
             deleted_access.unwrap_err(),
             DbErr::RecordNotFound(_)
         ));
+    }
+
+    #[tokio::test]
+    async fn get_by_uid_and_model_id_test() {
+        let (access_context, expected_access, user, model) = seed_db().await;
+
+        let access = access_context
+            .get_access_by_uid_and_model_id(user.id, model.id)
+            .await;
+
+        dbg!(&expected_access, &access, user, model);
+
+        assert!(access.unwrap().unwrap() == expected_access);
     }
 }
