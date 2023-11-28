@@ -1,16 +1,3 @@
-use crate::api::context_collection::ContextCollection;
-use regex::Regex;
-use sea_orm::SqlErr;
-use serde_json;
-use std::sync::Arc;
-use tonic::{Code, Request, Response, Status};
-use crate::api::auth::{RequestExt, Token, TokenType};
-use crate::database::{
-    access_context::AccessContextTrait, in_use_context::InUseContextTrait,
-    model_context::ModelContextTrait, query_context::QueryContextTrait,
-    session_context::SessionContextTrait, user_context::UserContextTrait,
-};
-use crate::entities::access::Model;
 use super::server::server::UpdateModelRequest;
 use super::server::server::{
     ecdar_api_auth_server::EcdarApiAuth,
@@ -23,7 +10,20 @@ use super::server::server::{
     SimulationStepRequest, SimulationStepResponse, UpdateAccessRequest, UpdateQueryRequest,
     UpdateUserRequest, UserTokenResponse,
 };
+use crate::api::auth::{RequestExt, Token, TokenType};
+use crate::api::context_collection::ContextCollection;
+use crate::database::{
+    access_context::AccessContextTrait, in_use_context::InUseContextTrait,
+    model_context::ModelContextTrait, query_context::QueryContextTrait,
+    session_context::SessionContextTrait, user_context::UserContextTrait,
+};
+use crate::entities::access::Model;
 use crate::entities::{access, query, session, user};
+use regex::Regex;
+use sea_orm::SqlErr;
+use serde_json;
+use std::sync::Arc;
+use tonic::{Code, Request, Response, Status};
 
 #[derive(Clone)]
 pub struct ConcreteEcdarApi {
