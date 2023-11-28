@@ -1,17 +1,102 @@
 use crate::database::database_context::DatabaseContextTrait;
-use crate::entities::{model, query};
+use crate::entities::{model, query, access, role};
+
 use crate::EntityContextTrait;
 use async_trait::async_trait;
-use sea_orm::{ActiveModelTrait, DbErr, EntityTrait, IntoActiveModel, ModelTrait, Set, Unchanged};
+use sea_orm::{ActiveModelTrait, DbErr, EntityTrait, IntoActiveModel, ModelTrait, Set, Unchanged, QuerySelect, FromQueryResult, JoinType, RelationTrait, Related, RelationDef, ColumnTrait, EntityOrSelect, QueryTrait, DatabaseBackend, QueryFilter, DbBackend};
+use serde::de;
 use std::sync::Arc;
 
 pub struct ModelContext {
     db_context: Arc<dyn DatabaseContextTrait>,
 }
 
-pub trait ModelContextTrait: EntityContextTrait<model::Model> {}
+#[derive(FromQueryResult)]
+#[derive(Debug)]
+pub struct ModelInfo {
+    pub model_id: i32,
+    pub model_name: String,
+    pub model_owner_id: i32,
+    pub user_role_on_model: String,
+}
 
-impl ModelContextTrait for ModelContext {}
+#[async_trait]
+pub trait ModelContextTrait: EntityContextTrait<model::Model> {
+    async fn get_model_info_by_uid(&self, uid: i32) -> Result<Vec<ModelInfo>, DbErr>;
+}
+
+#[async_trait]
+impl ModelContextTrait for ModelContext {
+    async fn get_model_info_by_uid(&self, uid: i32) -> Result<Vec<ModelInfo>, DbErr> {
+        //join model, access and role tables
+
+        /*model::Entity::find()
+        .select_only()
+        .column_as(model::Column::Id, "model_id")
+        .column_as(model::Column::Name, "model_name")
+        .column_as(model::Column::OwnerId, "model_owner_id")
+        .column_as(access::Column::Role, "user_role_on_model")
+        .join(JoinType::InnerJoin, model::Relation::Access.def())
+        .having(access::Column::UserId.eq(uid))
+        .group_by(model::Column::Id)
+        .into_model::<ModelInfo>()
+        .all(&self.db_context.get_connection())
+        .await*/
+
+        let sqlStatement = access::Entity::find()
+        .select_only()
+        .column_as(model::Column::Id, "model_id")
+        .column_as(model::Column::Name, "model_name")
+        .column_as(model::Column::OwnerId, "model_owner_id")
+        .column_as(access::Column::Role, "user_role_on_model")
+        .join(JoinType::InnerJoin, access::Relation::Model.def())
+        .group_by(model::Column::Id)
+        .filter(access::Column::UserId.eq(uid))
+        .build(DbBackend::Postgres)
+        .to_string();
+
+        println!("sqlStatement: {}", sqlStatement);
+
+
+
+        let model_info = access::Entity::find()
+            .select_only()
+            .column_as(model::Column::Id, "model_id")
+            .column_as(model::Column::Name, "model_name")
+            .column_as(model::Column::OwnerId, "model_owner_id")
+            .column_as(access::Column::Role, "user_role_on_model")
+            .join(JoinType::InnerJoin, access::Relation::Model.def())
+            .group_by(model::Column::Id)
+            .group_by(access::Column::Role)
+            .filter(access::Column::UserId.eq(uid))
+            .into_model::<ModelInfo>()
+            .all(&self.db_context.get_connection())
+            .await;
+
+        //print the model info
+        match model_info {
+            Ok(model_info) => {
+                for m in model_info.iter() {
+                    println!("model_id: {}", m.model_id);
+                    println!("model_name: {}", m.model_name);
+                    println!("model_owner_id: {}", m.model_owner_id);
+                    println!("user_role_on_model: {}", m.user_role_on_model);
+                }
+                Ok(model_info)
+            }
+            Err(e) => {
+                println!("Error: {}", e);
+                Err(e.into())
+            }
+        }
+
+
+
+
+        
+    }
+
+}
 
 impl ModelContext {
     pub fn new(db_context: Arc<dyn DatabaseContextTrait>) -> ModelContext {

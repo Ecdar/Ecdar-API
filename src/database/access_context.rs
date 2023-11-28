@@ -17,11 +17,11 @@ pub trait AccessContextTrait: EntityContextTrait<access::Model> {
 
 #[async_trait]
 impl AccessContextTrait for AccessContext {
-    async fn get_access_by_uid(&self, uid: i32) -> Result<Vec<access::Model>, DbErr> {
-        access::Entity::find()
+    async fn get_access_by_uid(&self, uid: i32, model_id: i32) -> Result<Vec<access::Model>, DbErr> {
+        /*access::Entity::find()
             .filter(access::Column::UserId.eq(uid))
             .all(&self.db_context.get_connection())
-            .await
+            .await*/
     }
 }
 
