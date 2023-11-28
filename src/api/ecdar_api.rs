@@ -21,7 +21,7 @@ use super::server::server::{
     DeleteAccessRequest, DeleteQueryRequest, GetAuthTokenRequest, GetAuthTokenResponse,
     ListAccessInfoResponse, QueryRequest, QueryResponse, SimulationStartRequest,
     SimulationStepRequest, SimulationStepResponse, UpdateAccessRequest, UpdateQueryRequest,
-    UpdateUserRequest, UserTokenResponse,
+    UpdateUserRequest, UserTokenResponse, GetModelRequest, GetModelResponse,
 };
 use super::server::server::{CreateModelRequest, DeleteModelRequest};
 use crate::entities::{access, model, query, session, user};
@@ -126,7 +126,7 @@ impl ConcreteEcdarApi {
 
 #[tonic::async_trait]
 impl EcdarApi for ConcreteEcdarApi {
-    async fn get_model(&self, _request: Request<()>) -> Result<Response<()>, Status> {
+    async fn get_model(&self, _request: Request<GetModelRequest>) -> Result<Response<GetModelResponse>, Status> {
         todo!()
     }
 
