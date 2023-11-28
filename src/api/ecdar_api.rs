@@ -569,12 +569,8 @@ mod access_logic_tests;
 mod user_logic_tests;
 
 #[cfg(test)]
-#[path = "../tests/api/query_logic.rs"]
-mod query_logic;
-
-#[cfg(test)]
 #[path = "../tests/api/model_logic.rs"]
-mod model_logic;
+mod model_logic_tests;
 
 #[cfg(test)]
 #[path = "../tests/api/session_logic.rs"]
