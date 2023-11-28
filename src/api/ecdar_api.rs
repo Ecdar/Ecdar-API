@@ -13,6 +13,7 @@ use crate::database::{
     session_context::SessionContextTrait, user_context::UserContextTrait,
 };
 
+use super::server::server::UpdateModelRequest;
 use super::server::server::{
     ecdar_api_auth_server::EcdarApiAuth,
     ecdar_api_server::EcdarApi,
@@ -157,8 +158,40 @@ impl EcdarApi for ConcreteEcdarApi {
         }
     }
 
-    async fn update_model(&self, _request: Request<()>) -> Result<Response<()>, Status> {
-        todo!()
+    async fn update_model(
+        &self, 
+        request: Request<UpdateModelRequest>
+    )-> Result<Response<()>, Status> {
+        let message = request.get_ref().clone();
+        let uid = request
+            .uid()
+            .ok_or(Status::internal("Could not get uid from request metadata"))?;
+
+        // Check if the model exists
+        let model = match self.model_context.get_by_id(message.id).await {
+            Ok(Some(model)) => model,
+            Ok(None) => return Err(Status::not_found("No model found with given id")),
+            Err(error) => return Err(Status::internal(error.to_string())),
+        };
+
+        // // Check if the user has access to the model
+        // let access = match self.access_context.get_by_id(message.id, uid).await {
+        //     Ok(Some(access)) => access,
+        //     Ok(None) => return Err(Status::permission_denied("No access to model")),
+        //     Err(error) => return Err(Status::internal(error.to_string())),
+        // };
+
+        // let model = model::Model {
+        //     id: message.id,
+        //     name: message.name,
+        //     components_info: serde_json::to_value(message.components_info).unwrap(),
+        //     owner_id: Default::default(),
+        // };
+
+        match self.model_context.update(model).await {
+            Ok(_) => Ok(Response::new(())),
+            Err(error) => Err(Status::new(Code::Internal, error.to_string())),
+        }
     }
 
     async fn delete_model(
