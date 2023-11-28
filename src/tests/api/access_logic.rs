@@ -8,7 +8,8 @@ mod access_logic {
     use crate::tests::api::helpers::{get_mock_concrete_ecdar_api, get_mock_services};
     use mockall::predicate;
     use sea_orm::DbErr;
-    use tonic::{Code, Request};
+    use std::str::FromStr;
+    use tonic::{metadata, Code, Request};
 
     #[tokio::test]
     async fn create_invalid_access_returns_err() {
@@ -172,4 +173,56 @@ mod access_logic {
 
         assert!(res.is_ok());
     }
+
+    #[tokio::test]
+    async fn get_list_access_info_returns_ok() {
+        let mut mock_services = get_mock_services();
+
+        let access = access::Model {
+            id: 1,
+            role: "Editor".to_string(),
+            model_id: Default::default(),
+            user_id: Default::default(),
+        };
+
+        mock_services
+            .access_context_mock
+            .expect_get_access_by_uid()
+            .returning(move |_| Ok(vec![access.clone()]));
+
+        let mut list_access_info_request = Request::new(());
+
+        list_access_info_request
+            .metadata_mut()
+            .insert("uid", metadata::MetadataValue::from_str("1").unwrap());
+
+        let api = get_mock_concrete_ecdar_api(mock_services);
+
+        let res = api.list_access_info(list_access_info_request).await;
+
+        assert!(res.is_ok());
+    }
+    
+    #[tokio::test]
+    async fn get_list_access_info_returns_not_found_err() {
+        let mut mock_services = get_mock_services();
+
+        mock_services
+            .access_context_mock
+            .expect_get_access_by_uid()
+            .returning(move |_| Ok(vec![]));
+
+        let mut list_access_info_request = Request::new(());
+
+        list_access_info_request
+            .metadata_mut()
+            .insert("uid", metadata::MetadataValue::from_str("1").unwrap());
+
+        let api = get_mock_concrete_ecdar_api(mock_services);
+
+        let res = api.list_access_info(list_access_info_request).await.unwrap_err();
+
+        assert_eq!(res.code(), Code::NotFound);
+    }
+
 }

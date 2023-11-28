@@ -160,7 +160,7 @@ impl EcdarApi for ConcreteEcdarApi {
             .ok_or(Status::internal("Could not get uid from request metadata"))?;
 
         let mut access_info_list: Vec<AccessInfo> = Vec::new(); // Initialize the Vec
-
+        
         match self.access_context.get_access_by_uid(uid).await {
             Ok(accesses) => {
                 for access in accesses {
