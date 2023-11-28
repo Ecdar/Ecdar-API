@@ -168,9 +168,10 @@ impl EcdarApi for ConcreteEcdarApi {
                     let model_info_test = ModelInfo {
                         model_id: model_info.model_id,
                         model_name: model_info.model_name,
-                        owner_id: model_info.model_owner_id,
-                        role: model_info.user_role_on_model,
+                        model_owner_id: model_info.model_owner_id,
+                        user_role_on_model: model_info.user_role_on_model,
                     };
+                    model_info_list_vector.push(model_info_test);
                 }
 
                 if model_info_list_vector.is_empty() {
@@ -178,55 +179,15 @@ impl EcdarApi for ConcreteEcdarApi {
                         Code::NotFound,
                         "No access found for given user",
                     ));
-                }
-
-                Ok(Response::new(ListModelInfoResponse {
-                    model_info_list: model_info_list_vector,
-                }))
-            }
-            Err(error) => Err(Status::new(Code::Internal, error.to_string())),
-        }
-
-        /*match self.access_context.get_access_by_uid(uid).await {
-            Ok(accesses) => {
-                for access in accesses {
-                    let model_info = ModelInfo {
-                        model_id: access.model_id,
-                        model_name: Default::default(),
-                        owner_id: Default::default(),
-                        role: access.role,
-                    };
-                    model_info_list.push(model_info);
-                }
-
-                if model_info_list.is_empty() {
-                    return Err(Status::new(
-                        Code::NotFound,
-                        "No access found for given user",
-                    ));
+                } else {
+                    Ok(Response::new(ListModelInfoResponse {
+                        model_info_list: model_info_list_vector,
+                    }))
                 }
             }
             Err(error) => Err(Status::new(Code::Internal, error.to_string())),
         }
 
-        match self.model_context.get_all().await {
-            Ok(models) => {
-                for model in models {
-                    let model_info = ModelInfo {
-                        id: model.id,
-                        role: Default::default(),
-                        model_id: Default::default(),
-                        user_id: Default::default(),
-                    };
-                    model_info_list.push(model_info);
-                }
-
-                if model_info_list.is_empty() {
-                    return Err(Status::new(Code::NotFound, "No models found"));
-                }
-            }
-            Err(error) => Err(Status::new(Code::Internal, error.to_string())),
-        }*/
     }
 
     /// Creates an access in the database.
