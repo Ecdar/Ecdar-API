@@ -624,6 +624,7 @@ impl EcdarBackend for ConcreteEcdarApi {
 #[path = "../tests/api/query_logic.rs"]
 mod query_logic_tests;
 
+#[cfg(test)]
 #[path = "../tests/api/access_logic.rs"]
 mod access_logic_tests;
 
