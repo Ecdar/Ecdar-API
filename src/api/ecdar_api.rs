@@ -7,6 +7,7 @@ use std::sync::Arc;
 use tonic::{Code, Request, Response, Status};
 
 use crate::api::auth::{RequestExt, Token, TokenType};
+use crate::api::server::server::component::Rep;
 use crate::database::{
     access_context::AccessContextTrait, in_use_context::InUseContextTrait,
     model_context::ModelContextTrait, query_context::QueryContextTrait,
@@ -18,7 +19,7 @@ use super::server::server::{
     ecdar_api_server::EcdarApi,
     ecdar_backend_server::EcdarBackend,
     get_auth_token_request::{user_credentials, UserCredentials},
-    CreateAccessRequest, CreateModelRequest, CreateModelResponse, CreateQueryRequest,
+    Component, CreateAccessRequest, CreateModelRequest, CreateModelResponse, CreateQueryRequest,
     CreateUserRequest, DeleteAccessRequest, DeleteModelRequest, DeleteQueryRequest,
     GetAuthTokenRequest, GetAuthTokenResponse, QueryRequest, QueryResponse, SimulationStartRequest,
     SimulationStepRequest, SimulationStepResponse, UpdateAccessRequest, UpdateQueryRequest,
@@ -153,7 +154,25 @@ impl EcdarApi for ConcreteEcdarApi {
 
         match self.model_context.create(model).await {
             Ok(model) => Ok(Response::new(CreateModelResponse { id: model.id })),
-            Err(error) => Err(Status::internal(error.to_string())),
+            Err(error) => match error.sql_err() {
+                Some(SqlErr::UniqueConstraintViolation(e)) => {
+                    let error_msg = match e.to_lowercase() {
+                        _ if e.contains("name") => "A model with that name already exists",
+                        _ => "Model already exists",
+                    };
+                    println!("{}", e);
+                    Err(Status::already_exists(error_msg))
+                }
+                Some(SqlErr::ForeignKeyConstraintViolation(e)) => {
+                    let error_msg = match e.to_lowercase() {
+                        _ if e.contains("owner_id") => "No user with that id exists",
+                        _ => "Could not create model",
+                    };
+                    println!("{}", e);
+                    Err(Status::invalid_argument(error_msg))
+                }
+                _ => Err(Status::internal(error.to_string())),
+            },
         }
     }
 
@@ -563,3 +582,7 @@ mod tests;
 #[cfg(test)]
 #[path = "../tests/api/query_logic.rs"]
 mod query_logic;
+
+#[cfg(test)]
+#[path = "../tests/api/model_logic.rs"]
+mod model_logic;
