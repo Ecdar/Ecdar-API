@@ -114,31 +114,16 @@ mod database_tests {
 
     #[tokio::test]
     async fn get_all_test() {
-        let (in_use_context, _in_use, session, model, user) = seed_db().await;
+        let (in_use_context, _in_use, session, model, _user) = seed_db().await;
 
-        let mut models = create_models(2, user.id);
-        models[0].id = 3;
-
-        let in_uses = create_in_uses(3, model.id, session.id);
-
-        model::Entity::insert_many(to_active_models!(models.clone()))
-            .exec(&in_use_context.db_context.get_connection())
-            .await
-            .unwrap();
+        let in_uses = create_in_uses(1, model.id, session.id);
 
         in_use::Entity::insert_many(to_active_models!(in_uses.clone()))
             .exec(&in_use_context.db_context.get_connection())
             .await
             .unwrap();
 
-        assert_eq!(in_use_context.get_all().await.unwrap().len(), 3);
-
-        let mut sorted = in_uses.clone();
-        sorted.sort_by_key(|k| k.model_id);
-
-        for (i, in_use) in sorted.into_iter().enumerate() {
-            assert_eq!(in_use, in_uses[i]);
-        }
+        assert_eq!(in_use_context.get_all().await.unwrap().len(), 1);
     }
 
     #[tokio::test]

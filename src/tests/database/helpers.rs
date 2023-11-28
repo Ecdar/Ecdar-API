@@ -66,7 +66,7 @@ pub fn create_users(amount: i32) -> Vec<user::Model> {
 pub fn create_models(amount: i32, user_id: i32) -> Vec<model::Model> {
     create_entities(amount, |i| model::Model {
         id: i + 1,
-        name: "name".to_string(),
+        name: format!("name {}", i),
         components_info: "{}".to_owned().parse().unwrap(),
         owner_id: user_id,
     })
