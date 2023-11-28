@@ -5,7 +5,8 @@ use crate::api::server::server::ModelInfo;
 use crate::EntityContextTrait;
 use async_trait::async_trait;
 use sea_orm::{
-    ActiveModelTrait, ColumnTrait, DbErr, EntityTrait, IntoActiveModel, JoinType, ModelTrait, QueryFilter, QuerySelect, RelationTrait, Set, Unchanged,
+    ActiveModelTrait, ColumnTrait, DbErr, EntityTrait, IntoActiveModel, JoinType, ModelTrait,
+    QueryFilter, QuerySelect, RelationTrait, Set, Unchanged,
 };
 use std::sync::Arc;
 
