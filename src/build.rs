@@ -1,5 +1,19 @@
 fn main() {
     tonic_build::compile_protos("Ecdar-ProtoBuf/services.proto").unwrap();
+    tonic_build::configure()
+        .type_attribute(
+            "ComponentsInfo",
+            "#[derive(serde::Serialize, serde::Deserialize)]",
+        )
+        .type_attribute(
+            "Component",
+            "#[derive(serde::Serialize, serde::Deserialize)]",
+        )
+        .type_attribute("ModelInfo", "#[derive(sea_orm::FromQueryResult)]")
+        .enum_attribute("rep", "#[derive(serde::Serialize, serde::Deserialize)]")
+        .compile(&["Ecdar-ProtoBuf/services.proto"], &["Ecdar-ProtoBuf/"])
+        .unwrap();
+
     // Tell cargo to invalidate the crate when the protobuf repository changes
     println!("cargo:rerun-if-changed=Ecdar-ProtoBuf");
 }

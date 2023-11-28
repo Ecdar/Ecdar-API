@@ -5,25 +5,20 @@ use crate::EntityContextTrait;
 use async_trait::async_trait;
 use sea_orm::{ActiveModelTrait, DbErr, EntityTrait, IntoActiveModel, ModelTrait, Set, Unchanged, QuerySelect, FromQueryResult, JoinType, RelationTrait, Related, RelationDef, ColumnTrait, EntityOrSelect, QueryTrait, DatabaseBackend, QueryFilter, DbBackend};
 use serde::de;
-use std::sync::Arc;
+use std::sync::Arc; 
+use crate::api::server::server::ModelInfo;
+
 
 pub struct ModelContext {
     db_context: Arc<dyn DatabaseContextTrait>,
 }
 
-#[derive(FromQueryResult)]
-#[derive(Debug)]
-pub struct ModelInfo {
-    pub model_id: i32,
-    pub model_name: String,
-    pub model_owner_id: i32,
-    pub user_role_on_model: String,
-}
 
 #[async_trait]
 pub trait ModelContextTrait: EntityContextTrait<model::Model> {
     async fn get_model_info_by_uid(&self, uid: i32) -> Result<Vec<ModelInfo>, DbErr>;
 }
+
 
 #[async_trait]
 impl ModelContextTrait for ModelContext {
