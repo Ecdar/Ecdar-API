@@ -18,10 +18,10 @@ use super::server::server::{
     get_auth_token_request::{user_credentials, UserCredentials},
     CreateAccessRequest, CreateModelRequest, CreateModelResponse, CreateQueryRequest,
     CreateUserRequest, DeleteAccessRequest, DeleteModelRequest, DeleteQueryRequest,
-    GetAuthTokenRequest, GetAuthTokenResponse, GetModelRequest, GetModelResponse, Query,
-    QueryRequest, QueryResponse, SimulationStartRequest, SimulationStepRequest,
-    SimulationStepResponse, UpdateAccessRequest, UpdateQueryRequest, UpdateUserRequest,
-    UserTokenResponse,
+    GetAuthTokenRequest, GetAuthTokenResponse, GetModelRequest, GetModelResponse,
+    ListAccessInfoResponse, Query, QueryRequest, QueryResponse, SimulationStartRequest,
+    SimulationStepRequest, SimulationStepResponse, UpdateAccessRequest, UpdateQueryRequest,
+    UpdateUserRequest, UserTokenResponse,
 };
 
 use crate::database::{
@@ -165,6 +165,13 @@ impl EcdarApi for ConcreteEcdarApi {
             owner_id: model.owner_id,
         };
 
+        let in_use = match self.in_use_context.get_by_id(model_id).await {
+            Ok(in_use) => {
+                matches!(in_use, Some(_in_use))
+            }
+            Err(err) => return Err(Status::new(Code::Internal, err.to_string())),
+        };
+
         let queries = self
             .query_context
             .get_all_by_model_id(model_id)
@@ -188,6 +195,7 @@ impl EcdarApi for ConcreteEcdarApi {
         Ok(Response::new(GetModelResponse {
             model: Some(model),
             queries,
+            in_use,
         }))
     }
 
@@ -229,7 +237,10 @@ impl EcdarApi for ConcreteEcdarApi {
         todo!()
     }
 
-    async fn list_models_info(&self, _request: Request<()>) -> Result<Response<()>, Status> {
+    async fn list_access_info(
+        &self,
+        _request: Request<()>,
+    ) -> Result<Response<ListAccessInfoResponse>, Status> {
         todo!()
     }
 
