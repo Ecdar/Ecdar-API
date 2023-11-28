@@ -6,11 +6,7 @@ use std::sync::Arc;
 use tonic::{Code, Request, Response, Status};
 
 use crate::api::auth::{RequestExt, Token, TokenType};
-use crate::database::{
-    access_context::AccessContextTrait, in_use_context::InUseContextTrait,
-    model_context::ModelContextTrait, query_context::QueryContextTrait,
-    session_context::SessionContextTrait, user_context::UserContextTrait,
-};
+use crate::database::{session_context::SessionContextTrait, user_context::UserContextTrait};
 
 use super::server::server::{
     ecdar_api_auth_server::EcdarApiAuth,

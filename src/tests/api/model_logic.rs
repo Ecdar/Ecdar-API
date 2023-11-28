@@ -1,7 +1,7 @@
 #[cfg(test)]
 use crate::api::server::server::ecdar_api_server::EcdarApi;
-use crate::api::server::server::{Component, ComponentsInfo, CreateModelRequest};
-use crate::entities::{model, user};
+use crate::api::server::server::{ComponentsInfo, CreateModelRequest};
+use crate::entities::model;
 use crate::tests::api::helpers::{get_mock_concrete_ecdar_api, get_mock_services};
 use mockall::predicate;
 use sea_orm::DbErr;
@@ -22,7 +22,7 @@ async fn create_model_returns_ok() {
         id: Default::default(),
         name: Default::default(),
         components_info: serde_json::to_value(components_info.clone()).unwrap(),
-        owner_id: uid.clone(),
+        owner_id: uid,
     };
 
     mock_services
@@ -34,7 +34,7 @@ async fn create_model_returns_ok() {
     let mut request = Request::new(CreateModelRequest {
         name: Default::default(),
         components_info: Option::from(components_info),
-        owner_id: uid.clone(),
+        owner_id: uid,
     });
 
     request
@@ -60,7 +60,7 @@ async fn create_model_existing_name_returns_err() {
         id: Default::default(),
         name: "model".to_string(),
         components_info: Default::default(),
-        owner_id: uid.clone(),
+        owner_id: uid,
     };
 
     mock_services
@@ -72,7 +72,7 @@ async fn create_model_existing_name_returns_err() {
     let mut request = Request::new(CreateModelRequest {
         name: "model".to_string(),
         components_info: Default::default(),
-        owner_id: uid.clone(),
+        owner_id: uid,
     });
 
     request
