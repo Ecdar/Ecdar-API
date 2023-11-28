@@ -202,7 +202,7 @@ mod access_logic {
 
         assert!(res.is_ok());
     }
-    
+
     #[tokio::test]
     async fn get_list_access_info_returns_not_found_err() {
         let mut mock_services = get_mock_services();
@@ -220,9 +220,11 @@ mod access_logic {
 
         let api = get_mock_concrete_ecdar_api(mock_services);
 
-        let res = api.list_access_info(list_access_info_request).await.unwrap_err();
+        let res = api
+            .list_access_info(list_access_info_request)
+            .await
+            .unwrap_err();
 
         assert_eq!(res.code(), Code::NotFound);
     }
-
 }
