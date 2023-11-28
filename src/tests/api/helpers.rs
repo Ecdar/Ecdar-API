@@ -5,7 +5,7 @@ use crate::api::reveaal_context::ReveaalContext;
 use crate::database::access_context::AccessContextTrait;
 use crate::database::entity_context::EntityContextTrait;
 use crate::database::in_use_context::InUseContextTrait;
-use crate::database::model_context::ModelContextTrait;
+use crate::database::model_context::{ModelContextTrait, ModelInfo};
 use crate::database::query_context::QueryContextTrait;
 use crate::database::session_context::SessionContextTrait;
 use crate::database::user_context::UserContextTrait;
@@ -88,7 +88,9 @@ mock! {
         async fn delete(&self, entity_id: i32) -> Result<model::Model, DbErr>;
     }
     #[async_trait]
-    impl ModelContextTrait for ModelContext {}
+    impl ModelContextTrait for ModelContext {
+        async fn get_model_info_by_uid(&self, uid: i32) -> Result<Vec<ModelInfo>, DbErr>;
+    }
 }
 
 mock! {

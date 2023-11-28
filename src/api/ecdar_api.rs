@@ -17,9 +17,9 @@ use super::server::server::{
     ecdar_api_server::EcdarApi,
     ecdar_backend_server::EcdarBackend,
     get_auth_token_request::{user_credentials, UserCredentials},
-    AccessInfo, CreateAccessRequest, CreateModelResponse, CreateQueryRequest, CreateUserRequest,
+    ModelInfo, CreateAccessRequest, CreateModelResponse, CreateQueryRequest, CreateUserRequest,
     DeleteAccessRequest, DeleteQueryRequest, GetAuthTokenRequest, GetAuthTokenResponse,
-    GetModelRequest, GetModelResponse, ListAccessInfoResponse, QueryRequest, QueryResponse,
+    GetModelRequest, GetModelResponse, ListModelInfoResponse, QueryRequest, QueryResponse,
     SimulationStartRequest, SimulationStepRequest, SimulationStepResponse, UpdateAccessRequest,
     UpdateQueryRequest, UpdateUserRequest, UserTokenResponse,
 };
@@ -151,39 +151,82 @@ impl EcdarApi for ConcreteEcdarApi {
         todo!()
     }
 
-    async fn list_access_info(
+    async fn list_model_info(
         &self,
         request: Request<()>,
-    ) -> Result<Response<ListAccessInfoResponse>, Status> {
+    ) -> Result<Response<ListModelInfoResponse>, Status> {
         let uid = request
             .uid()
             .ok_or(Status::internal("Could not get uid from request metadata"))?;
 
-        let mut access_info_list: Vec<AccessInfo> = Vec::new(); // Initialize the Vec
+        let mut model_info_list_vector: Vec<ModelInfo> = Vec::new(); // Initialize the Vec
 
-        match self.access_context.get_access_by_uid(uid).await {
-            Ok(accesses) => {
-                for access in accesses {
-                    let access_info = AccessInfo {
-                        id: access.id,
-                        role: access.role,
-                        model_id: access.model_id,
-                        user_id: access.user_id,
+        // Get all the models that the user has access to
+        match self.model_context.get_model_info_by_uid(uid).await {
+            Ok(model_info_list) => {
+                for model_info in model_info_list {
+                    let model_info_test = ModelInfo {
+                        model_id: model_info.model_id,
+                        model_name: model_info.model_name,
+                        owner_id: model_info.model_owner_id,
+                        role: model_info.user_role_on_model,
                     };
-                    access_info_list.push(access_info);
                 }
 
-                if access_info_list.is_empty() {
+                if model_info_list_vector.is_empty() {
                     return Err(Status::new(
                         Code::NotFound,
                         "No access found for given user",
                     ));
                 }
 
-                Ok(Response::new(ListAccessInfoResponse { access_info_list }))
+                Ok(Response::new(ListModelInfoResponse {
+                    model_info_list: model_info_list_vector,
+                }))
             }
             Err(error) => Err(Status::new(Code::Internal, error.to_string())),
         }
+
+        /*match self.access_context.get_access_by_uid(uid).await {
+            Ok(accesses) => {
+                for access in accesses {
+                    let model_info = ModelInfo {
+                        model_id: access.model_id,
+                        model_name: Default::default(),
+                        owner_id: Default::default(),
+                        role: access.role,
+                    };
+                    model_info_list.push(model_info);
+                }
+
+                if model_info_list.is_empty() {
+                    return Err(Status::new(
+                        Code::NotFound,
+                        "No access found for given user",
+                    ));
+                }
+            }
+            Err(error) => Err(Status::new(Code::Internal, error.to_string())),
+        }
+
+        match self.model_context.get_all().await {
+            Ok(models) => {
+                for model in models {
+                    let model_info = ModelInfo {
+                        id: model.id,
+                        role: Default::default(),
+                        model_id: Default::default(),
+                        user_id: Default::default(),
+                    };
+                    model_info_list.push(model_info);
+                }
+
+                if model_info_list.is_empty() {
+                    return Err(Status::new(Code::NotFound, "No models found"));
+                }
+            }
+            Err(error) => Err(Status::new(Code::Internal, error.to_string())),
+        }*/
     }
 
     /// Creates an access in the database.

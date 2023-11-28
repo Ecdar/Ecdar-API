@@ -198,7 +198,7 @@ mod access_logic {
 
         let api = get_mock_concrete_ecdar_api(mock_services);
 
-        let res = api.list_access_info(list_access_info_request).await;
+        let res = api.list_model_info(list_access_info_request).await;
 
         assert!(res.is_ok());
     }
@@ -212,16 +212,16 @@ mod access_logic {
             .expect_get_access_by_uid()
             .returning(move |_| Ok(vec![]));
 
-        let mut list_access_info_request = Request::new(());
+        let mut list_model_info_request = Request::new(());
 
-        list_access_info_request
+        list_model_info_request
             .metadata_mut()
             .insert("uid", metadata::MetadataValue::from_str("1").unwrap());
 
         let api = get_mock_concrete_ecdar_api(mock_services);
 
         let res = api
-            .list_access_info(list_access_info_request)
+            .list_model_info(list_model_info_request)
             .await
             .unwrap_err();
 
