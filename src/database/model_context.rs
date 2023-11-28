@@ -1,24 +1,25 @@
 use crate::database::database_context::DatabaseContextTrait;
-use crate::entities::{model, query, access, role};
+use crate::entities::{access, model, query, role};
 
+use crate::api::server::server::ModelInfo;
 use crate::EntityContextTrait;
 use async_trait::async_trait;
-use sea_orm::{ActiveModelTrait, DbErr, EntityTrait, IntoActiveModel, ModelTrait, Set, Unchanged, QuerySelect, FromQueryResult, JoinType, RelationTrait, Related, RelationDef, ColumnTrait, EntityOrSelect, QueryTrait, DatabaseBackend, QueryFilter, DbBackend};
+use sea_orm::{
+    ActiveModelTrait, ColumnTrait, DatabaseBackend, DbBackend, DbErr, EntityOrSelect, EntityTrait,
+    FromQueryResult, IntoActiveModel, JoinType, ModelTrait, QueryFilter, QuerySelect, QueryTrait,
+    Related, RelationDef, RelationTrait, Set, Unchanged,
+};
 use serde::de;
-use std::sync::Arc; 
-use crate::api::server::server::ModelInfo;
-
+use std::sync::Arc;
 
 pub struct ModelContext {
     db_context: Arc<dyn DatabaseContextTrait>,
 }
 
-
 #[async_trait]
 pub trait ModelContextTrait: EntityContextTrait<model::Model> {
     async fn get_model_info_by_uid(&self, uid: i32) -> Result<Vec<ModelInfo>, DbErr>;
 }
-
 
 #[async_trait]
 impl ModelContextTrait for ModelContext {
@@ -38,9 +39,7 @@ impl ModelContextTrait for ModelContext {
             .into_model::<ModelInfo>()
             .all(&self.db_context.get_connection())
             .await
-        
     }
-
 }
 
 impl ModelContext {

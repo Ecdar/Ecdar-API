@@ -151,7 +151,7 @@ mod access_logic {
     #[tokio::test]
     async fn delete_access_returns_ok() {
         let mut mock_services = get_mock_services();
-        
+
         let access = access::Model {
             id: 1,
             role: "Editor".to_string(),
@@ -173,5 +173,4 @@ mod access_logic {
 
         assert!(res.is_ok());
     }
-
 }

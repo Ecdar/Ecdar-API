@@ -1,14 +1,12 @@
 #[cfg(test)]
 use crate::api::server::server::ecdar_api_server::EcdarApi;
-use crate::api::server::server::{
-    CreateAccessRequest, DeleteAccessRequest, UpdateAccessRequest,
-};
+use crate::api::server::server::ModelInfo;
+use crate::api::server::server::{CreateAccessRequest, DeleteAccessRequest, UpdateAccessRequest};
 use crate::entities::model;
 use crate::tests::api::helpers::{get_mock_concrete_ecdar_api, get_mock_services};
 use mockall::predicate;
 use sea_orm::DbErr;
 use std::str::FromStr;
-use crate::api::server::server::ModelInfo;
 
 use tonic::{metadata, Code, Request};
 

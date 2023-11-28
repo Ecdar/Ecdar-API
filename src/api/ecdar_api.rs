@@ -17,11 +17,12 @@ use super::server::server::{
     ecdar_api_server::EcdarApi,
     ecdar_backend_server::EcdarBackend,
     get_auth_token_request::{user_credentials, UserCredentials},
-    ModelInfo, CreateAccessRequest, CreateModelResponse, CreateQueryRequest, CreateUserRequest,
-    DeleteAccessRequest, DeleteQueryRequest, GetAuthTokenRequest, GetAuthTokenResponse,
-    GetModelRequest, GetModelResponse, ListModelInfoResponse, QueryRequest, QueryResponse,
-    SimulationStartRequest, SimulationStepRequest, SimulationStepResponse, UpdateAccessRequest,
-    UpdateQueryRequest, UpdateUserRequest, UserTokenResponse, CreateModelRequest, DeleteModelRequest,
+    CreateAccessRequest, CreateModelRequest, CreateModelResponse, CreateQueryRequest,
+    CreateUserRequest, DeleteAccessRequest, DeleteModelRequest, DeleteQueryRequest,
+    GetAuthTokenRequest, GetAuthTokenResponse, GetModelRequest, GetModelResponse,
+    ListModelInfoResponse, ModelInfo, QueryRequest, QueryResponse, SimulationStartRequest,
+    SimulationStepRequest, SimulationStepResponse, UpdateAccessRequest, UpdateQueryRequest,
+    UpdateUserRequest, UserTokenResponse,
 };
 use crate::entities::{access, model, query, session, user};
 
@@ -166,9 +167,7 @@ impl EcdarApi for ConcreteEcdarApi {
                         "No access found for given user",
                     ));
                 } else {
-                    Ok(Response::new(ListModelInfoResponse {
-                        model_info_list,
-                    }))
+                    Ok(Response::new(ListModelInfoResponse { model_info_list }))
                 }
             }
             Err(error) => Err(Status::new(Code::Internal, error.to_string())),
@@ -201,7 +200,6 @@ impl EcdarApi for ConcreteEcdarApi {
             }
             Err(error) => Err(Status::new(Code::Internal, error.to_string())),
         }*/
-
     }
 
     /// Creates an access in the database.

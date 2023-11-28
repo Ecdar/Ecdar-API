@@ -2,15 +2,15 @@
 
 use crate::api::ecdar_api::ConcreteEcdarApi;
 use crate::api::reveaal_context::ReveaalContext;
+use crate::api::server::server::ModelInfo;
 use crate::database::access_context::AccessContextTrait;
 use crate::database::entity_context::EntityContextTrait;
 use crate::database::in_use_context::InUseContextTrait;
-use crate::database::model_context::{ModelContextTrait};
+use crate::database::model_context::ModelContextTrait;
 use crate::database::query_context::QueryContextTrait;
 use crate::database::session_context::SessionContextTrait;
 use crate::database::user_context::UserContextTrait;
 use crate::entities::{access, in_use, model, query, session, user};
-use crate::api::server::server::ModelInfo;
 use async_trait::async_trait;
 use mockall::mock;
 use sea_orm::DbErr;
