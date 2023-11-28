@@ -3,7 +3,7 @@ use crate::database::entity_context::EntityContextTrait;
 use crate::entities::access;
 use sea_orm::prelude::async_trait::async_trait;
 use sea_orm::ActiveValue::{Set, Unchanged};
-use sea_orm::{ActiveModelTrait, ColumnTrait, DbErr, EntityTrait, QueryFilter, QuerySelect};
+use sea_orm::{ActiveModelTrait, ColumnTrait, DbErr, EntityTrait, QueryFilter};
 use std::sync::Arc;
 
 pub struct AccessContext {
@@ -19,8 +19,6 @@ pub trait AccessContextTrait: EntityContextTrait<access::Model> {
 impl AccessContextTrait for AccessContext {
     async fn get_access_by_uid(&self, uid: i32) -> Result<Vec<access::Model>, DbErr> {
         access::Entity::find()
-            /*.select_only()
-            .columns([access::Column::ModelId, access::Column::UserId, access::Column::Role])*/
             .filter(access::Column::UserId.eq(uid))
             .all(&self.db_context.get_connection())
             .await
