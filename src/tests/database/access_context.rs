@@ -1,6 +1,7 @@
 #[cfg(test)]
 mod database_tests {
     use crate::database::access_context::AccessContextTrait;
+
     use crate::tests::database::helpers::{
         create_accesses, create_models, create_users, get_reset_database_context,
     };
@@ -31,7 +32,6 @@ mod database_tests {
 
         (access_context, access, user, model)
     }
-
     // Test the functionality of the 'create' function, which creates a access in the database
     #[tokio::test]
     async fn create_test() {
@@ -83,7 +83,6 @@ mod database_tests {
 
         let mut model_2 = create_models(1, user.id)[0].clone();
         model_2.id = model_1.id + 1;
-        model_2.name = "model_2".to_string();
 
         model::Entity::insert(model_2.into_active_model())
             .exec(&access_context.db_context.get_connection())
@@ -172,6 +171,21 @@ mod database_tests {
             assert_eq!(access, new_accesses[i]);
         }
     }
+    #[tokio::test]
+    async fn get_by_uid_and_model_id_test() {
+        let (access_context, expected_access, user, model) = seed_db().await;
+
+        access::Entity::insert(expected_access.clone().into_active_model())
+            .exec(&access_context.db_context.get_connection())
+            .await
+            .unwrap();
+
+        let access = access_context
+            .get_access_by_uid_and_model_id(user.id, model.id)
+            .await;
+
+        assert!(access.unwrap().unwrap() == expected_access);
+    }
 
     #[tokio::test]
     async fn get_all_empty_test() {
@@ -247,7 +261,6 @@ mod database_tests {
 
         assert!(matches!(res.unwrap_err(), DbErr::RecordNotUpdated));
     }
-
     #[tokio::test]
     async fn update_does_not_modify_model_id_test() {
         let (access_context, access, _, _) = seed_db().await;
@@ -265,7 +278,6 @@ mod database_tests {
 
         assert_eq!(access, res);
     }
-
     #[tokio::test]
     async fn update_does_not_modify_user_id_test() {
         let (access_context, access, _, _) = seed_db().await;
@@ -345,21 +357,5 @@ mod database_tests {
             deleted_access.unwrap_err(),
             DbErr::RecordNotFound(_)
         ));
-    }
-
-    #[tokio::test]
-    async fn get_by_uid_and_model_id_test() {
-        let (access_context, expected_access, user, model) = seed_db().await;
-
-        access::Entity::insert(expected_access.clone().into_active_model())
-            .exec(&access_context.db_context.get_connection())
-            .await
-            .unwrap();
-
-        let access = access_context
-            .get_access_by_uid_and_model_id(user.id, model.id)
-            .await;
-
-        assert!(access.unwrap().unwrap() == expected_access);
     }
 }

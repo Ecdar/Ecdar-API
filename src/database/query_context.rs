@@ -135,4 +135,4 @@ impl EntityContextTrait<query::Model> for QueryContext {
 
 #[cfg(test)]
 #[path = "../tests/database/query_context.rs"]
-mod tests;
+mod query_context_tests;
