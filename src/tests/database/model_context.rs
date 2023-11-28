@@ -412,9 +412,9 @@ mod database_tests {
         let access = create_accesses(1, user.id, model.id)[0].clone();
 
         let expected_model_info = vec![ModelInfo {
-            model_id: model.id.clone(),
+            model_id: model.id,
             model_name: model.name.clone(),
-            model_owner_id: model.owner_id.clone(),
+            model_owner_id: model.owner_id,
             user_role_on_model: access.role.clone(),
         }];
 
