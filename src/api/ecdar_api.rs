@@ -573,5 +573,5 @@ mod tests;
 mod query_logic;
 
 #[cfg(test)]
-#[path ="../tests/api/model_logic.rs"]
+#[path = "../tests/api/model_logic.rs"]
 mod model_logic;
