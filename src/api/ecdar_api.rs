@@ -21,9 +21,8 @@ use super::server::server::{
     DeleteAccessRequest, DeleteQueryRequest, GetAuthTokenRequest, GetAuthTokenResponse,
     GetModelRequest, GetModelResponse, ListModelInfoResponse, QueryRequest, QueryResponse,
     SimulationStartRequest, SimulationStepRequest, SimulationStepResponse, UpdateAccessRequest,
-    UpdateQueryRequest, UpdateUserRequest, UserTokenResponse,
+    UpdateQueryRequest, UpdateUserRequest, UserTokenResponse, CreateModelRequest, DeleteModelRequest,
 };
-use super::server::server::{CreateModelRequest, DeleteModelRequest};
 use crate::entities::{access, model, query, session, user};
 
 #[derive(Clone)]
@@ -159,7 +158,22 @@ impl EcdarApi for ConcreteEcdarApi {
             .uid()
             .ok_or(Status::internal("Could not get uid from request metadata"))?;
 
-        let mut model_info_list_vector: Vec<ModelInfo> = Vec::new(); // Initialize the Vec
+        match self.model_context.get_model_info_by_uid(uid).await {
+            Ok(model_info_list) => {
+                if model_info_list.is_empty() {
+                    return Err(Status::new(
+                        Code::NotFound,
+                        "No access found for given user",
+                    ));
+                } else {
+                    Ok(Response::new(ListModelInfoResponse {
+                        model_info_list,
+                    }))
+                }
+            }
+            Err(error) => Err(Status::new(Code::Internal, error.to_string())),
+        }
+        /*let mut model_info_list_vector: Vec<ModelInfo> = Vec::new(); // Initialize the Vec
 
         // Get all the models that the user has access to
         match self.model_context.get_model_info_by_uid(uid).await {
@@ -186,7 +200,7 @@ impl EcdarApi for ConcreteEcdarApi {
                 }
             }
             Err(error) => Err(Status::new(Code::Internal, error.to_string())),
-        }
+        }*/
 
     }
 
@@ -581,3 +595,7 @@ mod tests;
 #[cfg(test)]
 #[path = "../tests/api/query_logic.rs"]
 mod query_logic;
+
+#[cfg(test)]
+#[path = "../tests/api/model_logic.rs"]
+mod model_logic;
