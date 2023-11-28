@@ -12,13 +12,8 @@ use super::server::server::{
 };
 use crate::api::auth::{RequestExt, Token, TokenType};
 use crate::api::context_collection::ContextCollection;
-use crate::database::{
-    access_context::AccessContextTrait, in_use_context::InUseContextTrait,
-    model_context::ModelContextTrait, query_context::QueryContextTrait,
-    session_context::SessionContextTrait, user_context::UserContextTrait,
-};
-use crate::entities::access::Model;
-use crate::entities::{access, query, session, user};
+use crate::database::{session_context::SessionContextTrait, user_context::UserContextTrait};
+use crate::entities::{access, model, query, session, user};
 use regex::Regex;
 use sea_orm::SqlErr;
 use serde_json;
@@ -129,7 +124,7 @@ impl EcdarApi for ConcreteEcdarApi {
             owner_id: uid,
         };
 
-        match self.model_context.create(model).await {
+        match self.contexts.model_context.create(model).await {
             Ok(model) => Ok(Response::new(CreateModelResponse { id: model.id })),
             Err(error) => Err(Status::internal(error.to_string())),
         }
@@ -150,7 +145,7 @@ impl EcdarApi for ConcreteEcdarApi {
             .ok_or(Status::internal("Could not get uid from request metadata"))?;
 
         // Check if the model exists
-        let model = match self.model_context.get_by_id(message.id).await {
+        let model = match self.contexts.model_context.get_by_id(message.id).await {
             Ok(Some(model)) => model,
             Ok(None) => return Err(Status::not_found("No model found with given id")),
             Err(error) => return Err(Status::internal(error.to_string())),
@@ -158,6 +153,7 @@ impl EcdarApi for ConcreteEcdarApi {
 
         // Check if the user has access to the model
         let access = match self
+            .contexts
             .access_context
             .get_access_by_uid_and_model_id(uid, model.id)
             .await
@@ -201,7 +197,7 @@ impl EcdarApi for ConcreteEcdarApi {
             },
         };
 
-        match self.model_context.update(new_model).await {
+        match self.contexts.model_context.update(new_model).await {
             Ok(_) => Ok(Response::new(())),
             Err(error) => Err(Status::new(Code::Internal, error.to_string())),
         }
