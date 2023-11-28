@@ -159,6 +159,11 @@ impl EcdarApi for ConcreteEcdarApi {
         }
     }
 
+    /// Updates a Model in the database given its id.
+    ///
+    /// # Errors
+    /// This function will return an error if the model does not exist in the database
+    /// or if the user does not have access to the model with role 'Editor'.
     async fn update_model(
         &self,
         request: Request<UpdateModelRequest>,
@@ -201,6 +206,8 @@ impl EcdarApi for ConcreteEcdarApi {
             }
             Err(error) => return Err(Status::internal(error.to_string())),
         };
+
+        // TODO: Check if the model is in use
 
         let new_model = model::Model {
             id: model.id,
