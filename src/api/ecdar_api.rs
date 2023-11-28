@@ -172,6 +172,14 @@ impl EcdarApi for ConcreteEcdarApi {
                     };
                     access_info_list.push(access_info);
                 }
+
+                if access_info_list.is_empty() {
+                    return Err(Status::new(
+                        Code::NotFound,
+                        "No access found for given user",
+                    ));
+                }
+
                 Ok(Response::new(ListAccessInfoResponse { access_info_list }))
             }
             Err(error) => Err(Status::new(Code::Internal, error.to_string())),
