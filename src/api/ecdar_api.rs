@@ -160,9 +160,9 @@ impl EcdarApi for ConcreteEcdarApi {
     }
 
     async fn update_model(
-        &self, 
-        request: Request<UpdateModelRequest>
-    )-> Result<Response<()>, Status> {
+        &self,
+        request: Request<UpdateModelRequest>,
+    ) -> Result<Response<()>, Status> {
         let message = request.get_ref().clone();
         let uid = request
             .uid()
@@ -176,7 +176,11 @@ impl EcdarApi for ConcreteEcdarApi {
         };
 
         // Check if the user has access to the model
-        let access = match self.access_context.get_access_by_uid_and_model_id(uid, model.id).await {
+        let access = match self
+            .access_context
+            .get_access_by_uid_and_model_id(uid, model.id)
+            .await
+        {
             Ok(access) => {
                 let mut is_editor = false;
                 let access = match access {
@@ -187,23 +191,23 @@ impl EcdarApi for ConcreteEcdarApi {
                             is_editor = false;
                         }
                         Some(access)
-                    },
-                    None => {
-                        None
-                    },
+                    }
+                    None => None,
                 };
 
                 if !is_editor || access.is_none() {
-                    return Err(Status::permission_denied("You do not have permission to update this model"))
+                    return Err(Status::permission_denied(
+                        "You do not have permission to update this model",
+                    ));
                 }
 
                 access.unwrap()
-            },
+            }
             Err(error) => return Err(Status::internal(error.to_string())),
         };
 
-        let new_model = model::Model { 
-            id: model.id, 
+        let new_model = model::Model {
+            id: model.id,
             name: match message.clone().name {
                 Some(name) => name,
                 None => model.name,
