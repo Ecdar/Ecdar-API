@@ -3,6 +3,8 @@ mod database;
 mod entities;
 mod tests;
 
+use crate::api::context_collection::ContextCollection;
+use crate::api::hashing_context::HashingContext;
 use crate::api::reveaal_context::ReveaalContext;
 use crate::database::access_context::AccessContext;
 use crate::database::database_context::{PostgresDatabaseContext, SQLiteDatabaseContext};
@@ -32,25 +34,18 @@ async fn main() -> Result<(), Box<dyn Error>> {
         _ => panic!("Database protocol not supported"),
     };
 
-    let model_context = Arc::new(ModelContext::new(db_context.clone()));
-    let user_context = Arc::new(UserContext::new(db_context.clone()));
-    let access_context = Arc::new(AccessContext::new(db_context.clone()));
-    let query_context = Arc::new(QueryContext::new(db_context.clone()));
-    let session_context = Arc::new(SessionContext::new(db_context.clone()));
-    let in_use_context = Arc::new(InUseContext::new(db_context.clone()));
-    let reveaal_context = Arc::new(ReveaalContext);
+    let contexts = ContextCollection {
+        access_context: Arc::new(AccessContext::new(db_context.clone())),
+        in_use_context: Arc::new(InUseContext::new(db_context.clone())),
+        model_context: Arc::new(ModelContext::new(db_context.clone())),
+        query_context: Arc::new(QueryContext::new(db_context.clone())),
+        session_context: Arc::new(SessionContext::new(db_context.clone())),
+        user_context: Arc::new(UserContext::new(db_context.clone())),
+        reveaal_context: Arc::new(ReveaalContext),
+        hashing_context: Arc::new(HashingContext),
+    };
 
-    start_grpc_server(
-        access_context,
-        in_use_context,
-        model_context,
-        query_context,
-        session_context,
-        user_context,
-        reveaal_context,
-    )
-    .await
-    .unwrap();
+    start_grpc_server(contexts).await.unwrap();
 
     Ok(())
 }
