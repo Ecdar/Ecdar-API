@@ -13,8 +13,8 @@ use super::server::server::{
 use crate::api::auth::{RequestExt, Token, TokenType};
 use crate::api::context_collection::ContextCollection;
 use crate::database::{session_context::SessionContextTrait, user_context::UserContextTrait};
-use crate::entities::{access, model, query, session, user, in_use};
-use chrono::{Utc, Duration};
+use crate::entities::{access, in_use, model, query, session, user};
+use chrono::{Duration, Utc};
 use regex::Regex;
 use sea_orm::SqlErr;
 use serde_json;
@@ -184,39 +184,41 @@ impl EcdarApi for ConcreteEcdarApi {
         let session = match self
             .contexts
             .session_context
-            .get_by_access_token(request.token_string().unwrap()).await 
+            .get_by_access_token(request.token_string().unwrap())
+            .await
         {
             Ok(Some(session)) => session,
-            Ok(None) => return Err(Status::unauthenticated("No session found with given access token")),
+            Ok(None) => {
+                return Err(Status::unauthenticated(
+                    "No session found with given access token",
+                ))
+            }
             Err(error) => return Err(Status::internal(error.to_string())),
         };
 
         // Get in_use for model
-        match self
-            .contexts
-            .in_use_context
-            .get_by_id(model.id)
-            .await
-        {
+        match self.contexts.in_use_context.get_by_id(model.id).await {
             Ok(Some(in_use)) => {
                 // Check if in_use latest activity is older than 10 minutes
                 if in_use.latest_activity > (Utc::now().naive_utc() - Duration::minutes(10)) {
-                    return Err(Status::failed_precondition("Model is currently in use by another session"));
+                    return Err(Status::failed_precondition(
+                        "Model is currently in use by another session",
+                    ));
                 }
 
-                let new_in_use = in_use::Model { 
-                    model_id: in_use.model_id, 
-                    session_id: session.id, 
-                    latest_activity: Utc::now().naive_utc() 
+                let new_in_use = in_use::Model {
+                    model_id: in_use.model_id,
+                    session_id: session.id,
+                    latest_activity: Utc::now().naive_utc(),
                 };
 
                 match self.contexts.in_use_context.update(new_in_use).await {
                     Ok(_) => (),
                     Err(error) => return Err(Status::internal(error.to_string())),
                 }
-            },
+            }
             Ok(None) => return Err(Status::internal("No in_use found for model")),
-            Err(error) => return Err(Status::internal(error.to_string())),  
+            Err(error) => return Err(Status::internal(error.to_string())),
         };
 
         let new_model = model::Model {
@@ -238,7 +240,7 @@ impl EcdarApi for ConcreteEcdarApi {
                             "You do not have permission to change the owner of this model",
                         ));
                     }
-                },
+                }
                 None => model.owner_id,
             },
         };

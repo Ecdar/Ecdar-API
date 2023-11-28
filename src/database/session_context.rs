@@ -35,7 +35,7 @@ impl SessionContextTrait for SessionContext {
             .one(&self.db_context.get_connection())
             .await
     }
-    
+
     async fn get_by_refresh_token(
         &self,
         refresh_token: String,
