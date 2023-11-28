@@ -203,7 +203,7 @@ impl EcdarApi for ConcreteEcdarApi {
         };
 
         let new_model = model::Model { 
-            id: Default::default(), 
+            id: model.id, 
             name: match message.clone().name {
                 Some(name) => name,
                 None => model.name,
