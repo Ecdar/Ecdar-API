@@ -121,4 +121,4 @@ impl EntityContextTrait<access::Model> for AccessContext {
 }
 #[cfg(test)]
 #[path = "../tests/database/access_context.rs"]
-mod tests;
+mod access_context_tests;

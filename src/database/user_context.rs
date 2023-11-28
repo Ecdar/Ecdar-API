@@ -147,4 +147,4 @@ impl EntityContextTrait<user::Model> for UserContext {
 }
 #[cfg(test)]
 #[path = "../tests/database/user_context.rs"]
-mod tests;
+mod user_context_tests;

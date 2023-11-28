@@ -154,4 +154,4 @@ impl EntityContextTrait<model::Model> for ModelContext {
 
 #[cfg(test)]
 #[path = "../tests/database/model_context.rs"]
-mod tests;
+mod model_context_tests;
