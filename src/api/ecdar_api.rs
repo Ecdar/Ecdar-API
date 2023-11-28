@@ -185,11 +185,7 @@ impl EcdarApi for ConcreteEcdarApi {
                 let mut is_editor = false;
                 let access = match access {
                     Some(access) => {
-                        if access.role == "Editor" {
-                            is_editor = true;
-                        } else {
-                            is_editor = false;
-                        }
+                        is_editor = access.role == "Editor";
                         Some(access)
                     }
                     None => None,
