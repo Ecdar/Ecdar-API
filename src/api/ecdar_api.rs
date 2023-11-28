@@ -13,7 +13,8 @@ use super::server::server::{
 use crate::api::auth::{RequestExt, Token, TokenType};
 use crate::api::context_collection::ContextCollection;
 use crate::database::{session_context::SessionContextTrait, user_context::UserContextTrait};
-use crate::entities::{access, model, query, session, user};
+use crate::entities::{access, model, query, session, user, in_use};
+use chrono::{Utc, Duration};
 use regex::Regex;
 use sea_orm::SqlErr;
 use serde_json;
@@ -189,19 +190,32 @@ impl EcdarApi for ConcreteEcdarApi {
             Ok(None) => return Err(Status::unauthenticated("No session found with given access token")),
             Err(error) => return Err(Status::internal(error.to_string())),
         };
-        
 
-        // TODO: Check if the model is in use
-        let in_use = match self
+        // Get in_use for model
+        match self
             .contexts
             .in_use_context
             .get_by_id(model.id)
             .await
         {
             Ok(Some(in_use)) => {
+                // Check if in_use latest activity is older than 10 minutes
+                if in_use.latest_activity > (Utc::now().naive_utc() - Duration::minutes(10)) {
+                    return Err(Status::failed_precondition("Model is currently in use by another session"));
+                }
 
+                let new_in_use = in_use::Model { 
+                    model_id: in_use.model_id, 
+                    session_id: session.id, 
+                    latest_activity: Utc::now().naive_utc() 
+                };
+
+                match self.contexts.in_use_context.update(new_in_use).await {
+                    Ok(_) => (),
+                    Err(error) => return Err(Status::internal(error.to_string())),
+                }
             },
-            Ok(None) => return Err(Status::not_found("No model found with given id")),
+            Ok(None) => return Err(Status::internal("No in_use found for model")),
             Err(error) => return Err(Status::internal(error.to_string())),  
         };
 
@@ -216,7 +230,15 @@ impl EcdarApi for ConcreteEcdarApi {
                 None => model.components_info,
             },
             owner_id: match message.clone().owner_id {
-                Some(owner_id) => owner_id,
+                Some(owner_id) => {
+                    if owner_id == uid {
+                        owner_id
+                    } else {
+                        return Err(Status::permission_denied(
+                            "You do not have permission to change the owner of this model",
+                        ));
+                    }
+                },
                 None => model.owner_id,
             },
         };
