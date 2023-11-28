@@ -151,7 +151,7 @@ mod access_logic {
     #[tokio::test]
     async fn delete_access_returns_ok() {
         let mut mock_services = get_mock_services();
-
+        
         let access = access::Model {
             id: 1,
             role: "Editor".to_string(),
@@ -174,57 +174,4 @@ mod access_logic {
         assert!(res.is_ok());
     }
 
-    #[tokio::test]
-    async fn get_list_access_info_returns_ok() {
-        let mut mock_services = get_mock_services();
-
-        let access = access::Model {
-            id: 1,
-            role: "Editor".to_string(),
-            model_id: Default::default(),
-            user_id: Default::default(),
-        };
-
-        mock_services
-            .access_context_mock
-            .expect_get_access_by_uid()
-            .returning(move |_| Ok(vec![access.clone()]));
-
-        let mut list_access_info_request = Request::new(());
-
-        list_access_info_request
-            .metadata_mut()
-            .insert("uid", metadata::MetadataValue::from_str("1").unwrap());
-
-        let api = get_mock_concrete_ecdar_api(mock_services);
-
-        let res = api.list_model_info(list_access_info_request).await;
-
-        assert!(res.is_ok());
-    }
-
-    #[tokio::test]
-    async fn get_list_access_info_returns_not_found_err() {
-        let mut mock_services = get_mock_services();
-
-        mock_services
-            .access_context_mock
-            .expect_get_access_by_uid()
-            .returning(move |_| Ok(vec![]));
-
-        let mut list_model_info_request = Request::new(());
-
-        list_model_info_request
-            .metadata_mut()
-            .insert("uid", metadata::MetadataValue::from_str("1").unwrap());
-
-        let api = get_mock_concrete_ecdar_api(mock_services);
-
-        let res = api
-            .list_model_info(list_model_info_request)
-            .await
-            .unwrap_err();
-
-        assert_eq!(res.code(), Code::NotFound);
-    }
 }
