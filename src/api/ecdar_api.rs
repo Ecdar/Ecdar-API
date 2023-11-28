@@ -447,7 +447,7 @@ impl EcdarApiAuth for ConcreteEcdarApi {
                 Arc::clone(&self.contexts.user_context),
                 user_credentials,
             )
-                .await?;
+            .await?;
 
             // Check if password in request matches users password
             if input_password != user_from_db.password {
@@ -486,7 +486,7 @@ impl EcdarApiAuth for ConcreteEcdarApi {
             refresh_token.clone(),
             uid,
         )
-            .await?;
+        .await?;
 
         Ok(Response::new(GetAuthTokenResponse {
             access_token,
