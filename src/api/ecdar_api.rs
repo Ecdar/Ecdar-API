@@ -12,6 +12,7 @@ use crate::database::{
     model_context::ModelContextTrait, query_context::QueryContextTrait,
     session_context::SessionContextTrait, user_context::UserContextTrait,
 };
+use crate::entities::access::Model;
 
 use super::server::server::UpdateModelRequest;
 use super::server::server::{
@@ -174,21 +175,50 @@ impl EcdarApi for ConcreteEcdarApi {
             Err(error) => return Err(Status::internal(error.to_string())),
         };
 
-        // // Check if the user has access to the model
-        // let access = match self.access_context.get_by_id(message.id, uid).await {
-        //     Ok(Some(access)) => access,
-        //     Ok(None) => return Err(Status::permission_denied("No access to model")),
-        //     Err(error) => return Err(Status::internal(error.to_string())),
-        // };
+        // Check if the user has access to the model
+        let access = match self.access_context.get_access_by_uid_and_model_id(uid, model.id).await {
+            Ok(access) => {
+                let mut is_editor = false;
+                let access = match access {
+                    Some(access) => {
+                        if access.role == "Editor" {
+                            is_editor = true;
+                        } else {
+                            is_editor = false;
+                        }
+                        Some(access)
+                    },
+                    None => {
+                        None
+                    },
+                };
 
-        // let model = model::Model {
-        //     id: message.id,
-        //     name: message.name,
-        //     components_info: serde_json::to_value(message.components_info).unwrap(),
-        //     owner_id: Default::default(),
-        // };
+                if !is_editor || access.is_none() {
+                    return Err(Status::permission_denied("You do not have permission to update this model"))
+                }
 
-        match self.model_context.update(model).await {
+                access.unwrap()
+            },
+            Err(error) => return Err(Status::internal(error.to_string())),
+        };
+
+        let new_model = model::Model { 
+            id: Default::default(), 
+            name: match message.clone().name {
+                Some(name) => name,
+                None => model.name,
+            },
+            components_info: match message.clone().components_info {
+                Some(components_info) => serde_json::to_value(components_info).unwrap(),
+                None => model.components_info,
+            },
+            owner_id: match message.clone().owner_id {
+                Some(owner_id) => owner_id,
+                None => model.owner_id,
+            },
+        };
+
+        match self.model_context.update(new_model).await {
             Ok(_) => Ok(Response::new(())),
             Err(error) => Err(Status::new(Code::Internal, error.to_string())),
         }
