@@ -44,8 +44,10 @@ async fn create_test() {
 async fn create_auto_increment_test() {
     let (model_context, model, _) = seed_db().await;
 
-    let created_model1 = model_context.create(model.clone()).await.unwrap();
-    let created_model2 = model_context.create(model.clone()).await.unwrap();
+    let models = create_models(2, model.owner_id);
+
+    let created_model1 = model_context.create(models[0].clone()).await.unwrap();
+    let created_model2 = model_context.create(models[1].clone()).await.unwrap();
 
     let fetched_model1 = model::Entity::find_by_id(created_model1.id)
         .one(&model_context.db_context.get_connection())
