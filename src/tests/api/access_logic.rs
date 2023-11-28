@@ -8,8 +8,7 @@ mod access_logic {
     use crate::tests::api::helpers::{get_mock_concrete_ecdar_api, get_mock_services};
     use mockall::predicate;
     use sea_orm::DbErr;
-    use std::str::FromStr;
-    use tonic::{metadata, Code, Request};
+    use tonic::{Code, Request};
 
     #[tokio::test]
     async fn create_invalid_access_returns_err() {

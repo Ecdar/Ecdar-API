@@ -3,7 +3,6 @@ mod ecdar_api {
 
     use crate::api::server::server::ecdar_api_server::EcdarApi;
 
-    use futures::SinkExt;
     use mockall::predicate;
     use sea_orm::DbErr;
     use std::str::FromStr;

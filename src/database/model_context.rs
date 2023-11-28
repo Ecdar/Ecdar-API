@@ -1,15 +1,12 @@
 use crate::database::database_context::DatabaseContextTrait;
-use crate::entities::{access, model, query, role};
+use crate::entities::{access, model, query};
 
 use crate::api::server::server::ModelInfo;
 use crate::EntityContextTrait;
 use async_trait::async_trait;
 use sea_orm::{
-    ActiveModelTrait, ColumnTrait, DatabaseBackend, DbBackend, DbErr, EntityOrSelect, EntityTrait,
-    FromQueryResult, IntoActiveModel, JoinType, ModelTrait, QueryFilter, QuerySelect, QueryTrait,
-    Related, RelationDef, RelationTrait, Set, Unchanged,
+    ActiveModelTrait, ColumnTrait, DbErr, EntityTrait, IntoActiveModel, JoinType, ModelTrait, QueryFilter, QuerySelect, RelationTrait, Set, Unchanged,
 };
-use serde::de;
 use std::sync::Arc;
 
 pub struct ModelContext {

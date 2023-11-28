@@ -20,11 +20,11 @@ use super::server::server::{
     CreateAccessRequest, CreateModelRequest, CreateModelResponse, CreateQueryRequest,
     CreateUserRequest, DeleteAccessRequest, DeleteModelRequest, DeleteQueryRequest,
     GetAuthTokenRequest, GetAuthTokenResponse, GetModelRequest, GetModelResponse,
-    ListModelInfoResponse, ModelInfo, QueryRequest, QueryResponse, SimulationStartRequest,
+    ListModelInfoResponse, QueryRequest, QueryResponse, SimulationStartRequest,
     SimulationStepRequest, SimulationStepResponse, UpdateAccessRequest, UpdateQueryRequest,
     UpdateUserRequest, UserTokenResponse,
 };
-use crate::entities::{access, model, query, session, user};
+use crate::entities::{access, query, session, user};
 
 #[derive(Clone)]
 pub struct ConcreteEcdarApi {
