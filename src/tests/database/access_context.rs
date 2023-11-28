@@ -351,11 +351,14 @@ mod database_tests {
     async fn get_by_uid_and_model_id_test() {
         let (access_context, expected_access, user, model) = seed_db().await;
 
+        access::Entity::insert(expected_access.clone().into_active_model())
+            .exec(&access_context.db_context.get_connection())
+            .await
+            .unwrap();
+
         let access = access_context
             .get_access_by_uid_and_model_id(user.id, model.id)
             .await;
-
-        dbg!(&expected_access, &access, user, model);
 
         assert!(access.unwrap().unwrap() == expected_access);
     }
