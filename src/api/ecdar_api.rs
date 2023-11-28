@@ -127,7 +127,25 @@ impl EcdarApi for ConcreteEcdarApi {
 
         match self.contexts.model_context.create(model).await {
             Ok(model) => Ok(Response::new(CreateModelResponse { id: model.id })),
-            Err(error) => Err(Status::internal(error.to_string())),
+            Err(error) => match error.sql_err() {
+                Some(SqlErr::UniqueConstraintViolation(e)) => {
+                    let error_msg = match e.to_lowercase() {
+                        _ if e.contains("name") => "A model with that name already exists",
+                        _ => "Model already exists",
+                    };
+                    println!("{}", e);
+                    Err(Status::already_exists(error_msg))
+                }
+                Some(SqlErr::ForeignKeyConstraintViolation(e)) => {
+                    let error_msg = match e.to_lowercase() {
+                        _ if e.contains("owner_id") => "No user with that id exists",
+                        _ => "Could not create model",
+                    };
+                    println!("{}", e);
+                    Err(Status::invalid_argument(error_msg))
+                }
+                _ => Err(Status::internal(error.to_string())),
+            },
         }
     }
 
@@ -563,3 +581,7 @@ mod user_logic_tests;
 #[cfg(test)]
 #[path = "../tests/api/session_logic.rs"]
 mod session_logic_tests;
+
+#[cfg(test)]
+#[path = "../tests/api/model_logic.rs"]
+mod model_logic;
