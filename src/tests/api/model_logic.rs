@@ -4,9 +4,7 @@ use mockall::predicate;
 use tonic::{metadata, Code, Request};
 
 use crate::{
-    api::server::server::{
-        ecdar_api_server::EcdarApi, Component, ComponentsInfo, DeleteModelRequest,
-    },
+    api::server::server::{ecdar_api_server::EcdarApi, DeleteModelRequest, ModelInfo},
     entities::model,
     tests::api::helpers::{get_mock_concrete_ecdar_api, get_mock_services},
 };
@@ -105,4 +103,57 @@ async fn delete_model_returns_ok() {
     let res = api.delete_model(request).await;
 
     assert!(res.is_ok());
+}
+
+#[tokio::test]
+async fn list_models_info_returns_ok() {
+    let mut mock_services = get_mock_services();
+
+    let model_info = ModelInfo {
+        model_id: 1,
+        model_name: "model::Model name".to_owned(),
+        model_owner_id: 1,
+        user_role_on_model: "Editor".to_owned(),
+    };
+
+    mock_services
+        .model_context_mock
+        .expect_get_models_info_by_uid()
+        .with(predicate::eq(1))
+        .returning(move |_| Ok(vec![model_info.clone()]));
+
+    let mut list_models_info_request = Request::new(());
+
+    list_models_info_request
+        .metadata_mut()
+        .insert("uid", metadata::MetadataValue::from_str("1").unwrap());
+
+    let api = get_mock_concrete_ecdar_api(mock_services);
+
+    let res = api.list_models_info(list_models_info_request).await;
+
+    assert!(res.is_ok());
+}
+
+#[tokio::test]
+async fn list_models_info_returns_err() {
+    let mut mock_services = get_mock_services();
+
+    mock_services
+        .model_context_mock
+        .expect_get_models_info_by_uid()
+        .with(predicate::eq(1))
+        .returning(move |_| Ok(vec![]));
+
+    let mut list_models_info_request = Request::new(());
+
+    list_models_info_request
+        .metadata_mut()
+        .insert("uid", metadata::MetadataValue::from_str("1").unwrap());
+
+    let api = get_mock_concrete_ecdar_api(mock_services);
+
+    let res = api.list_models_info(list_models_info_request).await;
+
+    assert!(res.is_err());
 }

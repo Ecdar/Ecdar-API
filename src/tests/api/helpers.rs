@@ -4,6 +4,7 @@ use crate::api::context_collection::ContextCollection;
 use crate::api::ecdar_api::ConcreteEcdarApi;
 use crate::api::hashing_context::HashingContextTrait;
 use crate::api::server::server::ecdar_backend_server::EcdarBackend;
+use crate::api::server::server::ModelInfo;
 use crate::api::server::server::{
     QueryRequest, QueryResponse, SimulationStartRequest, SimulationStepRequest,
     SimulationStepResponse, UserTokenResponse,
@@ -71,7 +72,9 @@ mock! {
         async fn delete(&self, entity_id: i32) -> Result<access::Model, DbErr>;
     }
     #[async_trait]
-    impl AccessContextTrait for AccessContext {}
+    impl AccessContextTrait for AccessContext {
+        async fn get_access_by_uid(&self, uid: i32) -> Result<Vec<access::Model>, DbErr>;
+    }
 }
 
 mock! {
@@ -99,7 +102,9 @@ mock! {
         async fn delete(&self, entity_id: i32) -> Result<model::Model, DbErr>;
     }
     #[async_trait]
-    impl ModelContextTrait for ModelContext {}
+    impl ModelContextTrait for ModelContext {
+        async fn get_models_info_by_uid(&self, uid: i32) -> Result<Vec<ModelInfo>, DbErr>;
+    }
 }
 
 mock! {

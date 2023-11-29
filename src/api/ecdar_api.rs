@@ -7,16 +7,17 @@ use tonic::{Code, Request, Response, Status};
 use crate::api::auth::{RequestExt, Token, TokenType};
 use crate::database::{session_context::SessionContextTrait, user_context::UserContextTrait};
 
-use super::server::server::DeleteModelRequest;
 use super::server::server::{
     ecdar_api_auth_server::EcdarApiAuth,
     ecdar_api_server::EcdarApi,
     ecdar_backend_server::EcdarBackend,
     get_auth_token_request::{user_credentials, UserCredentials},
-    CreateAccessRequest, CreateQueryRequest, CreateUserRequest, DeleteAccessRequest,
-    DeleteQueryRequest, GetAuthTokenRequest, GetAuthTokenResponse, QueryRequest, QueryResponse,
-    SimulationStartRequest, SimulationStepRequest, SimulationStepResponse, UpdateAccessRequest,
-    UpdateQueryRequest, UpdateUserRequest, UserTokenResponse,
+    CreateAccessRequest, CreateModelRequest, CreateModelResponse, CreateQueryRequest,
+    CreateUserRequest, DeleteAccessRequest, DeleteModelRequest, DeleteQueryRequest,
+    GetAuthTokenRequest, GetAuthTokenResponse, GetModelRequest, GetModelResponse,
+    ListModelsInfoResponse, QueryRequest, QueryResponse, SimulationStartRequest,
+    SimulationStepRequest, SimulationStepResponse, UpdateAccessRequest, UpdateQueryRequest,
+    UpdateUserRequest, UserTokenResponse,
 };
 use crate::entities::{access, query, session, user};
 
@@ -99,11 +100,17 @@ impl ConcreteEcdarApi {
 
 #[tonic::async_trait]
 impl EcdarApi for ConcreteEcdarApi {
-    async fn get_model(&self, _request: Request<()>) -> Result<Response<()>, Status> {
+    async fn get_model(
+        &self,
+        _request: Request<GetModelRequest>,
+    ) -> Result<Response<GetModelResponse>, Status> {
         todo!()
     }
 
-    async fn create_model(&self, _request: Request<()>) -> Result<Response<()>, Status> {
+    async fn create_model(
+        &self,
+        _request: Request<CreateModelRequest>,
+    ) -> Result<Response<CreateModelResponse>, Status> {
         todo!()
     }
 
@@ -150,8 +157,60 @@ impl EcdarApi for ConcreteEcdarApi {
         }
     }
 
-    async fn list_models_info(&self, _request: Request<()>) -> Result<Response<()>, Status> {
-        todo!()
+    async fn list_models_info(
+        &self,
+        request: Request<()>,
+    ) -> Result<Response<ListModelsInfoResponse>, Status> {
+        let uid = request
+            .uid()
+            .ok_or(Status::internal("Could not get uid from request metadata"))?;
+
+        match self
+            .contexts
+            .model_context
+            .get_models_info_by_uid(uid)
+            .await
+        {
+            Ok(model_info_list) => {
+                if model_info_list.is_empty() {
+                    return Err(Status::new(
+                        Code::NotFound,
+                        "No access found for given user",
+                    ));
+                } else {
+                    Ok(Response::new(ListModelsInfoResponse { model_info_list }))
+                }
+            }
+            Err(error) => Err(Status::new(Code::Internal, error.to_string())),
+        }
+        /*let mut model_info_list_vector: Vec<ModelInfo> = Vec::new(); // Initialize the Vec
+
+        // Get all the models that the user has access to
+        match self.model_context.get_model_info_by_uid(uid).await {
+            Ok(model_info_list) => {
+                for model_info in model_info_list {
+                    let model_info_test = ModelInfo {
+                        model_id: model_info.model_id,
+                        model_name: model_info.model_name,
+                        model_owner_id: model_info.model_owner_id,
+                        user_role_on_model: model_info.user_role_on_model,
+                    };
+                    model_info_list_vector.push(model_info_test);
+                }
+
+                if model_info_list_vector.is_empty() {
+                    return Err(Status::new(
+                        Code::NotFound,
+                        "No access found for given user",
+                    ));
+                } else {
+                    Ok(Response::new(ListModelInfoResponse {
+                        model_info_list: model_info_list_vector,
+                    }))
+                }
+            }
+            Err(error) => Err(Status::new(Code::Internal, error.to_string())),
+        }*/
     }
 
     /// Creates an access in the database.
