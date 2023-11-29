@@ -15,7 +15,7 @@ use super::server::server::{
     CreateAccessRequest, CreateModelRequest, CreateModelResponse, CreateQueryRequest,
     CreateUserRequest, DeleteAccessRequest, DeleteModelRequest, DeleteQueryRequest,
     GetAuthTokenRequest, GetAuthTokenResponse, GetModelRequest, GetModelResponse,
-    ListModelInfoResponse, QueryRequest, QueryResponse, SimulationStartRequest,
+    ListModelsInfoResponse, QueryRequest, QueryResponse, SimulationStartRequest,
     SimulationStepRequest, SimulationStepResponse, UpdateAccessRequest, UpdateQueryRequest,
     UpdateUserRequest, UserTokenResponse,
 };
@@ -157,15 +157,15 @@ impl EcdarApi for ConcreteEcdarApi {
         }
     }
 
-    async fn list_model_info(
+    async fn list_models_info(
         &self,
         request: Request<()>,
-    ) -> Result<Response<ListModelInfoResponse>, Status> {
+    ) -> Result<Response<ListModelsInfoResponse>, Status> {
         let uid = request
             .uid()
             .ok_or(Status::internal("Could not get uid from request metadata"))?;
 
-        match self.contexts.model_context.get_model_info_by_uid(uid).await {
+        match self.contexts.model_context.get_models_info_by_uid(uid).await {
             Ok(model_info_list) => {
                 if model_info_list.is_empty() {
                     return Err(Status::new(
@@ -173,7 +173,7 @@ impl EcdarApi for ConcreteEcdarApi {
                         "No access found for given user",
                     ));
                 } else {
-                    Ok(Response::new(ListModelInfoResponse { model_info_list }))
+                    Ok(Response::new(ListModelsInfoResponse { model_info_list }))
                 }
             }
             Err(error) => Err(Status::new(Code::Internal, error.to_string())),

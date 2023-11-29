@@ -106,7 +106,7 @@ async fn delete_model_returns_ok() {
 }
 
 #[tokio::test]
-async fn list_model_info_returns_ok() {
+async fn list_models_info_returns_ok() {
     let mut mock_services = get_mock_services();
 
     let model_info = ModelInfo {
@@ -118,42 +118,42 @@ async fn list_model_info_returns_ok() {
 
     mock_services
         .model_context_mock
-        .expect_get_model_info_by_uid()
+        .expect_get_models_info_by_uid()
         .with(predicate::eq(1))
         .returning(move |_| Ok(vec![model_info.clone()]));
 
-    let mut list_model_info_request = Request::new(());
+    let mut list_models_info_request = Request::new(());
 
-    list_model_info_request
+    list_models_info_request
         .metadata_mut()
         .insert("uid", metadata::MetadataValue::from_str("1").unwrap());
 
     let api = get_mock_concrete_ecdar_api(mock_services);
 
-    let res = api.list_model_info(list_model_info_request).await;
+    let res = api.list_models_info(list_models_info_request).await;
 
     assert!(res.is_ok());
 }
 
 #[tokio::test]
-async fn list_model_info_returns_err() {
+async fn list_models_info_returns_err() {
     let mut mock_services = get_mock_services();
 
     mock_services
         .model_context_mock
-        .expect_get_model_info_by_uid()
+        .expect_get_models_info_by_uid()
         .with(predicate::eq(1))
         .returning(move |_| Ok(vec![]));
 
-    let mut list_model_info_request = Request::new(());
+    let mut list_models_info_request = Request::new(());
 
-    list_model_info_request
+    list_models_info_request
         .metadata_mut()
         .insert("uid", metadata::MetadataValue::from_str("1").unwrap());
 
     let api = get_mock_concrete_ecdar_api(mock_services);
 
-    let res = api.list_model_info(list_model_info_request).await;
+    let res = api.list_models_info(list_models_info_request).await;
 
     assert!(res.is_err());
 }

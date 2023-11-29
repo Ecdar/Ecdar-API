@@ -103,7 +103,7 @@ mock! {
     }
     #[async_trait]
     impl ModelContextTrait for ModelContext {
-        async fn get_model_info_by_uid(&self, uid: i32) -> Result<Vec<ModelInfo>, DbErr>;
+        async fn get_models_info_by_uid(&self, uid: i32) -> Result<Vec<ModelInfo>, DbErr>;
     }
 }
 
