@@ -21,6 +21,8 @@ use serde_json;
 use std::sync::Arc;
 use tonic::{Code, Request, Response, Status};
 
+const IN_USE_DURATION_MINUTES: i64 = 10;
+
 #[derive(Clone)]
 pub struct ConcreteEcdarApi {
     contexts: ContextCollection,
@@ -197,8 +199,8 @@ impl EcdarApi for ConcreteEcdarApi {
         // Get in_use for model
         match self.contexts.in_use_context.get_by_id(model.id).await {
             Ok(Some(in_use)) => {
-                // Check if in_use latest activity is older than 10 minutes
-                if in_use.latest_activity > (Utc::now().naive_utc() - Duration::minutes(10))
+                // Check if in_use latest activity is older than the max allowed
+                if in_use.latest_activity > (Utc::now().naive_utc() - Duration::minutes(IN_USE_DURATION_MINUTES))
                     && in_use.session_id != session.id
                 {
                     return Err(Status::failed_precondition(
