@@ -629,7 +629,3 @@ mod model_logic_tests;
 #[cfg(test)]
 #[path = "../tests/api/session_logic.rs"]
 mod session_logic_tests;
-
-#[cfg(test)]
-#[path = "../tests/api/model_logic.rs"]
-mod model_logic;
