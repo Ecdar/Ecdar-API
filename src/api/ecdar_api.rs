@@ -56,7 +56,7 @@ pub async fn handle_session(
         };
     } else {
         let mut session = match session_context
-            .get_by_refresh_token(request.token_string().unwrap())
+            .get_by_token(TokenType::RefreshToken, request.token_string().unwrap())
             .await
         {
             Ok(Some(session)) => session,
@@ -128,7 +128,7 @@ impl EcdarApi for ConcreteEcdarApi {
 
         model = match self.contexts.model_context.create(model).await {
             Ok(model) => model,
-            Err(error) => match error.sql_err() {
+            Err(error) => return match error.sql_err() {
                 Some(SqlErr::UniqueConstraintViolation(e)) => {
                     let error_msg = match e.to_lowercase() {
                         _ if e.contains("name") => "A model with that name already exists",
@@ -147,21 +147,30 @@ impl EcdarApi for ConcreteEcdarApi {
                 }
                 _ => Err(Status::internal(error.to_string())),
             },
-        }?;
+        };
+
 
         let access = access::Model {
             id: Default::default(),
             role: "Editor".to_string(), //todo!("Use role enum")
-            model_id: model.id,
+            model_id: model.clone().id,
             user_id: uid,
         };
 
+        let session = self.contexts.session_context.get_by_token(TokenType::AccessToken, request.token_string().unwrap()).await.unwrap().unwrap();
 
         let in_use = in_use::Model {
-            model_id: model.id,
-            session_id: Default::default(),
+            model_id: model.clone().id,
+            session_id: session.id,
             latest_activity: Default::default(),
         };
+
+        self.contexts.in_use_context.create(in_use).await.unwrap();
+        self.contexts.access_context.create(access).await.unwrap();
+
+        Ok(Response::new(CreateModelResponse {
+            id: model.id,
+        }))
     }
 
     async fn update_model(&self, _request: Request<()>) -> Result<Response<()>, Status> {

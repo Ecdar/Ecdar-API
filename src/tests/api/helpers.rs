@@ -128,7 +128,7 @@ mock! {
     }
     #[async_trait]
     impl SessionContextTrait for SessionContext {
-        async fn get_by_refresh_token(&self, refresh_token: String) -> Result<Option<session::Model>, DbErr>;
+        async fn get_by_token(&self, token_type: TokenType, token: String) -> Result<Option<session::Model>, DbErr>;
     }
 }
 

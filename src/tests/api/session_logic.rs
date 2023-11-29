@@ -1,5 +1,5 @@
-use crate::api::ecdar_api::handle_session;
 use crate::api::server::server::GetAuthTokenRequest;
+use crate::api::{auth::TokenType, ecdar_api::handle_session};
 use crate::entities::session;
 use crate::tests::api::helpers::get_mock_services;
 use mockall::predicate;
@@ -30,9 +30,12 @@ async fn handle_session_updated_session_contains_correct_fields_returns_ok() {
 
     mock_services
         .session_context_mock
-        .expect_get_by_refresh_token()
-        .with(predicate::eq("old_refresh_token".to_string()))
-        .returning(move |_| Ok(Some(old_session.clone())));
+        .expect_get_by_token()
+        .with(
+            predicate::eq(TokenType::RefreshToken),
+            predicate::eq("old_refresh_token".to_string()),
+        )
+        .returning(move |_, _| Ok(Some(old_session.clone())));
 
     mock_services
         .session_context_mock
