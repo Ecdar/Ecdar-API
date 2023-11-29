@@ -74,7 +74,7 @@ mock! {
     }
     #[async_trait]
     impl AccessContextTrait for AccessContext {
-        async fn get_access_by_uid(&self, uid: i32) -> Result<Vec<access::Model>, DbErr>;
+        async fn get_access_by_uid_and_model_id(&self, uid: i32, model_id: i32) -> Result<Option<access::Model>, DbErr>;
     }
 }
 
