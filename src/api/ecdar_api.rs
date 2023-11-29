@@ -146,7 +146,7 @@ impl EcdarApi for ConcreteEcdarApi {
                         Err(Status::invalid_argument(error_msg))
                     }
                     _ => Err(Status::internal(error.to_string())),
-                }
+                };
             }
         };
 

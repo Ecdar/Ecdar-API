@@ -83,7 +83,6 @@ async fn create_model_returns_ok() {
     let mut request = Request::new(CreateModelRequest {
         name: Default::default(),
         components_info: Option::from(components_info),
-        owner_id: uid,
     });
 
     request
@@ -124,7 +123,6 @@ async fn create_model_existing_name_returns_err() {
     let mut request = Request::new(CreateModelRequest {
         name: "model".to_string(),
         components_info: Default::default(),
-        owner_id: uid,
     });
 
     request
