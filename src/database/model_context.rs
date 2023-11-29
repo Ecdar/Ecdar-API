@@ -5,8 +5,8 @@ use crate::api::server::server::ModelInfo;
 use crate::EntityContextTrait;
 use async_trait::async_trait;
 use sea_orm::{
-    ActiveModelTrait, ColumnTrait, DbErr, EntityTrait, IntoActiveModel, JoinType, ModelTrait,
-    QueryFilter, QuerySelect, RelationTrait, Set, Unchanged, QueryTrait, DbBackend,
+    ActiveModelTrait, ColumnTrait, DbBackend, DbErr, EntityTrait, IntoActiveModel, JoinType,
+    ModelTrait, QueryFilter, QuerySelect, QueryTrait, RelationTrait, Set, Unchanged,
 };
 use std::sync::Arc;
 
@@ -25,21 +25,21 @@ pub trait ModelContextTrait: EntityContextTrait<model::Model> {
 impl ModelContextTrait for ModelContext {
     async fn get_models_info_by_uid(&self, uid: i32) -> Result<Vec<ModelInfo>, DbErr> {
         /*let querytest = access::Entity::find()
-            .select_only()
-            .column_as(model::Column::Id, "model_id")
-            .column_as(model::Column::Name, "model_name")
-            .column_as(model::Column::OwnerId, "model_owner_id")
-            .column_as(access::Column::Role, "user_role_on_model")
-            .join(JoinType::InnerJoin, access::Relation::Model.def())
-            .join(JoinType::InnerJoin, access::Relation::Role.def())
-            .group_by(model::Column::Id)
-            .group_by(access::Column::Role)
-            .filter(access::Column::UserId.eq(uid))
-            .build(DbBackend::Postgres)
-            .to_string();
+        .select_only()
+        .column_as(model::Column::Id, "model_id")
+        .column_as(model::Column::Name, "model_name")
+        .column_as(model::Column::OwnerId, "model_owner_id")
+        .column_as(access::Column::Role, "user_role_on_model")
+        .join(JoinType::InnerJoin, access::Relation::Model.def())
+        .join(JoinType::InnerJoin, access::Relation::Role.def())
+        .group_by(model::Column::Id)
+        .group_by(access::Column::Role)
+        .filter(access::Column::UserId.eq(uid))
+        .build(DbBackend::Postgres)
+        .to_string();
 
-            println!("SQL Query: {}", querytest);*/
-        
+        println!("SQL Query: {}", querytest);*/
+
         //join model, access and role tables
         access::Entity::find()
             .select_only()
@@ -55,8 +55,6 @@ impl ModelContextTrait for ModelContext {
             .into_model::<ModelInfo>()
             .all(&self.db_context.get_connection())
             .await
-
-            
     }
 }
 

@@ -165,7 +165,12 @@ impl EcdarApi for ConcreteEcdarApi {
             .uid()
             .ok_or(Status::internal("Could not get uid from request metadata"))?;
 
-        match self.contexts.model_context.get_models_info_by_uid(uid).await {
+        match self
+            .contexts
+            .model_context
+            .get_models_info_by_uid(uid)
+            .await
+        {
             Ok(model_info_list) => {
                 if model_info_list.is_empty() {
                     return Err(Status::new(

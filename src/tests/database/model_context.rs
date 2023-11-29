@@ -424,7 +424,10 @@ async fn delete_non_existing_id_test() {
             .await
             .unwrap();
 
-        let model_info = model_context.get_models_info_by_uid(model.id).await.unwrap();
+        let model_info = model_context
+            .get_models_info_by_uid(model.id)
+            .await
+            .unwrap();
 
         assert_eq!(model_info, expected_model_info);
     }
