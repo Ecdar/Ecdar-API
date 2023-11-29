@@ -5,8 +5,10 @@ use sea_orm::DbErr;
 use tonic::{metadata, Code, Request};
 
 use crate::api::auth::TokenType;
+use crate::api::server::server::{
+    ecdar_api_server::EcdarApi, ComponentsInfo, CreateModelRequest, DeleteModelRequest, ModelInfo,
+};
 use crate::entities::{access, in_use, model, session};
-use crate::api::server::server::{ecdar_api_server::EcdarApi, ComponentsInfo, CreateModelRequest, DeleteModelRequest, ModelInfo};
 use crate::tests::api::helpers::{get_mock_concrete_ecdar_api, get_mock_services};
 
 #[tokio::test]
