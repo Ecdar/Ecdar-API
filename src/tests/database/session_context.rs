@@ -1,4 +1,4 @@
-use crate::tests::database::helpers::*;
+use crate::{api::auth::TokenType, tests::database::helpers::*};
 use sea_orm::{entity::prelude::*, IntoActiveModel};
 use std::ops::Add;
 
@@ -350,7 +350,7 @@ async fn get_by_refresh_token_test() {
         .unwrap();
 
     let fetched_session = session_context
-        .get_by_refresh_token(session.refresh_token.clone())
+        .get_by_token(TokenType::RefreshToken, session.refresh_token.clone())
         .await
         .unwrap();
 

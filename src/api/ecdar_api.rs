@@ -16,12 +16,15 @@ use crate::api::{
     server::server::Model,
 };
 use crate::database::{session_context::SessionContextTrait, user_context::UserContextTrait};
-use crate::entities::{access, model, query, session, user};
+use crate::entities::{access, in_use, model, query, session, user};
+use chrono::{Duration, Utc};
 use regex::Regex;
 use sea_orm::SqlErr;
 use serde_json;
 use std::sync::Arc;
 use tonic::{Code, Request, Response, Status};
+
+const IN_USE_DURATION_MINUTES: i64 = 10;
 
 #[derive(Clone)]
 pub struct ConcreteEcdarApi {
@@ -58,7 +61,7 @@ pub async fn handle_session(
         };
     } else {
         let mut session = match session_context
-            .get_by_refresh_token(request.token_string().unwrap())
+            .get_by_token(TokenType::RefreshToken, request.token_string().unwrap())
             .await
         {
             Ok(Some(session)) => session,
@@ -114,7 +117,8 @@ impl EcdarApi for ConcreteEcdarApi {
             .uid()
             .ok_or(Status::internal("Could not get uid from request metadata"))?;
 
-        self.contexts
+        let access = self
+            .contexts
             .access_context
             .get_access_by_uid_and_model_id(uid, model_id)
             .await
@@ -138,12 +142,45 @@ impl EcdarApi for ConcreteEcdarApi {
             owner_id: model.owner_id,
         };
 
-        let in_use = match self.contexts.in_use_context.get_by_id(model_id).await {
-            Ok(in_use) => {
-                matches!(in_use, Some(_in_use))
+        let mut in_use_bool = true;
+        match self.contexts.in_use_context.get_by_id(model_id).await {
+            Ok(Some(in_use)) => {
+                if in_use.latest_activity
+                    <= (Utc::now().naive_utc() - Duration::minutes(IN_USE_DURATION_MINUTES))
+                {
+                    in_use_bool = false;
+
+                    if access.role == "Editor" {
+                        let session = self
+                            .contexts
+                            .session_context
+                            .get_by_token(TokenType::AccessToken, request.token_string().unwrap())
+                            .await
+                            .map_err(|err| Status::new(Code::Internal, err.to_string()))?
+                            .ok_or_else(|| {
+                                Status::new(
+                                    Code::Unauthenticated,
+                                    "No session found with given access token",
+                                )
+                            })?;
+
+                        let in_use = in_use::Model {
+                            model_id: in_use.model_id,
+                            session_id: session.id,
+                            latest_activity: Utc::now().naive_utc(),
+                        };
+
+                        self.contexts
+                            .in_use_context
+                            .update(in_use)
+                            .await
+                            .map_err(|err| Status::new(Code::Internal, err.to_string()))?;
+                    }
+                }
             }
+            Ok(None) => return Err(Status::new(Code::Internal, "No in use found for model")),
             Err(err) => return Err(Status::new(Code::Internal, err.to_string())),
-        };
+        }
 
         let queries = self
             .contexts
@@ -169,7 +206,7 @@ impl EcdarApi for ConcreteEcdarApi {
         Ok(Response::new(GetModelResponse {
             model: Some(model),
             queries,
-            in_use,
+            in_use: in_use_bool,
         }))
     }
 

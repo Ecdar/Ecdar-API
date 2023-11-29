@@ -1,5 +1,6 @@
 #![cfg(test)]
 
+use crate::api::auth::TokenType;
 use crate::api::context_collection::ContextCollection;
 use crate::api::ecdar_api::ConcreteEcdarApi;
 use crate::api::hashing_context::HashingContextTrait;
@@ -150,7 +151,7 @@ mock! {
     }
     #[async_trait]
     impl SessionContextTrait for SessionContext {
-        async fn get_by_refresh_token(&self, refresh_token: String) -> Result<Option<session::Model>, DbErr>;
+        async fn get_by_token(&self, token_type: TokenType, token: String) -> Result<Option<session::Model>, DbErr>;
     }
 }
 
