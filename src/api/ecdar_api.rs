@@ -200,7 +200,8 @@ impl EcdarApi for ConcreteEcdarApi {
         match self.contexts.in_use_context.get_by_id(model.id).await {
             Ok(Some(in_use)) => {
                 // Check if in_use latest activity is older than the max allowed
-                if in_use.latest_activity > (Utc::now().naive_utc() - Duration::minutes(IN_USE_DURATION_MINUTES))
+                if in_use.latest_activity
+                    > (Utc::now().naive_utc() - Duration::minutes(IN_USE_DURATION_MINUTES))
                     && in_use.session_id != session.id
                 {
                     return Err(Status::failed_precondition(
