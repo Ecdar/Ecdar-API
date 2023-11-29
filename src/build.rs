@@ -1,5 +1,4 @@
 fn main() {
-    tonic_build::compile_protos("Ecdar-ProtoBuf/services.proto").unwrap();
     tonic_build::configure()
         .type_attribute(
             "ComponentsInfo",

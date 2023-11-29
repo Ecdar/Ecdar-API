@@ -1,5 +1,6 @@
 #![cfg(test)]
 
+use crate::api::auth::TokenType;
 use crate::api::context_collection::ContextCollection;
 use crate::api::ecdar_api::ConcreteEcdarApi;
 use crate::api::hashing_context::HashingContextTrait;
@@ -73,7 +74,7 @@ mock! {
     }
     #[async_trait]
     impl AccessContextTrait for AccessContext {
-        async fn get_access_by_uid(&self, uid: i32) -> Result<Vec<access::Model>, DbErr>;
+        async fn get_access_by_uid_and_model_id(&self, uid: i32, model_id: i32) -> Result<Option<access::Model>, DbErr>;
     }
 }
 
@@ -133,7 +134,7 @@ mock! {
     }
     #[async_trait]
     impl SessionContextTrait for SessionContext {
-        async fn get_by_refresh_token(&self, refresh_token: String) -> Result<Option<session::Model>, DbErr>;
+        async fn get_by_token(&self, token_type: TokenType, token: String) -> Result<Option<session::Model>, DbErr>;
     }
 }
 

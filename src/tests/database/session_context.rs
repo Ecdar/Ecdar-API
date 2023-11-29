@@ -1,4 +1,4 @@
-use crate::tests::database::helpers::*;
+use crate::{api::auth::TokenType, tests::database::helpers::*};
 use sea_orm::{entity::prelude::*, IntoActiveModel};
 use std::ops::Add;
 
@@ -341,7 +341,7 @@ async fn delete_non_existing_id_test() {
 }
 
 #[tokio::test]
-async fn get_by_refresh_token_test() {
+async fn get_by_token_refresh_test() {
     let (session_context, session, _, _) = seed_db().await;
 
     session::Entity::insert(session.clone().into_active_model())
@@ -350,7 +350,7 @@ async fn get_by_refresh_token_test() {
         .unwrap();
 
     let fetched_session = session_context
-        .get_by_refresh_token(session.refresh_token.clone())
+        .get_by_token(TokenType::RefreshToken, session.refresh_token.clone())
         .await
         .unwrap();
 
@@ -358,4 +358,21 @@ async fn get_by_refresh_token_test() {
         fetched_session.unwrap().refresh_token,
         session.refresh_token
     );
+}
+
+#[tokio::test]
+async fn get_by_token_access_test() {
+    let (session_context, session, _, _) = seed_db().await;
+
+    session::Entity::insert(session.clone().into_active_model())
+        .exec(&session_context.db_context.get_connection())
+        .await
+        .unwrap();
+
+    let fetched_session = session_context
+        .get_by_token(TokenType::AccessToken, session.access_token.clone())
+        .await
+        .unwrap();
+
+    assert_eq!(fetched_session.unwrap().access_token, session.access_token);
 }

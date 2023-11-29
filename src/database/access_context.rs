@@ -3,7 +3,7 @@ use crate::database::entity_context::EntityContextTrait;
 use crate::entities::access;
 use sea_orm::prelude::async_trait::async_trait;
 use sea_orm::ActiveValue::{Set, Unchanged};
-use sea_orm::{ActiveModelTrait, ColumnTrait, DbErr, EntityTrait, QueryFilter};
+use sea_orm::{ActiveModelTrait, ColumnTrait, Condition, DbErr, EntityTrait, QueryFilter};
 use std::sync::Arc;
 
 pub struct AccessContext {
@@ -12,15 +12,27 @@ pub struct AccessContext {
 
 #[async_trait]
 pub trait AccessContextTrait: EntityContextTrait<access::Model> {
-    async fn get_access_by_uid(&self, uid: i32) -> Result<Vec<access::Model>, DbErr>;
+    async fn get_access_by_uid_and_model_id(
+        &self,
+        uid: i32,
+        model_id: i32,
+    ) -> Result<Option<access::Model>, DbErr>;
 }
 
 #[async_trait]
 impl AccessContextTrait for AccessContext {
-    async fn get_access_by_uid(&self, uid: i32) -> Result<Vec<access::Model>, DbErr> {
+    async fn get_access_by_uid_and_model_id(
+        &self,
+        uid: i32,
+        model_id: i32,
+    ) -> Result<Option<access::Model>, DbErr> {
         access::Entity::find()
-            .filter(access::Column::UserId.eq(uid))
-            .all(&self.db_context.get_connection())
+            .filter(
+                Condition::all()
+                    .add(access::Column::UserId.eq(uid))
+                    .add(access::Column::ModelId.eq(model_id)),
+            )
+            .one(&self.db_context.get_connection())
             .await
     }
 }
