@@ -3,16 +3,27 @@ use crate::database::entity_context::EntityContextTrait;
 use crate::entities::query;
 use sea_orm::prelude::async_trait::async_trait;
 use sea_orm::ActiveValue::{Set, Unchanged};
-use sea_orm::{ActiveModelTrait, DbErr, EntityTrait, NotSet};
+use sea_orm::{ActiveModelTrait, ColumnTrait, DbErr, EntityTrait, NotSet, QueryFilter};
 use std::sync::Arc;
 
 pub struct QueryContext {
     db_context: Arc<dyn DatabaseContextTrait>,
 }
 
-pub trait QueryContextTrait: EntityContextTrait<query::Model> {}
+#[async_trait]
+pub trait QueryContextTrait: EntityContextTrait<query::Model> {
+    async fn get_all_by_model_id(&self, model_id: i32) -> Result<Vec<query::Model>, DbErr>;
+}
 
-impl QueryContextTrait for QueryContext {}
+#[async_trait]
+impl QueryContextTrait for QueryContext {
+    async fn get_all_by_model_id(&self, model_id: i32) -> Result<Vec<query::Model>, DbErr> {
+        query::Entity::find()
+            .filter(query::Column::ModelId.eq(model_id))
+            .all(&self.db_context.get_connection())
+            .await
+    }
+}
 
 impl QueryContext {
     pub fn new(db_context: Arc<dyn DatabaseContextTrait>) -> QueryContext {
