@@ -1,5 +1,3 @@
-#![cfg(test)]
-
 use crate::database::database_context::{
     DatabaseContextTrait, PostgresDatabaseContext, SQLiteDatabaseContext,
 };

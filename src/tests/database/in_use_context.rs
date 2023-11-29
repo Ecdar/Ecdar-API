@@ -1,4 +1,3 @@
-#[cfg(test)]
 use crate::tests::database::helpers::*;
 use crate::{
     database::{
