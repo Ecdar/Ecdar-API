@@ -153,7 +153,7 @@ impl EcdarApi for ConcreteEcdarApi {
         };
 
         // Check if the user has access to the model
-        let access = match self
+        match self
             .contexts
             .access_context
             .get_access_by_uid_and_model_id(uid, model.id)
@@ -174,8 +174,6 @@ impl EcdarApi for ConcreteEcdarApi {
                         "You do not have permission to update this model",
                     ));
                 }
-
-                access.unwrap()
             }
             Err(error) => return Err(Status::internal(error.to_string())),
         };
