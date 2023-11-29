@@ -29,13 +29,13 @@ async fn create_model_returns_ok() {
         id: Default::default(),
         name: Default::default(),
         components_info: serde_json::to_value(components_info.clone()).unwrap(),
-        owner_id: uid.clone(),
+        owner_id: uid,
     };
 
     let access = access::Model {
         id: Default::default(),
         role: "Editor".to_string(),
-        user_id: uid.clone(),
+        user_id: uid,
         model_id: model.id,
     };
 
@@ -44,7 +44,7 @@ async fn create_model_returns_ok() {
         refresh_token: "refresh_token".to_string(),
         access_token: "access_token".to_string(),
         updated_at: Default::default(),
-        user_id: uid.clone(),
+        user_id: uid,
     };
 
     let in_use = in_use::Model {
