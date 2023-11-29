@@ -56,7 +56,7 @@ pub async fn handle_session(
         };
     } else {
         let mut session = match session_context
-            .get_by_refresh_token(request.token_string().unwrap())
+            .get_by_token(TokenType::RefreshToken, request.token_string().unwrap())
             .await
         {
             Ok(Some(session)) => session,
@@ -184,7 +184,7 @@ impl EcdarApi for ConcreteEcdarApi {
         let session = match self
             .contexts
             .session_context
-            .get_by_access_token(request.token_string().unwrap())
+            .get_by_token(TokenType::AccessToken, request.token_string().unwrap())
             .await
         {
             Ok(Some(session)) => session,
