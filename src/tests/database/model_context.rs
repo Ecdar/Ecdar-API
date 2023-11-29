@@ -1,3 +1,5 @@
+use crate::api::server::server::ModelInfo;
+use crate::database::model_context::ModelContextTrait;
 use crate::tests::database::helpers::*;
 use crate::{
     database::{entity_context::EntityContextTrait, model_context::ModelContext},
@@ -6,7 +8,7 @@ use crate::{
 };
 use sea_orm::error::DbErr;
 use sea_orm::{entity::prelude::*, IntoActiveModel};
-use std::matches;
+use std::{matches, vec};
 
 async fn seed_db() -> (ModelContext, model::Model, user::Model) {
     let db_context = get_reset_database_context().await;
@@ -401,4 +403,43 @@ async fn delete_non_existing_id_test() {
         deleted_model.unwrap_err(),
         DbErr::RecordNotFound(_)
     ));
+
+    #[tokio::test]
+    async fn get_model_info_by_uid_test() {
+        let (model_context, model, user) = seed_db().await;
+
+        let access = create_accesses(1, user.id, model.id)[0].clone();
+
+        let expected_model_info = vec![ModelInfo {
+            model_id: model.id,
+            model_name: model.name.clone(),
+            model_owner_id: model.owner_id,
+            user_role_on_model: access.role.clone(),
+        }];
+
+        model::Entity::insert(model.clone().into_active_model())
+            .exec(&model_context.db_context.get_connection())
+            .await
+            .unwrap();
+        access::Entity::insert(access.clone().into_active_model())
+            .exec(&model_context.db_context.get_connection())
+            .await
+            .unwrap();
+
+        let model_info = model_context
+            .get_models_info_by_uid(model.id)
+            .await
+            .unwrap();
+
+        assert_eq!(model_info, expected_model_info);
+    }
+
+    #[tokio::test]
+    async fn get_model_info_by_uid_non_existing_id_test() {
+        let (model_context, _, _) = seed_db().await;
+
+        let model_info = model_context.get_models_info_by_uid(1).await;
+
+        assert_eq!(model_info.unwrap().len(), 0);
+    }
 }

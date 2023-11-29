@@ -6,7 +6,7 @@ use super::server::server::{
     CreateAccessRequest, CreateModelRequest, CreateModelResponse, CreateQueryRequest,
     CreateUserRequest, DeleteAccessRequest, DeleteModelRequest, DeleteQueryRequest,
     GetAuthTokenRequest, GetAuthTokenResponse, GetModelRequest, GetModelResponse,
-    ListAccessInfoResponse, Query, QueryRequest, QueryResponse, SimulationStartRequest,
+    ListModelsInfoResponse, QueryRequest, QueryResponse, SimulationStartRequest,
     SimulationStepRequest, SimulationStepResponse, UpdateAccessRequest, UpdateQueryRequest,
     UpdateUserRequest, UserTokenResponse,
 };
@@ -241,18 +241,99 @@ impl EcdarApi for ConcreteEcdarApi {
         todo!()
     }
 
+    /// Deletes a Model from the database.
+    ///
+    /// # Errors
+    /// This function will return an error if the model does not exist in the database
+    /// or if the user is not the model owner.
     async fn delete_model(
         &self,
-        _request: Request<DeleteModelRequest>,
+        request: Request<DeleteModelRequest>,
     ) -> Result<Response<()>, Status> {
-        todo!()
+        let uid = request
+            .uid()
+            .ok_or(Status::internal("Could not get uid from request metadata"))?;
+        let model_id = request.get_ref().id;
+
+        let model = match self.contexts.model_context.get_by_id(model_id).await {
+            Ok(Some(model)) => model,
+            Ok(None) => return Err(Status::new(Code::NotFound, "No model found with given id")),
+            Err(err) => return Err(Status::new(Code::Internal, err.to_string())),
+        };
+
+        // Check if user is owner and thereby has permission to delete model
+        if model.owner_id != uid {
+            return Err(Status::new(
+                Code::PermissionDenied,
+                "You do not have permission to delete this model",
+            ));
+        }
+
+        match self.contexts.model_context.delete(model_id).await {
+            Ok(_) => Ok(Response::new(())),
+            Err(error) => match error {
+                sea_orm::DbErr::RecordNotFound(message) => {
+                    Err(Status::new(Code::NotFound, message))
+                }
+                _ => Err(Status::new(Code::Internal, error.to_string())),
+            },
+        }
     }
 
-    async fn list_access_info(
+    async fn list_models_info(
         &self,
-        _request: Request<()>,
-    ) -> Result<Response<ListAccessInfoResponse>, Status> {
-        todo!()
+        request: Request<()>,
+    ) -> Result<Response<ListModelsInfoResponse>, Status> {
+        let uid = request
+            .uid()
+            .ok_or(Status::internal("Could not get uid from request metadata"))?;
+
+        match self
+            .contexts
+            .model_context
+            .get_models_info_by_uid(uid)
+            .await
+        {
+            Ok(model_info_list) => {
+                if model_info_list.is_empty() {
+                    return Err(Status::new(
+                        Code::NotFound,
+                        "No access found for given user",
+                    ));
+                } else {
+                    Ok(Response::new(ListModelsInfoResponse { model_info_list }))
+                }
+            }
+            Err(error) => Err(Status::new(Code::Internal, error.to_string())),
+        }
+        /*let mut model_info_list_vector: Vec<ModelInfo> = Vec::new(); // Initialize the Vec
+
+        // Get all the models that the user has access to
+        match self.model_context.get_model_info_by_uid(uid).await {
+            Ok(model_info_list) => {
+                for model_info in model_info_list {
+                    let model_info_test = ModelInfo {
+                        model_id: model_info.model_id,
+                        model_name: model_info.model_name,
+                        model_owner_id: model_info.model_owner_id,
+                        user_role_on_model: model_info.user_role_on_model,
+                    };
+                    model_info_list_vector.push(model_info_test);
+                }
+
+                if model_info_list_vector.is_empty() {
+                    return Err(Status::new(
+                        Code::NotFound,
+                        "No access found for given user",
+                    ));
+                } else {
+                    Ok(Response::new(ListModelInfoResponse {
+                        model_info_list: model_info_list_vector,
+                    }))
+                }
+            }
+            Err(error) => Err(Status::new(Code::Internal, error.to_string())),
+        }*/
     }
 
     /// Creates an access in the database.
@@ -672,6 +753,10 @@ mod model_logic_tests;
 #[cfg(test)]
 #[path = "../tests/api/user_logic.rs"]
 mod user_logic_tests;
+
+#[cfg(test)]
+#[path = "../tests/api/model_logic.rs"]
+mod model_logic_tests;
 
 #[cfg(test)]
 #[path = "../tests/api/session_logic.rs"]

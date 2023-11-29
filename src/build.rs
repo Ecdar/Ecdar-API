@@ -8,6 +8,7 @@ fn main() {
             "Component",
             "#[derive(serde::Serialize, serde::Deserialize)]",
         )
+        .type_attribute("ModelInfo", "#[derive(sea_orm::FromQueryResult)]")
         .enum_attribute("rep", "#[derive(serde::Serialize, serde::Deserialize)]")
         .compile(&["Ecdar-ProtoBuf/services.proto"], &["Ecdar-ProtoBuf/"])
         .unwrap();
