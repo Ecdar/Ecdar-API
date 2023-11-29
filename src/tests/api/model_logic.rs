@@ -2,8 +2,8 @@ use crate::{
     api::{
         auth::TokenType,
         server::server::{
-            ecdar_api_server::EcdarApi, ComponentsInfo, CreateModelRequest, DeleteModelRequest,
-            GetModelRequest, ModelInfo, UpdateModelRequest,
+            component::Rep, ecdar_api_server::EcdarApi, Component, ComponentsInfo,
+            CreateModelRequest, DeleteModelRequest, GetModelRequest, ModelInfo, UpdateModelRequest,
         },
     },
     entities::{access, in_use, model, query, session},
@@ -685,6 +685,456 @@ async fn list_models_info_returns_err() {
 }
 
 #[tokio::test]
+async fn update_name_returns_ok() {
+    let mut mock_services = get_mock_services();
+
+    let user_id = 1;
+    let model_id = 1;
+    let new_model_name = "new_name".to_string();
+
+    let mut update_model_request = Request::new(UpdateModelRequest {
+        id: model_id,
+        name: Some(new_model_name.clone()),
+        components_info: None,
+        owner_id: None,
+    });
+
+    update_model_request.metadata_mut().insert(
+        "authorization",
+        metadata::MetadataValue::from_str("Bearer access_token").unwrap(),
+    );
+
+    update_model_request.metadata_mut().insert(
+        "uid",
+        metadata::MetadataValue::from_str(user_id.to_string().as_str()).unwrap(),
+    );
+
+    mock_services
+        .model_context_mock
+        .expect_get_by_id()
+        .with(predicate::eq(model_id))
+        .returning(move |_| {
+            Ok(Some(model::Model {
+                id: model_id,
+                name: "old_name".to_owned(),
+                components_info: Default::default(),
+                owner_id: user_id,
+            }))
+        });
+
+    mock_services
+        .access_context_mock
+        .expect_get_access_by_uid_and_model_id()
+        .with(predicate::eq(1), predicate::eq(model_id))
+        .returning(move |_, _| {
+            Ok(Some(access::Model {
+                id: 1,
+                user_id,
+                model_id,
+                role: "Editor".to_string(),
+            }))
+        });
+
+    mock_services
+        .session_context_mock
+        .expect_get_by_token()
+        .with(
+            predicate::eq(TokenType::AccessToken),
+            predicate::eq("access_token".to_string()),
+        )
+        .returning(move |_, _| {
+            Ok(Some(session::Model {
+                id: 1,
+                refresh_token: "refresh_token".to_string(),
+                access_token: "access_token".to_string(),
+                updated_at: Default::default(),
+                user_id,
+            }))
+        });
+
+    mock_services
+        .model_context_mock
+        .expect_update()
+        .returning(move |_| {
+            Ok(model::Model {
+                id: model_id,
+                name: new_model_name.clone(),
+                components_info: Default::default(),
+                owner_id: user_id,
+            })
+        });
+
+    mock_services
+        .in_use_context_mock
+        .expect_get_by_id()
+        .returning(move |_| {
+            Ok(Some(in_use::Model {
+                model_id,
+                session_id: 1,
+                latest_activity: Utc::now().naive_utc(),
+            }))
+        });
+
+    mock_services
+        .in_use_context_mock
+        .expect_update()
+        .returning(move |_| {
+            Ok(in_use::Model {
+                model_id: 1,
+                session_id: 1,
+                latest_activity: Utc::now().naive_utc(),
+            })
+        });
+
+    let api = get_mock_concrete_ecdar_api(mock_services);
+
+    let res = api.update_model(update_model_request).await;
+
+    assert!(res.is_ok());
+}
+
+#[tokio::test]
+async fn update_components_info_returns_ok() {
+    let mut mock_services = get_mock_services();
+
+    let user_id = 1;
+    let model_id = 1;
+    let components_info_non_json = ComponentsInfo {
+        components: vec![Component {
+            rep: Some(Rep::Json("a".to_owned())),
+        }],
+        components_hash: 1234456,
+    };
+    let components_info = serde_json::to_value(components_info_non_json.clone()).unwrap();
+
+    let mut update_model_request = Request::new(UpdateModelRequest {
+        id: model_id,
+        name: None,
+        components_info: Some(components_info_non_json.clone()),
+        owner_id: None,
+    });
+
+    update_model_request.metadata_mut().insert(
+        "authorization",
+        metadata::MetadataValue::from_str("Bearer access_token").unwrap(),
+    );
+
+    update_model_request.metadata_mut().insert(
+        "uid",
+        metadata::MetadataValue::from_str(user_id.to_string().as_str()).unwrap(),
+    );
+
+    mock_services
+        .model_context_mock
+        .expect_get_by_id()
+        .with(predicate::eq(model_id))
+        .returning(move |_| {
+            Ok(Some(model::Model {
+                id: model_id,
+                name: Default::default(),
+                components_info: Default::default(),
+                owner_id: user_id,
+            }))
+        });
+
+    mock_services
+        .access_context_mock
+        .expect_get_access_by_uid_and_model_id()
+        .with(predicate::eq(1), predicate::eq(model_id))
+        .returning(move |_, _| {
+            Ok(Some(access::Model {
+                id: 1,
+                user_id,
+                model_id,
+                role: "Editor".to_string(),
+            }))
+        });
+
+    mock_services
+        .session_context_mock
+        .expect_get_by_token()
+        .with(
+            predicate::eq(TokenType::AccessToken),
+            predicate::eq("access_token".to_string()),
+        )
+        .returning(move |_, _| {
+            Ok(Some(session::Model {
+                id: 1,
+                refresh_token: "refresh_token".to_string(),
+                access_token: "access_token".to_string(),
+                updated_at: Default::default(),
+                user_id,
+            }))
+        });
+
+    mock_services
+        .model_context_mock
+        .expect_update()
+        .returning(move |_| {
+            Ok(model::Model {
+                id: model_id,
+                name: Default::default(),
+                components_info: components_info.clone(),
+                owner_id: user_id,
+            })
+        });
+
+    mock_services
+        .in_use_context_mock
+        .expect_get_by_id()
+        .returning(move |_| {
+            Ok(Some(in_use::Model {
+                model_id,
+                session_id: 1,
+                latest_activity: Utc::now().naive_utc(),
+            }))
+        });
+
+    mock_services
+        .in_use_context_mock
+        .expect_update()
+        .returning(move |_| {
+            Ok(in_use::Model {
+                model_id: 1,
+                session_id: 1,
+                latest_activity: Utc::now().naive_utc(),
+            })
+        });
+
+    let api = get_mock_concrete_ecdar_api(mock_services);
+
+    let res = api.update_model(update_model_request).await;
+
+    assert!(res.is_ok());
+}
+
+#[tokio::test]
+async fn update_owner_id_returns_ok() {
+    let mut mock_services = get_mock_services();
+
+    let user_id = 1;
+    let model_id = 1;
+    let new_owner_id = 2;
+
+    let mut update_model_request = Request::new(UpdateModelRequest {
+        id: model_id,
+        name: None,
+        components_info: None,
+        owner_id: Some(new_owner_id),
+    });
+
+    update_model_request.metadata_mut().insert(
+        "authorization",
+        metadata::MetadataValue::from_str("Bearer access_token").unwrap(),
+    );
+
+    update_model_request.metadata_mut().insert(
+        "uid",
+        metadata::MetadataValue::from_str(user_id.to_string().as_str()).unwrap(),
+    );
+
+    mock_services
+        .model_context_mock
+        .expect_get_by_id()
+        .with(predicate::eq(model_id))
+        .returning(move |_| {
+            Ok(Some(model::Model {
+                id: model_id,
+                name: Default::default(),
+                components_info: Default::default(),
+                owner_id: user_id,
+            }))
+        });
+
+    mock_services
+        .access_context_mock
+        .expect_get_access_by_uid_and_model_id()
+        .with(predicate::eq(1), predicate::eq(model_id))
+        .returning(move |_, _| {
+            Ok(Some(access::Model {
+                id: 1,
+                user_id,
+                model_id,
+                role: "Editor".to_string(),
+            }))
+        });
+
+    mock_services
+        .session_context_mock
+        .expect_get_by_token()
+        .with(
+            predicate::eq(TokenType::AccessToken),
+            predicate::eq("access_token".to_string()),
+        )
+        .returning(move |_, _| {
+            Ok(Some(session::Model {
+                id: 1,
+                refresh_token: "refresh_token".to_string(),
+                access_token: "access_token".to_string(),
+                updated_at: Default::default(),
+                user_id,
+            }))
+        });
+
+    mock_services
+        .model_context_mock
+        .expect_update()
+        .returning(move |_| {
+            Ok(model::Model {
+                id: model_id,
+                name: Default::default(),
+                components_info: Default::default(),
+                owner_id: new_owner_id,
+            })
+        });
+
+    mock_services
+        .in_use_context_mock
+        .expect_get_by_id()
+        .returning(move |_| {
+            Ok(Some(in_use::Model {
+                model_id,
+                session_id: 1,
+                latest_activity: Utc::now().naive_utc(),
+            }))
+        });
+
+    mock_services
+        .in_use_context_mock
+        .expect_update()
+        .returning(move |_| {
+            Ok(in_use::Model {
+                model_id: 1,
+                session_id: 1,
+                latest_activity: Utc::now().naive_utc(),
+            })
+        });
+
+    let api = get_mock_concrete_ecdar_api(mock_services);
+
+    let res = api.update_model(update_model_request).await;
+
+    assert!(res.is_ok());
+}
+
+#[tokio::test]
+async fn update_returns_ok() {
+    let mut mock_services = get_mock_services();
+
+    let user_id = 1;
+    let model_id = 1;
+    let new_model_name = "new_name".to_string();
+    let new_components_info_non_json = ComponentsInfo {
+        components: vec![Component {
+            rep: Some(Rep::Json("a".to_owned())),
+        }],
+        components_hash: 1234456,
+    };
+    let new_components_info = serde_json::to_value(new_components_info_non_json.clone()).unwrap();
+    let new_owner_id = 2;
+
+    let mut update_model_request = Request::new(UpdateModelRequest {
+        id: model_id,
+        name: Some(new_model_name.clone()),
+        components_info: Some(new_components_info_non_json.clone()),
+        owner_id: Some(new_owner_id),
+    });
+
+    update_model_request.metadata_mut().insert(
+        "authorization",
+        metadata::MetadataValue::from_str("Bearer access_token").unwrap(),
+    );
+
+    update_model_request.metadata_mut().insert(
+        "uid",
+        metadata::MetadataValue::from_str(user_id.to_string().as_str()).unwrap(),
+    );
+
+    mock_services
+        .model_context_mock
+        .expect_get_by_id()
+        .with(predicate::eq(model_id))
+        .returning(move |_| {
+            Ok(Some(model::Model {
+                id: model_id,
+                name: "old_name".to_owned(),
+                components_info: serde_json::to_value("{\"old_components\":1}".clone()).unwrap(),
+                owner_id: user_id,
+            }))
+        });
+
+    mock_services
+        .access_context_mock
+        .expect_get_access_by_uid_and_model_id()
+        .with(predicate::eq(1), predicate::eq(model_id))
+        .returning(move |_, _| {
+            Ok(Some(access::Model {
+                id: 1,
+                user_id,
+                model_id,
+                role: "Editor".to_string(),
+            }))
+        });
+
+    mock_services
+        .session_context_mock
+        .expect_get_by_token()
+        .with(
+            predicate::eq(TokenType::AccessToken),
+            predicate::eq("access_token".to_string()),
+        )
+        .returning(move |_, _| {
+            Ok(Some(session::Model {
+                id: 1,
+                refresh_token: "refresh_token".to_string(),
+                access_token: "access_token".to_string(),
+                updated_at: Default::default(),
+                user_id,
+            }))
+        });
+
+    mock_services
+        .model_context_mock
+        .expect_update()
+        .returning(move |_| {
+            Ok(model::Model {
+                id: model_id,
+                name: new_model_name.clone(),
+                components_info: new_components_info.clone(),
+                owner_id: new_owner_id,
+            })
+        });
+
+    mock_services
+        .in_use_context_mock
+        .expect_get_by_id()
+        .returning(move |_| {
+            Ok(Some(in_use::Model {
+                model_id,
+                session_id: 1,
+                latest_activity: Utc::now().naive_utc(),
+            }))
+        });
+
+    mock_services
+        .in_use_context_mock
+        .expect_update()
+        .returning(move |_| {
+            Ok(in_use::Model {
+                model_id: 1,
+                session_id: 1,
+                latest_activity: Utc::now().naive_utc(),
+            })
+        });
+
+    let api = get_mock_concrete_ecdar_api(mock_services);
+
+    let res = api.update_model(update_model_request).await;
+
+    assert!(res.is_ok());
+}
+
+#[tokio::test]
 async fn update_owner_not_owner_returns_err() {
     let mut mock_services = get_mock_services();
 
@@ -778,7 +1228,7 @@ async fn update_owner_not_owner_returns_err() {
 }
 
 #[tokio::test]
-async fn update_model_in_use_returns_err() {
+async fn update_no_in_use_returns_err() {
     let mut mock_services = get_mock_services();
 
     mock_services
