@@ -19,7 +19,7 @@ use super::server::server::{
     SimulationStepRequest, SimulationStepResponse, UpdateAccessRequest, UpdateQueryRequest,
     UpdateUserRequest, UserTokenResponse,
 };
-use crate::entities::{access, model, query, session, user};
+use crate::entities::{access, model, query, session, user, in_use};
 
 #[derive(Clone)]
 pub struct ConcreteEcdarApi {
@@ -118,15 +118,16 @@ impl EcdarApi for ConcreteEcdarApi {
             None => return Err(Status::invalid_argument("No components info provided")),
         };
 
-        let model = model::Model {
+        let mut model = model::Model {
             id: Default::default(),
             name: message.clone().name,
             components_info,
             owner_id: uid,
         };
 
-        match self.contexts.model_context.create(model).await {
-            Ok(model) => Ok(Response::new(CreateModelResponse { id: model.id })),
+
+        model = match self.contexts.model_context.create(model).await {
+            Ok(model) => model,
             Err(error) => match error.sql_err() {
                 Some(SqlErr::UniqueConstraintViolation(e)) => {
                     let error_msg = match e.to_lowercase() {
@@ -146,7 +147,21 @@ impl EcdarApi for ConcreteEcdarApi {
                 }
                 _ => Err(Status::internal(error.to_string())),
             },
-        }
+        }?;
+
+        let access = access::Model {
+            id: Default::default(),
+            role: "Editor".to_string(), //todo!("Use role enum")
+            model_id: model.id,
+            user_id: uid,
+        };
+
+
+        let in_use = in_use::Model {
+            model_id: model.id,
+            session_id: Default::default(),
+            latest_activity: Default::default(),
+        };
     }
 
     async fn update_model(&self, _request: Request<()>) -> Result<Response<()>, Status> {
