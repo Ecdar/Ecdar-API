@@ -123,7 +123,7 @@ async fn get_model_user_has_no_access_returns_err() {
 
     let res = api.get_model(request).await.unwrap_err();
 
-    assert!(dbg!(res.code()) == Code::PermissionDenied);
+    assert!(res.code() == Code::PermissionDenied);
 }
 
 #[tokio::test]
