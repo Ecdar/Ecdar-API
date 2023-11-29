@@ -54,11 +54,8 @@ pub async fn handle_session(
                 updated_at: Default::default(),
                 user_id: uid.parse().unwrap(),
             })
-            .await;
-        return match res {
-            Ok(_) => Ok(()),
-            Err(e) => Err(Status::new(Code::Internal, e.to_string())),
-        };
+            .await
+            .map_err(|err| Status::new(Code::Internal, err.to_string()))?;
     } else {
         let mut session = match session_context
             .get_by_token(TokenType::RefreshToken, request.token_string().unwrap())
@@ -77,10 +74,10 @@ pub async fn handle_session(
         session.access_token = access_token.clone();
         session.refresh_token = refresh_token.clone();
 
-        match session_context.update(session).await {
-            Ok(_) => (),
-            Err(err) => return Err(Status::new(Code::Internal, err.to_string())),
-        };
+        session_context
+            .update(session)
+            .await
+            .map_err(|err| Status::new(Code::Internal, err.to_string()))?;
     }
     Ok(())
 }
