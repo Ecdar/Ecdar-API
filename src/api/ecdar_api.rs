@@ -124,17 +124,63 @@ impl EcdarApi for ConcreteEcdarApi {
             None => return Err(Status::invalid_argument("No components info provided")),
         };
 
-        let model = model::Model {
+        let mut model = model::Model {
             id: Default::default(),
             name: message.clone().name,
             components_info,
             owner_id: uid,
         };
 
-        match self.contexts.model_context.create(model).await {
-            Ok(model) => Ok(Response::new(CreateModelResponse { id: model.id })),
-            Err(error) => Err(Status::internal(error.to_string())),
-        }
+        model = match self.contexts.model_context.create(model).await {
+            Ok(model) => model,
+            Err(error) => {
+                return match error.sql_err() {
+                    Some(SqlErr::UniqueConstraintViolation(e)) => {
+                        let error_msg = match e.to_lowercase() {
+                            _ if e.contains("name") => "A model with that name already exists",
+                            _ => "Model already exists",
+                        };
+                        println!("{}", e);
+                        Err(Status::already_exists(error_msg))
+                    }
+                    Some(SqlErr::ForeignKeyConstraintViolation(e)) => {
+                        let error_msg = match e.to_lowercase() {
+                            _ if e.contains("owner_id") => "No user with that id exists",
+                            _ => "Could not create model",
+                        };
+                        println!("{}", e);
+                        Err(Status::invalid_argument(error_msg))
+                    }
+                    _ => Err(Status::internal(error.to_string())),
+                };
+            }
+        };
+
+        let access = access::Model {
+            id: Default::default(),
+            role: "Editor".to_string(), //todo!("Use role enum")
+            model_id: model.clone().id,
+            user_id: uid,
+        };
+
+        let session = self
+            .contexts
+            .session_context
+            .get_by_token(TokenType::AccessToken, request.token_string().unwrap())
+            .await
+            .unwrap()
+            .unwrap();
+
+        let in_use = in_use::Model {
+            model_id: model.clone().id,
+            session_id: session.id,
+            latest_activity: Default::default(),
+        };
+
+        self.contexts.in_use_context.create(in_use).await.unwrap();
+        self.contexts.access_context.create(access).await.unwrap();
+
+        Ok(Response::new(CreateModelResponse { id: model.id }))
     }
 
     /// Updates a Model in the database given its id.
