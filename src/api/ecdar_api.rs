@@ -198,7 +198,9 @@ impl EcdarApi for ConcreteEcdarApi {
         match self.contexts.in_use_context.get_by_id(model.id).await {
             Ok(Some(in_use)) => {
                 // Check if in_use latest activity is older than 10 minutes
-                if in_use.latest_activity > (Utc::now().naive_utc() - Duration::minutes(10)) {
+                if in_use.latest_activity > (Utc::now().naive_utc() - Duration::minutes(10))
+                    && in_use.session_id != session.id
+                {
                     return Err(Status::failed_precondition(
                         "Model is currently in use by another session",
                     ));
@@ -230,9 +232,9 @@ impl EcdarApi for ConcreteEcdarApi {
                 None => model.components_info,
             },
             owner_id: match message.clone().owner_id {
-                Some(owner_id) => {
-                    if owner_id == uid {
-                        owner_id
+                Some(new_owner_id) => {
+                    if model.owner_id == uid {
+                        new_owner_id
                     } else {
                         return Err(Status::permission_denied(
                             "You do not have permission to change the owner of this model",
