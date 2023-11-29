@@ -135,11 +135,43 @@ impl EcdarApi for ConcreteEcdarApi {
         todo!()
     }
 
+    /// Deletes a Model from the database.
+    ///
+    /// # Errors
+    /// This function will return an error if the model does not exist in the database
+    /// or if the user is not the model owner.
     async fn delete_model(
         &self,
-        _request: Request<DeleteModelRequest>,
+        request: Request<DeleteModelRequest>,
     ) -> Result<Response<()>, Status> {
-        todo!()
+        let uid = request
+            .uid()
+            .ok_or(Status::internal("Could not get uid from request metadata"))?;
+        let model_id = request.get_ref().id;
+
+        let model = match self.contexts.model_context.get_by_id(model_id).await {
+            Ok(Some(model)) => model,
+            Ok(None) => return Err(Status::new(Code::NotFound, "No model found with given id")),
+            Err(err) => return Err(Status::new(Code::Internal, err.to_string())),
+        };
+
+        // Check if user is owner and thereby has permission to delete model
+        if model.owner_id != uid {
+            return Err(Status::new(
+                Code::PermissionDenied,
+                "You do not have permission to delete this model",
+            ));
+        }
+
+        match self.contexts.model_context.delete(model_id).await {
+            Ok(_) => Ok(Response::new(())),
+            Err(error) => match error {
+                sea_orm::DbErr::RecordNotFound(message) => {
+                    Err(Status::new(Code::NotFound, message))
+                }
+                _ => Err(Status::new(Code::Internal, error.to_string())),
+            },
+        }
     }
 
     async fn list_models_info(&self, _request: Request<()>) -> Result<Response<()>, Status> {
@@ -559,6 +591,10 @@ mod access_logic_tests;
 #[cfg(test)]
 #[path = "../tests/api/user_logic.rs"]
 mod user_logic_tests;
+
+#[cfg(test)]
+#[path = "../tests/api/model_logic.rs"]
+mod model_logic_tests;
 
 #[cfg(test)]
 #[path = "../tests/api/session_logic.rs"]
