@@ -1,11 +1,12 @@
 use std::str::FromStr;
 
 use mockall::predicate;
+use sea_orm::DbErr;
 use tonic::{metadata, Code, Request};
 
 use crate::{
     api::server::server::{
-        ecdar_api_server::EcdarApi, ComponentsInfo, DeleteModelRequest, CreateModelRequest,
+        ecdar_api_server::EcdarApi, ComponentsInfo, CreateModelRequest, DeleteModelRequest,
     },
     entities::model,
     tests::api::helpers::{get_mock_concrete_ecdar_api, get_mock_services},
