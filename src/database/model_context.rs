@@ -61,6 +61,7 @@ impl ModelContext {
         ModelContext { db_context }
     }
 }
+
 #[async_trait]
 impl EntityContextTrait<model::Model> for ModelContext {
     /// Used for creating a model::Model entity
