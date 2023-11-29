@@ -1,13 +1,12 @@
+use crate::api::auth::TokenType;
+use crate::database::database_context::DatabaseContextTrait;
+use crate::database::entity_context::EntityContextTrait;
+use crate::entities::session;
 use chrono::Local;
 use sea_orm::prelude::async_trait::async_trait;
 use sea_orm::ActiveValue::{Set, Unchanged};
 use sea_orm::{ActiveModelTrait, ColumnTrait, DbErr, EntityTrait, NotSet, QueryFilter};
 use std::sync::Arc;
-
-use crate::api::auth::TokenType;
-use crate::database::database_context::DatabaseContextTrait;
-use crate::database::entity_context::EntityContextTrait;
-use crate::entities::session;
 
 pub struct SessionContext {
     db_context: Arc<dyn DatabaseContextTrait>,

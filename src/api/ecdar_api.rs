@@ -1,4 +1,3 @@
-use super::server::server::UpdateModelRequest;
 use super::server::server::{
     ecdar_api_auth_server::EcdarApiAuth,
     ecdar_api_server::EcdarApi,
@@ -7,12 +6,15 @@ use super::server::server::{
     CreateAccessRequest, CreateModelRequest, CreateModelResponse, CreateQueryRequest,
     CreateUserRequest, DeleteAccessRequest, DeleteModelRequest, DeleteQueryRequest,
     GetAuthTokenRequest, GetAuthTokenResponse, GetModelRequest, GetModelResponse,
-    ListModelsInfoResponse, QueryRequest, QueryResponse, SimulationStartRequest,
-    SimulationStepRequest, SimulationStepResponse, UpdateAccessRequest, UpdateQueryRequest,
-    UpdateUserRequest, UserTokenResponse,
+    ListModelsInfoResponse, Query, QueryRequest, QueryResponse, SimulationStartRequest,
+    SimulationStepRequest, SimulationStepResponse, UpdateAccessRequest, UpdateModelRequest,
+    UpdateQueryRequest, UpdateUserRequest, UserTokenResponse,
 };
-use crate::api::auth::{RequestExt, Token, TokenType};
 use crate::api::context_collection::ContextCollection;
+use crate::api::{
+    auth::{RequestExt, Token, TokenType},
+    server::server::Model,
+};
 use crate::database::{session_context::SessionContextTrait, user_context::UserContextTrait};
 use crate::entities::{access, in_use, model, query, session, user};
 use chrono::{Duration, Utc};
@@ -44,7 +46,7 @@ pub async fn handle_session(
     uid: String,
 ) -> Result<(), Status> {
     if is_new_session {
-        let res = session_context
+        session_context
             .create(session::Model {
                 id: Default::default(),
                 access_token: access_token.clone(),
@@ -52,11 +54,8 @@ pub async fn handle_session(
                 updated_at: Default::default(),
                 user_id: uid.parse().unwrap(),
             })
-            .await;
-        return match res {
-            Ok(_) => Ok(()),
-            Err(e) => Err(Status::new(Code::Internal, e.to_string())),
-        };
+            .await
+            .map_err(|err| Status::new(Code::Internal, err.to_string()))?;
     } else {
         let mut session = match session_context
             .get_by_token(TokenType::RefreshToken, request.token_string().unwrap())
@@ -75,10 +74,10 @@ pub async fn handle_session(
         session.access_token = access_token.clone();
         session.refresh_token = refresh_token.clone();
 
-        match session_context.update(session).await {
-            Ok(_) => (),
-            Err(err) => return Err(Status::new(Code::Internal, err.to_string())),
-        };
+        session_context
+            .update(session)
+            .await
+            .map_err(|err| Status::new(Code::Internal, err.to_string()))?;
     }
     Ok(())
 }
@@ -103,11 +102,114 @@ impl ConcreteEcdarApi {
 
 #[tonic::async_trait]
 impl EcdarApi for ConcreteEcdarApi {
+    /// Gets a Model and its queries from the database.
+    ///
+    /// If the Model is not in use, it will now be in use by the requestees session,
+    /// given that they are an Editor.
     async fn get_model(
         &self,
-        _request: Request<GetModelRequest>,
+        request: Request<GetModelRequest>,
     ) -> Result<Response<GetModelResponse>, Status> {
-        todo!()
+        let message = request.get_ref().clone();
+
+        let model_id = message.id;
+
+        let uid = request
+            .uid()
+            .ok_or(Status::internal("Could not get uid from request metadata"))?;
+
+        let access = self
+            .contexts
+            .access_context
+            .get_access_by_uid_and_model_id(uid, model_id)
+            .await
+            .map_err(|err| Status::new(Code::Internal, err.to_string()))?
+            .ok_or_else(|| {
+                Status::new(Code::PermissionDenied, "User does not have access to model")
+            })?;
+
+        let model = self
+            .contexts
+            .model_context
+            .get_by_id(model_id)
+            .await
+            .map_err(|err| Status::new(Code::Internal, err.to_string()))?
+            .ok_or_else(|| Status::new(Code::Internal, "Model not found"))?;
+
+        let model = Model {
+            id: model.id,
+            name: model.name,
+            components_info: serde_json::from_value(model.components_info).unwrap(),
+            owner_id: model.owner_id,
+        };
+
+        let mut in_use_bool = true;
+        match self.contexts.in_use_context.get_by_id(model_id).await {
+            Ok(Some(in_use)) => {
+                // If model is not in use and user is an Editor, update the in use with the users session.
+                if in_use.latest_activity
+                    <= (Utc::now().naive_utc() - Duration::minutes(IN_USE_DURATION_MINUTES))
+                {
+                    in_use_bool = false;
+
+                    if access.role == "Editor" {
+                        let session = self
+                            .contexts
+                            .session_context
+                            .get_by_token(TokenType::AccessToken, request.token_string().unwrap())
+                            .await
+                            .map_err(|err| Status::new(Code::Internal, err.to_string()))?
+                            .ok_or_else(|| {
+                                Status::new(
+                                    Code::Unauthenticated,
+                                    "No session found with given access token",
+                                )
+                            })?;
+
+                        let in_use = in_use::Model {
+                            model_id: in_use.model_id,
+                            session_id: session.id,
+                            latest_activity: Utc::now().naive_utc(),
+                        };
+
+                        self.contexts
+                            .in_use_context
+                            .update(in_use)
+                            .await
+                            .map_err(|err| Status::new(Code::Internal, err.to_string()))?;
+                    }
+                }
+            }
+            Ok(None) => return Err(Status::new(Code::Internal, "No in use found for model")),
+            Err(err) => return Err(Status::new(Code::Internal, err.to_string())),
+        }
+
+        let queries = self
+            .contexts
+            .query_context
+            .get_all_by_model_id(model_id)
+            .await
+            .map_err(|err| Status::new(Code::Internal, err.to_string()))?;
+
+        let queries = queries
+            .into_iter()
+            .map(|query| Query {
+                id: query.id,
+                model_id: query.model_id,
+                query: query.string,
+                result: match query.result {
+                    Some(result) => serde_json::from_value(result).unwrap(),
+                    None => "".to_owned(),
+                },
+                outdated: query.outdated,
+            })
+            .collect::<Vec<Query>>();
+
+        Ok(Response::new(GetModelResponse {
+            model: Some(model),
+            queries,
+            in_use: in_use_bool,
+        }))
     }
 
     async fn create_model(
@@ -782,12 +884,12 @@ mod query_logic_tests;
 mod access_logic_tests;
 
 #[cfg(test)]
-#[path = "../tests/api/user_logic.rs"]
-mod user_logic_tests;
-
-#[cfg(test)]
 #[path = "../tests/api/model_logic.rs"]
 mod model_logic_tests;
+
+#[cfg(test)]
+#[path = "../tests/api/user_logic.rs"]
+mod user_logic_tests;
 
 #[cfg(test)]
 #[path = "../tests/api/session_logic.rs"]

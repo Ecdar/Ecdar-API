@@ -1,3 +1,4 @@
+use crate::database::access_context::AccessContextTrait;
 use crate::tests::database::helpers::{
     create_accesses, create_models, create_users, get_reset_database_context,
 };
@@ -342,4 +343,20 @@ async fn delete_non_existing_id_test() {
         deleted_access.unwrap_err(),
         DbErr::RecordNotFound(_)
     ));
+}
+
+#[tokio::test]
+async fn get_by_uid_and_model_id_test() {
+    let (access_context, expected_access, user, model) = seed_db().await;
+
+    access::Entity::insert(expected_access.clone().into_active_model())
+        .exec(&access_context.db_context.get_connection())
+        .await
+        .unwrap();
+
+    let access = access_context
+        .get_access_by_uid_and_model_id(user.id, model.id)
+        .await;
+
+    assert!(access.unwrap().unwrap() == expected_access);
 }
