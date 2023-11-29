@@ -105,6 +105,10 @@ impl ConcreteEcdarApi {
 
 #[tonic::async_trait]
 impl EcdarApi for ConcreteEcdarApi {
+    /// Gets a Model and its queries from the database.
+    ///
+    /// If the Model is not in use, it will now be in use by the requestees session,
+    /// given that they are an Editor.
     async fn get_model(
         &self,
         request: Request<GetModelRequest>,
@@ -145,6 +149,7 @@ impl EcdarApi for ConcreteEcdarApi {
         let mut in_use_bool = true;
         match self.contexts.in_use_context.get_by_id(model_id).await {
             Ok(Some(in_use)) => {
+                // If model is not in use and user is an Editor, update the in use with the users session.
                 if in_use.latest_activity
                     <= (Utc::now().naive_utc() - Duration::minutes(IN_USE_DURATION_MINUTES))
                 {
