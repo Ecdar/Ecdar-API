@@ -6,9 +6,9 @@ use super::server::server::{
     CreateAccessRequest, CreateModelRequest, CreateModelResponse, CreateQueryRequest,
     CreateUserRequest, DeleteAccessRequest, DeleteModelRequest, DeleteQueryRequest,
     GetAuthTokenRequest, GetAuthTokenResponse, GetModelRequest, GetModelResponse,
-    ListModelsInfoResponse, QueryRequest, QueryResponse, SimulationStartRequest,
-    SimulationStepRequest, SimulationStepResponse, UpdateAccessRequest, UpdateQueryRequest,
-    UpdateUserRequest, UserTokenResponse,
+    ListModelsInfoResponse, Query, QueryRequest, QueryResponse, SimulationStartRequest,
+    SimulationStepRequest, SimulationStepResponse, UpdateAccessRequest, UpdateModelRequest,
+    UpdateQueryRequest, UpdateUserRequest, UserTokenResponse,
 };
 use crate::api::context_collection::ContextCollection;
 use crate::api::{
@@ -237,7 +237,10 @@ impl EcdarApi for ConcreteEcdarApi {
         }
     }
 
-    async fn update_model(&self, _request: Request<()>) -> Result<Response<()>, Status> {
+    async fn update_model(
+        &self,
+        _request: Request<UpdateModelRequest>,
+    ) -> Result<Response<()>, Status> {
         todo!()
     }
 
@@ -753,10 +756,6 @@ mod model_logic_tests;
 #[cfg(test)]
 #[path = "../tests/api/user_logic.rs"]
 mod user_logic_tests;
-
-#[cfg(test)]
-#[path = "../tests/api/model_logic.rs"]
-mod model_logic_tests;
 
 #[cfg(test)]
 #[path = "../tests/api/session_logic.rs"]
