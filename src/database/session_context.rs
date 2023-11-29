@@ -4,6 +4,7 @@ use sea_orm::ActiveValue::{Set, Unchanged};
 use sea_orm::{ActiveModelTrait, ColumnTrait, DbErr, EntityTrait, NotSet, QueryFilter};
 use std::sync::Arc;
 
+use crate::api::auth::TokenType;
 use crate::database::database_context::DatabaseContextTrait;
 use crate::database::entity_context::EntityContextTrait;
 use crate::entities::session;
@@ -14,22 +15,34 @@ pub struct SessionContext {
 
 #[async_trait]
 pub trait SessionContextTrait: EntityContextTrait<session::Model> {
-    async fn get_by_refresh_token(
+    async fn get_by_token(
         &self,
-        refresh_token: String,
+        token_type: TokenType,
+        token: String,
     ) -> Result<Option<session::Model>, DbErr>;
 }
 
 #[async_trait]
 impl SessionContextTrait for SessionContext {
-    async fn get_by_refresh_token(
+    async fn get_by_token(
         &self,
-        refresh_token: String,
+        token_type: TokenType,
+        token: String,
     ) -> Result<Option<session::Model>, DbErr> {
-        session::Entity::find()
-            .filter(session::Column::RefreshToken.eq(refresh_token))
-            .one(&self.db_context.get_connection())
-            .await
+        match token_type {
+            TokenType::AccessToken => {
+                session::Entity::find()
+                    .filter(session::Column::AccessToken.eq(token))
+                    .one(&self.db_context.get_connection())
+                    .await
+            }
+            TokenType::RefreshToken => {
+                session::Entity::find()
+                    .filter(session::Column::RefreshToken.eq(token))
+                    .one(&self.db_context.get_connection())
+                    .await
+            }
+        }
     }
 }
 
