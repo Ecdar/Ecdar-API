@@ -420,11 +420,13 @@ impl EcdarApi for ConcreteEcdarApi {
             .ok_or(Status::internal("Could not get uid from request metadata"))?;
         let model_id = request.get_ref().id;
 
-        let model = match self.contexts.model_context.get_by_id(model_id).await {
-            Ok(Some(model)) => model,
-            Ok(None) => return Err(Status::new(Code::NotFound, "No model found with given id")),
-            Err(err) => return Err(Status::new(Code::Internal, err.to_string())),
-        };
+        let model = self
+            .contexts
+            .model_context
+            .get_by_id(model_id)
+            .await
+            .map_err(|err| Status::new(Code::Internal, err.to_string()))?
+            .ok_or_else(|| Status::new(Code::NotFound, "No model found with the given id"))?;
 
         // Check if user is owner and thereby has permission to delete model
         if model.owner_id != uid {
