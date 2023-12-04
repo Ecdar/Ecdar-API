@@ -485,7 +485,6 @@ impl EcdarApi for ConcreteEcdarApi {
             .uid()
             .ok_or(Status::internal("Could not get uid from request metadata"))?;
 
-        // Check if user has access to model with role 'Editor'
         let access = self
             .contexts
             .access_context
@@ -496,6 +495,7 @@ impl EcdarApi for ConcreteEcdarApi {
                 Status::new(Code::PermissionDenied, "User does not have access to model")
             })?;
 
+        // Check if user has access to model with role 'Editor'
         if access.role != "Editor" {
             return Err(Status::new(
                 Code::PermissionDenied,
