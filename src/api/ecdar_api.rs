@@ -632,6 +632,24 @@ impl EcdarApi for ConcreteEcdarApi {
         request: Request<CreateQueryRequest>,
     ) -> Result<Response<()>, Status> {
         let query_request = request.get_ref();
+
+        let access = self
+            .contexts
+            .access_context
+            .get_access_by_uid_and_model_id(request.uid().unwrap(), query_request.model_id)
+            .await
+            .map_err(|err| Status::new(Code::Internal, err.to_string()))?
+            .ok_or_else(|| {
+                Status::new(Code::PermissionDenied, "User does not have access to model")
+            })?;
+
+        if access.role != "Editor" {
+            return Err(Status::new(
+                Code::PermissionDenied,
+                "Role does not have permission to create query",
+            ));
+        }
+
         let query = query::Model {
             id: Default::default(),
             string: query_request.string.to_string(),
@@ -669,6 +687,23 @@ impl EcdarApi for ConcreteEcdarApi {
             None => return Err(Status::new(Code::NotFound, "Query not found".to_string())),
         };
 
+        let access = self
+            .contexts
+            .access_context
+            .get_access_by_uid_and_model_id(request.uid().unwrap(), old_query.model_id)
+            .await
+            .map_err(|err| Status::new(Code::Internal, err.to_string()))?
+            .ok_or_else(|| {
+                Status::new(Code::PermissionDenied, "User does not have access to model")
+            })?;
+
+        if access.role != "Editor" {
+            return Err(Status::new(
+                Code::PermissionDenied,
+                "Role does not have permission to update query",
+            ));
+        }
+
         let query = query::Model {
             id: message.id,
             model_id: Default::default(),
@@ -690,12 +725,34 @@ impl EcdarApi for ConcreteEcdarApi {
         &self,
         request: Request<DeleteQueryRequest>,
     ) -> Result<Response<()>, Status> {
-        match self
+        let message = request.get_ref();
+
+        let query = self
             .contexts
             .query_context
-            .delete(request.get_ref().id)
+            .get_by_id(message.id)
             .await
-        {
+            .map_err(|err| Status::new(Code::Internal, err.to_string()))?
+            .ok_or_else(|| Status::new(Code::NotFound, "Query not found"))?;
+
+        let access = self
+            .contexts
+            .access_context
+            .get_access_by_uid_and_model_id(request.uid().unwrap(), query.model_id)
+            .await
+            .map_err(|err| Status::new(Code::Internal, err.to_string()))?
+            .ok_or_else(|| {
+                Status::new(Code::PermissionDenied, "User does not have access to model")
+            })?;
+
+        if access.role != "Editor" {
+            return Err(Status::new(
+                Code::PermissionDenied,
+                "Role does not have permission to update query",
+            ));
+        }
+
+        match self.contexts.query_context.delete(message.id).await {
             Ok(_) => Ok(Response::new(())),
             Err(error) => match error {
                 sea_orm::DbErr::RecordNotFound(message) => {
