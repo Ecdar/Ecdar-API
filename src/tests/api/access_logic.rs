@@ -1,3 +1,5 @@
+use std::str::FromStr;
+
 use crate::api::server::server::ecdar_api_server::EcdarApi;
 use crate::api::server::server::{CreateAccessRequest, DeleteAccessRequest, UpdateAccessRequest};
 use crate::entities::access;
@@ -5,6 +7,69 @@ use crate::tests::api::helpers::{get_mock_concrete_ecdar_api, get_mock_services}
 use mockall::predicate;
 use sea_orm::DbErr;
 use tonic::{Code, Request};
+
+#[tokio::test]
+async fn create_incorrect_role_returns_err() {
+    let mut mock_services = get_mock_services();
+
+    mock_services
+        .access_context_mock
+        .expect_get_access_by_uid_and_model_id()
+        .with(predicate::eq(1), predicate::eq(1))
+        .returning(move |_, _| {
+            Ok(Some(access::Model {
+                id: Default::default(),
+                role: "Viewer".to_owned(),
+                user_id: 1,
+                model_id: 1,
+            }))
+        });
+
+    let mut request = Request::new(CreateAccessRequest {
+        role: "Viewer".to_string(),
+        model_id: 1,
+        user_id: 1,
+    });
+
+    request.metadata_mut().insert(
+        "uid",
+        tonic::metadata::MetadataValue::from_str("1").unwrap(),
+    );
+
+    let api = get_mock_concrete_ecdar_api(mock_services);
+
+    let res = api.create_access(request).await.unwrap_err();
+
+    assert_eq!(res.code(), Code::PermissionDenied);
+}
+
+#[tokio::test]
+async fn create_no_access_returns_err() {
+    let mut mock_services = get_mock_services();
+
+    mock_services
+        .access_context_mock
+        .expect_get_access_by_uid_and_model_id()
+        .with(predicate::eq(1), predicate::eq(1))
+        .returning(move |_, _| Ok(None));
+
+    let mut request = Request::new(CreateAccessRequest {
+        role: "Editor".to_string(),
+        model_id: 1,
+        user_id: 1,
+    });
+
+    request.metadata_mut().insert(
+        "uid",
+        tonic::metadata::MetadataValue::from_str("1").unwrap(),
+    );
+
+    let api = get_mock_concrete_ecdar_api(mock_services);
+
+    let res = api.create_access(request).await.unwrap_err();
+
+    assert_eq!(res.code(), Code::PermissionDenied);
+}
 
 #[tokio::test]
 async fn create_invalid_access_returns_err() {
@@ -23,11 +88,29 @@ async fn create_invalid_access_returns_err() {
         .with(predicate::eq(access.clone()))
         .returning(move |_| Err(DbErr::RecordNotInserted));
 
-    let request = Request::new(CreateAccessRequest {
+    mock_services
+        .access_context_mock
+        .expect_get_access_by_uid_and_model_id()
+        .with(predicate::eq(1), predicate::eq(1))
+        .returning(move |_, _| {
+            Ok(Some(access::Model {
+                id: Default::default(),
+                role: "Editor".to_owned(),
+                user_id: 1,
+                model_id: 1,
+            }))
+        });
+
+    let mut request = Request::new(CreateAccessRequest {
         role: "Editor".to_string(),
         model_id: 1,
         user_id: 1,
     });
+
+    request.metadata_mut().insert(
+        "uid",
+        tonic::metadata::MetadataValue::from_str("1").unwrap(),
+    );
 
     let api = get_mock_concrete_ecdar_api(mock_services);
 
@@ -49,15 +132,33 @@ async fn create_access_returns_ok() {
 
     mock_services
         .access_context_mock
+        .expect_get_access_by_uid_and_model_id()
+        .with(predicate::eq(1), predicate::eq(1))
+        .returning(move |_, _| {
+            Ok(Some(access::Model {
+                id: Default::default(),
+                role: "Editor".to_owned(),
+                user_id: 1,
+                model_id: 1,
+            }))
+        });
+
+    mock_services
+        .access_context_mock
         .expect_create()
         .with(predicate::eq(access.clone()))
         .returning(move |_| Ok(access.clone()));
 
-    let request = Request::new(CreateAccessRequest {
+    let mut request = Request::new(CreateAccessRequest {
         role: "Editor".to_string(),
         model_id: 1,
         user_id: 1,
     });
+
+    request.metadata_mut().insert(
+        "uid",
+        tonic::metadata::MetadataValue::from_str("1").unwrap(),
+    );
 
     let api = get_mock_concrete_ecdar_api(mock_services);
 

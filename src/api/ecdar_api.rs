@@ -480,6 +480,29 @@ impl EcdarApi for ConcreteEcdarApi {
         &self,
         request: Request<CreateAccessRequest>,
     ) -> Result<Response<()>, Status> {
+        let message = request.get_ref().clone();
+        let uid = request
+            .uid()
+            .ok_or(Status::internal("Could not get uid from request metadata"))?;
+
+        // Check if user has access to model with role 'Editor'
+        let access = self
+            .contexts
+            .access_context
+            .get_access_by_uid_and_model_id(uid, message.model_id)
+            .await
+            .map_err(|err| Status::new(Code::Internal, err.to_string()))?
+            .ok_or_else(|| {
+                Status::new(Code::PermissionDenied, "User does not have access to model")
+            })?;
+
+        if access.role != "Editor" {
+            return Err(Status::new(
+                Code::PermissionDenied,
+                "You do not have permission to create access for this model",
+            ));
+        }
+
         let access = request.get_ref();
 
         let access = access::Model {
