@@ -8,7 +8,7 @@ use super::server::server::{
     GetAuthTokenRequest, GetAuthTokenResponse, GetModelRequest, GetModelResponse,
     ListModelsInfoResponse, Query, QueryRequest, QueryResponse, SimulationStartRequest,
     SimulationStepRequest, SimulationStepResponse, UpdateAccessRequest, UpdateModelRequest,
-    UpdateQueryRequest, UpdateUserRequest, UserTokenResponse,
+    UpdateQueryRequest, UpdateUserRequest, UserTokenResponse, ListAccessInfoRequest, ListAccessInfoResponse,
 };
 use crate::api::context_collection::ContextCollection;
 use crate::api::{
@@ -210,6 +210,55 @@ impl EcdarApi for ConcreteEcdarApi {
             queries,
             in_use: in_use_bool,
         }))
+    }
+
+    async fn list_access_info(
+        &self,
+        request: Request<ListAccessInfoRequest>,
+    ) -> Result<Response<ListAccessInfoResponse>, Status> {
+        let message = request.get_ref().clone();
+
+        let uid = request
+            .uid()
+            .ok_or(Status::internal("Could not get uid from request metadata"))?;
+
+        match self
+            .contexts
+            .access_context
+            .get_access_by_uid_and_model_id(uid, message.model_id)
+            .await
+        {
+            Ok(access) => {
+                if access.is_none() {
+                    return Err(Status::new(
+                        Code::PermissionDenied,
+                        "User does not have access to model",
+                    ));
+                }
+            }   
+            Err(error) => return Err(Status::new(Code::Internal, error.to_string())),
+        };
+
+        match self
+            .contexts
+            .access_context
+            .get_access_by_model_id(message.model_id)
+            .await
+        {
+            Ok(access_info_list) => {
+                if access_info_list.is_empty() {
+                    return Err(Status::new(
+                        Code::NotFound,
+                        "No access found for given user",
+                    ));
+                } else {
+                    Ok(Response::new(ListAccessInfoResponse { access_info_list }))
+                }
+            }
+            Err(error) => Err(Status::new(Code::Internal, error.to_string())),
+        }
+
+        
     }
 
     async fn create_model(
