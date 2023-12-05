@@ -130,6 +130,8 @@ mod auth {
 
     #[tokio::test]
     async fn token_from_str_invalid_returns_err() {
+        env::set_var("ACCESS_TOKEN_HS512_SECRET", "access_secret");
+
         let token = Token::from_str(TokenType::AccessToken, "invalid_token");
         let result = token.validate();
 
