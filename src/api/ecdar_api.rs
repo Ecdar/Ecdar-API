@@ -3,12 +3,13 @@ use super::server::server::{
     ecdar_api_server::EcdarApi,
     ecdar_backend_server::EcdarBackend,
     get_auth_token_request::{user_credentials, UserCredentials},
+    get_users_response::UserInfo,
     CreateAccessRequest, CreateModelRequest, CreateModelResponse, CreateQueryRequest,
     CreateUserRequest, DeleteAccessRequest, DeleteModelRequest, DeleteQueryRequest,
-    GetAuthTokenRequest, GetAuthTokenResponse, GetModelRequest, GetModelResponse,
-    ListModelsInfoResponse, Query, QueryRequest, QueryResponse, SimulationStartRequest,
-    SimulationStepRequest, SimulationStepResponse, UpdateAccessRequest, UpdateModelRequest,
-    UpdateQueryRequest, UpdateUserRequest, UserTokenResponse,
+    GetAuthTokenRequest, GetAuthTokenResponse, GetModelRequest, GetModelResponse, GetUsersRequest,
+    GetUsersResponse, ListModelsInfoResponse, Query, QueryRequest, QueryResponse,
+    SimulationStartRequest, SimulationStepRequest, SimulationStepResponse, UpdateAccessRequest,
+    UpdateModelRequest, UpdateQueryRequest, UpdateUserRequest, UserTokenResponse,
 };
 use crate::api::context_collection::ContextCollection;
 use crate::api::{
@@ -19,7 +20,7 @@ use crate::database::{session_context::SessionContextTrait, user_context::UserCo
 use crate::entities::{access, in_use, model, query, session, user};
 use chrono::{Duration, Utc};
 use regex::Regex;
-use sea_orm::SqlErr;
+use sea_orm::{DbErr, SqlErr};
 use serde_json;
 use std::sync::Arc;
 use tonic::{Code, Request, Response, Status};
@@ -532,6 +533,31 @@ impl EcdarApi for ConcreteEcdarApi {
             Ok(_) => Ok(Response::new(())),
             Err(error) => Err(Status::new(Code::Internal, error.to_string())),
         }
+    }
+    /// Gets users from the database.
+    /// If no users exits with the given ids, an empty list is returned.
+    async fn get_users(
+        &self,
+        request: Request<GetUsersRequest>,
+    ) -> Result<Response<GetUsersResponse>, Status> {
+        let ids = request.get_ref().ids.clone();
+
+        let users = self
+            .contexts
+            .user_context
+            .get_by_ids(ids)
+            .await
+            .map_err(|err| Status::internal(err.to_string()))?;
+
+        let users_info = users
+            .into_iter()
+            .map(|user| UserInfo {
+                id: user.id,
+                username: user.username,
+            })
+            .collect::<Vec<UserInfo>>();
+
+        Ok(Response::new(GetUsersResponse { users: users_info }))
     }
 
     /// Creates a query in the database

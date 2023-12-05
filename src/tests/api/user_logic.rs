@@ -319,3 +319,56 @@ async fn update_user_non_existant_user_returns_err() {
 
     assert_eq!(res.unwrap_err().code(), Code::Internal);
 }
+
+#[tokio::test]
+async fn get_users_returns_ok() {
+    let mut mock_services = get_mock_services();
+
+    let users = vec![
+        user::Model {
+            id: 1,
+            email: "".to_string(),
+            username: "".to_string(),
+            password: "".to_string(),
+        },
+        user::Model {
+            id: 2,
+            email: "".to_string(),
+            username: "".to_string(),
+            password: "".to_string(),
+        },
+    ];
+
+    mock_services
+        .user_context_mock
+        .expect_get_by_ids()
+        .returning(move |_| Ok(users.clone()));
+
+    let api = get_mock_concrete_ecdar_api(mock_services);
+
+    let get_users_request = Request::new(GetUsersRequest { ids: vec![1, 2] });
+
+    let get_users_response = api.get_users(get_users_request).await.unwrap();
+
+    assert_eq!(get_users_response.get_ref().users.len(), 2);
+}
+
+#[tokio::test]
+async fn get_users_returns_empty_array() {
+    let mut mock_services = get_mock_services();
+
+    let users: Vec<user::Model> = vec![];
+
+    mock_services
+        .user_context_mock
+        .expect_get_by_ids()
+        .returning(move |_| Ok(users.clone()));
+
+    let api = get_mock_concrete_ecdar_api(mock_services);
+
+    let get_users_request = Request::new(GetUsersRequest { ids: vec![1, 2] });
+
+    let get_users_response = api.get_users(get_users_request).await.unwrap();
+
+    assert_eq!(get_users_response.get_ref().users.len(), 0);
+}
