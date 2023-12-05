@@ -172,6 +172,7 @@ mock! {
     impl UserContextTrait for UserContext {
         async fn get_by_username(&self, username: String) -> Result<Option<user::Model>, DbErr>;
         async fn get_by_email(&self, email: String) -> Result<Option<user::Model>, DbErr>;
+        async fn get_by_ids(&self, ids: Vec<i32>) -> Result<Vec<user::Model>, DbErr>;
     }
 }
 
