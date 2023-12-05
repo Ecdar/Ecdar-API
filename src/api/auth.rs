@@ -75,7 +75,7 @@ impl TokenType {
 /// assert_eq!(token.token_type(), TokenType::AccessToken);
 /// assert_eq!(token.to_string(), token.as_str());
 /// ```
-
+#[derive(Debug)]
 pub struct Token {
     token_type: TokenType,
     token: String,
