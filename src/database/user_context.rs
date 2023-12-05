@@ -39,7 +39,7 @@ impl UserContextTrait for UserContext {
             .await
     }
 
-    async fn get_by_ids(&self, ids: Vec<i32>) -> Result<Vec<Model>, DbErr> {
+    async fn get_by_ids(&self, ids: Vec<i32>) -> Result<Vec<user::Model>, DbErr> {
         user::Entity::find()
             .filter(user::Column::Id.is_in(ids))
             .all(&self.db_context.get_connection())
