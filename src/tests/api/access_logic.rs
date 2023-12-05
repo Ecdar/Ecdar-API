@@ -351,10 +351,54 @@ async fn delete_invalid_access_returns_err() {
     mock_services
         .access_context_mock
         .expect_delete()
-        .with(predicate::eq(1))
+        .with(predicate::eq(2))
         .returning(move |_| Err(DbErr::RecordNotFound("".to_string())));
 
-    let request = Request::new(DeleteAccessRequest { id: 1 });
+    mock_services
+        .access_context_mock
+        .expect_get_by_id()
+        .with(predicate::eq(2))
+        .returning(move |_| {
+            Ok(Some(access::Model {
+                id: 1,
+                role: "Editor".to_string(),
+                model_id: 1,
+                user_id: 2,
+            }))
+        });
+
+    mock_services
+        .access_context_mock
+        .expect_get_access_by_uid_and_model_id()
+        .with(predicate::eq(1), predicate::eq(1))
+        .returning(move |_, _| {
+            Ok(Some(access::Model {
+                id: 1,
+                role: "Editor".to_string(),
+                model_id: 1,
+                user_id: 1,
+            }))
+        });
+
+    mock_services
+        .model_context_mock
+        .expect_get_by_id()
+        .with(predicate::eq(1))
+        .returning(move |_| {
+            Ok(Some(model::Model {
+                id: 1,
+                name: "test".to_string(),
+                owner_id: 1,
+                components_info: Default::default(),
+            }))
+        });
+
+    let mut request = Request::new(DeleteAccessRequest { id: 2 });
+
+    request.metadata_mut().insert(
+        "uid",
+        tonic::metadata::MetadataValue::from_str("1").unwrap(),
+    );
 
     let api = get_mock_concrete_ecdar_api(mock_services);
 
@@ -368,7 +412,7 @@ async fn delete_access_returns_ok() {
     let mut mock_services = get_mock_services();
 
     let access = access::Model {
-        id: 1,
+        id: 2,
         role: "Editor".to_string(),
         model_id: Default::default(),
         user_id: Default::default(),
@@ -377,10 +421,54 @@ async fn delete_access_returns_ok() {
     mock_services
         .access_context_mock
         .expect_delete()
-        .with(predicate::eq(1))
+        .with(predicate::eq(2))
         .returning(move |_| Ok(access.clone()));
 
-    let request = Request::new(DeleteAccessRequest { id: 1 });
+    mock_services
+        .access_context_mock
+        .expect_get_by_id()
+        .with(predicate::eq(2))
+        .returning(move |_| {
+            Ok(Some(access::Model {
+                id: 1,
+                role: "Editor".to_string(),
+                model_id: 1,
+                user_id: 2,
+            }))
+        });
+
+    mock_services
+        .access_context_mock
+        .expect_get_access_by_uid_and_model_id()
+        .with(predicate::eq(1), predicate::eq(1))
+        .returning(move |_, _| {
+            Ok(Some(access::Model {
+                id: 1,
+                role: "Editor".to_string(),
+                model_id: 1,
+                user_id: 1,
+            }))
+        });
+
+    mock_services
+        .model_context_mock
+        .expect_get_by_id()
+        .with(predicate::eq(1))
+        .returning(move |_| {
+            Ok(Some(model::Model {
+                id: 1,
+                name: "test".to_string(),
+                owner_id: 1,
+                components_info: Default::default(),
+            }))
+        });
+
+    let mut request = Request::new(DeleteAccessRequest { id: 2 });
+
+    request.metadata_mut().insert(
+        "uid",
+        tonic::metadata::MetadataValue::from_str("1").unwrap(),
+    );
 
     let api = get_mock_concrete_ecdar_api(mock_services);
 
