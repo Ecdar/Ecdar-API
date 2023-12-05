@@ -1,10 +1,12 @@
 use crate::api::server::server::ecdar_api_server::EcdarApi;
-use crate::api::server::server::{CreateAccessRequest, DeleteAccessRequest, UpdateAccessRequest};
+use crate::api::server::server::{CreateAccessRequest, DeleteAccessRequest, UpdateAccessRequest, AccessInfo, ListAccessInfoRequest};
 use crate::entities::access;
 use crate::tests::api::helpers::{get_mock_concrete_ecdar_api, get_mock_services};
 use mockall::predicate;
 use sea_orm::DbErr;
-use tonic::{Code, Request};
+use tonic::{metadata, Code, Request};
+use std::str::FromStr;
+
 
 #[tokio::test]
 async fn create_invalid_access_returns_err() {
@@ -167,4 +169,100 @@ async fn delete_access_returns_ok() {
     let res = api.delete_access(request).await;
 
     assert!(res.is_ok());
+}
+
+#[tokio::test]
+async fn list_access_info_returns_ok() {
+    let mut mock_services = get_mock_services();
+
+    let mut request: Request<ListAccessInfoRequest> = Request::new(ListAccessInfoRequest { model_id: 1 });
+
+    request
+        .metadata_mut()
+        .insert("uid", metadata::MetadataValue::from_str("1").unwrap());
+
+    let access = AccessInfo {
+        id: 1,
+        role: "Editor".to_string(),
+        model_id: 1,
+        user_id: 1,
+    };
+
+    mock_services
+        .access_context_mock
+        .expect_get_access_by_uid_and_model_id()
+        .returning(move |_,_| Ok(Some(access::Model {
+            id: 1,
+            role: "Editor".to_string(),
+            model_id: Default::default(),
+            user_id: Default::default(),
+        })));
+
+    mock_services
+        .access_context_mock
+        .expect_get_access_by_model_id()
+        .returning(move |_| Ok(vec![access.clone()]));
+
+    let api = get_mock_concrete_ecdar_api(mock_services);
+
+    let res = api.list_access_info(request).await;
+
+    assert!(res.is_ok());
+}
+
+#[tokio::test]
+async fn list_access_info_returns_not_found() {
+    let mut mock_services = get_mock_services();
+
+    let mut request = Request::new(ListAccessInfoRequest { model_id: 1 });
+
+    request
+        .metadata_mut()
+        .insert("uid", metadata::MetadataValue::from_str("1").unwrap());
+
+
+    let access = access::Model {
+        id: 1,
+        role: "Editor".to_string(),
+        model_id: 1,
+        user_id: 1,
+    };
+
+    mock_services
+        .access_context_mock
+        .expect_get_access_by_model_id()
+        .returning(move |_| Ok(vec![]));
+
+    mock_services
+        .access_context_mock
+        .expect_get_access_by_uid_and_model_id()
+        .returning(move |_, _| Ok(Some(access.clone())));
+    
+    let api = get_mock_concrete_ecdar_api(mock_services);
+
+    let res = api.list_access_info(request).await.unwrap_err();
+
+    assert_eq!(res.code(), Code::NotFound);
+}
+
+#[tokio::test]
+async fn list_access_info_returns_no_permission() {
+    let mut request = Request::new(ListAccessInfoRequest { model_id: 1 });
+
+    request
+        .metadata_mut()
+        .insert("uid", metadata::MetadataValue::from_str("1").unwrap());
+
+    let mut mock_services = get_mock_services();
+
+    mock_services
+        .access_context_mock
+        .expect_get_access_by_uid_and_model_id()
+        .returning(move |_,_| Ok(None));
+
+    let api = get_mock_concrete_ecdar_api(mock_services);
+
+    let res = api.list_access_info(request).await.unwrap_err();
+
+    assert_eq!(res.code(), Code::PermissionDenied);
 }

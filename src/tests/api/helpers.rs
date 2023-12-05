@@ -23,6 +23,7 @@ use mockall::mock;
 use sea_orm::DbErr;
 use std::sync::Arc;
 use tonic::{Request, Response, Status};
+use crate::api::server::server::AccessInfo;
 
 pub fn get_mock_concrete_ecdar_api(mock_services: MockServices) -> ConcreteEcdarApi {
     let contexts = ContextCollection {
@@ -86,6 +87,17 @@ mock! {
                         .add(access::Column::ModelId.eq(model_id)),
                 )
                 .one(&self.db_context.get_connection())
+                .await
+        }
+
+        async fn get_access_by_model_id(
+            &self,
+            model_id: i32,
+        ) -> Result<Vec<AccessInfo>, DbErr> {
+            access::Entity::find()
+                .filter(access::Column::ModelId.eq(model_id))
+                .into_model::<AccessInfo>()
+                .all(&self.db_context.get_connection())
                 .await
         }
     }
