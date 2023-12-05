@@ -809,7 +809,7 @@ impl EcdarApi for ConcreteEcdarApi {
             query_id: message.id,
             query: query.string.clone(),
             components_info: serde_json::from_value(model.components_info).unwrap(),
-            settings: Default::default(),
+            settings: Default::default(), //TODO
         });
 
         // Run query on Reveaal
