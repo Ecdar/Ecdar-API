@@ -19,10 +19,7 @@ pub trait AccessContextTrait: EntityContextTrait<access::Model> {
         model_id: i32,
     ) -> Result<Option<access::Model>, DbErr>;
 
-    async fn get_access_by_model_id(
-        &self,
-        model_id: i32,
-    ) -> Result<Vec<AccessInfo>, DbErr>;
+    async fn get_access_by_model_id(&self, model_id: i32) -> Result<Vec<AccessInfo>, DbErr>;
 }
 
 #[async_trait]
@@ -42,17 +39,13 @@ impl AccessContextTrait for AccessContext {
             .await
     }
 
-    async fn get_access_by_model_id(
-        &self,
-        model_id: i32,
-    ) -> Result<Vec<AccessInfo>, DbErr> {
+    async fn get_access_by_model_id(&self, model_id: i32) -> Result<Vec<AccessInfo>, DbErr> {
         access::Entity::find()
             .filter(access::Column::ModelId.eq(model_id))
             .into_model::<AccessInfo>()
             .all(&self.db_context.get_connection())
             .await
     }
-
 }
 
 impl AccessContext {

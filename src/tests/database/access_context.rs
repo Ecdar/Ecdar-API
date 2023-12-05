@@ -1,3 +1,4 @@
+use crate::api::server::server::AccessInfo;
 use crate::database::access_context::AccessContextTrait;
 use crate::tests::database::helpers::{
     create_accesses, create_models, create_users, get_reset_database_context,
@@ -8,7 +9,6 @@ use crate::{
     to_active_models,
 };
 use sea_orm::{entity::prelude::*, IntoActiveModel};
-use crate::api::server::server::AccessInfo;
 
 async fn seed_db() -> (AccessContext, access::Model, user::Model, model::Model) {
     let db_context = get_reset_database_context().await;

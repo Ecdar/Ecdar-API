@@ -7,9 +7,10 @@ use super::server::server::{
     CreateAccessRequest, CreateModelRequest, CreateModelResponse, CreateQueryRequest,
     CreateUserRequest, DeleteAccessRequest, DeleteModelRequest, DeleteQueryRequest,
     GetAuthTokenRequest, GetAuthTokenResponse, GetModelRequest, GetModelResponse,
-    ListModelsInfoResponse, Query, QueryRequest, QueryResponse, SimulationStartRequest,
-    SimulationStepRequest, SimulationStepResponse, UpdateAccessRequest, UpdateModelRequest,
-    UpdateQueryRequest, UpdateUserRequest, UserTokenResponse, ListAccessInfoRequest, ListAccessInfoResponse,
+    ListAccessInfoRequest, ListAccessInfoResponse, ListModelsInfoResponse, Query, QueryRequest,
+    QueryResponse, SimulationStartRequest, SimulationStepRequest, SimulationStepResponse,
+    UpdateAccessRequest, UpdateModelRequest, UpdateQueryRequest, UpdateUserRequest,
+    UserTokenResponse,
 };
 use crate::api::{
     auth::{RequestExt, Token, TokenType},
@@ -238,7 +239,7 @@ impl EcdarApi for ConcreteEcdarApi {
                         "User does not have access to model",
                     ));
                 }
-            }   
+            }
             Err(error) => return Err(Status::new(Code::Internal, error.to_string())),
         };
 
@@ -260,8 +261,6 @@ impl EcdarApi for ConcreteEcdarApi {
             }
             Err(error) => Err(Status::new(Code::Internal, error.to_string())),
         }
-
-        
     }
 
     async fn create_model(

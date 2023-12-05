@@ -5,6 +5,7 @@ use crate::api::context_collection::ContextCollection;
 use crate::api::ecdar_api::ConcreteEcdarApi;
 use crate::api::hashing_context::HashingContextTrait;
 use crate::api::server::server::ecdar_backend_server::EcdarBackend;
+use crate::api::server::server::AccessInfo;
 use crate::api::server::server::ModelInfo;
 use crate::api::server::server::{
     QueryRequest, QueryResponse, SimulationStartRequest, SimulationStepRequest,
@@ -23,7 +24,6 @@ use mockall::mock;
 use sea_orm::DbErr;
 use std::sync::Arc;
 use tonic::{Request, Response, Status};
-use crate::api::server::server::AccessInfo;
 
 pub fn get_mock_concrete_ecdar_api(mock_services: MockServices) -> ConcreteEcdarApi {
     let contexts = ContextCollection {
