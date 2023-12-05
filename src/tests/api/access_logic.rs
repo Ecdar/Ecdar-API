@@ -69,6 +69,8 @@ async fn create_no_access_returns_err() {
 
     let res = api.create_access(request).await.unwrap_err();
 
+    print!("{:?}", res);
+
     assert_eq!(res.code(), Code::PermissionDenied);
 }
 

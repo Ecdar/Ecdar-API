@@ -12,13 +12,15 @@ use super::server::server::{
     UpdateAccessRequest, UpdateModelRequest, UpdateQueryRequest, UpdateUserRequest,
     UserTokenResponse,
 };
-use crate::api::context_collection::ContextCollection;
 use crate::api::{
     auth::{RequestExt, Token, TokenType},
     server::server::Model,
 };
 use crate::database::{session_context::SessionContextTrait, user_context::UserContextTrait};
 use crate::entities::{access, in_use, model, query, session, user};
+use crate::{
+    api::context_collection::ContextCollection, database::access_context::AccessContextTrait,
+};
 use chrono::{Duration, Utc};
 use regex::Regex;
 use sea_orm::SqlErr;
@@ -495,24 +497,13 @@ impl EcdarApi for ConcreteEcdarApi {
             .uid()
             .ok_or(Status::internal("Could not get uid from request metadata"))?;
 
-        // Check if the requester has access to model
-        let requester_access = self
-            .contexts
-            .access_context
-            .get_access_by_uid_and_model_id(uid, message.model_id)
-            .await
-            .map_err(|err| Status::new(Code::Internal, err.to_string()))?
-            .ok_or_else(|| {
-                Status::new(Code::PermissionDenied, "User does not have access to model")
-            })?;
-
-        // Check if the requester has role 'Editor'
-        if requester_access.role != "Editor" {
-            return Err(Status::new(
-                Code::PermissionDenied,
-                "You do not have permission to create access for this model",
-            ));
-        }
+        // Check if the requester has access to model with role 'Editor'
+        check_editor_role_helper(
+            Arc::clone(&self.contexts.access_context),
+            uid,
+            message.model_id,
+        )
+        .await?;
 
         if let Some(user) = message.user {
             let user_from_db =
@@ -568,26 +559,12 @@ impl EcdarApi for ConcreteEcdarApi {
                 )
             })?;
 
-        let requester_access = self
-            .contexts
-            .access_context
-            .get_access_by_uid_and_model_id(uid, user_access.model_id)
-            .await
-            .map_err(|err| Status::new(Code::Internal, err.to_string()))?
-            .ok_or_else(|| {
-                Status::new(
-                    Code::NotFound,
-                    "No access entity found for requester".to_string(),
-                )
-            })?;
-
-        // Check if the requester has role 'Editor'
-        if requester_access.role != "Editor" {
-            return Err(Status::new(
-                Code::PermissionDenied,
-                "Requester does not have permission to update access for this model",
-            ));
-        }
+        check_editor_role_helper(
+            Arc::clone(&self.contexts.access_context),
+            uid,
+            user_access.model_id,
+        )
+        .await?;
 
         let model = self
             .contexts
@@ -626,12 +603,9 @@ impl EcdarApi for ConcreteEcdarApi {
         &self,
         request: Request<DeleteAccessRequest>,
     ) -> Result<Response<()>, Status> {
-        match self
-            .contexts
-            .access_context
-            .delete(request.get_ref().id)
-            .await
-        {
+        let message = request.get_ref().clone();
+
+        match self.contexts.access_context.delete(message.id).await {
             Ok(_) => Ok(Response::new(())),
             Err(error) => match error {
                 sea_orm::DbErr::RecordNotFound(message) => {
@@ -798,6 +772,33 @@ impl EcdarApi for ConcreteEcdarApi {
             },
         }
     }
+}
+
+async fn check_editor_role_helper(
+    access_context: Arc<dyn AccessContextTrait>,
+    user_id: i32,
+    model_id: i32,
+) -> Result<(), Status> {
+    let access = access_context
+        .get_access_by_uid_and_model_id(user_id, model_id)
+        .await
+        .map_err(|err| Status::new(Code::Internal, err.to_string()))?
+        .ok_or_else(|| {
+            Status::new(
+                Code::PermissionDenied,
+                "User does not have access to model".to_string(),
+            )
+        })?;
+
+    // Check if the requester has role 'Editor'
+    if access.role != "Editor" {
+        return Err(Status::new(
+            Code::PermissionDenied,
+            "User does not have 'Editor' role for this model",
+        ));
+    }
+
+    Ok(())
 }
 
 async fn create_access_find_user_helper(
