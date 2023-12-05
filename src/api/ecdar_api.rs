@@ -495,8 +495,8 @@ impl EcdarApi for ConcreteEcdarApi {
             .uid()
             .ok_or(Status::internal("Could not get uid from request metadata"))?;
 
-        // Check if user (the requester) has access to model
-        let access = self
+        // Check if the requester has access to model
+        let requester_access = self
             .contexts
             .access_context
             .get_access_by_uid_and_model_id(uid, message.model_id)
@@ -506,8 +506,8 @@ impl EcdarApi for ConcreteEcdarApi {
                 Status::new(Code::PermissionDenied, "User does not have access to model")
             })?;
 
-        // Check if user (the requester) has role 'Editor'
-        if access.role != "Editor" {
+        // Check if the requester has role 'Editor'
+        if requester_access.role != "Editor" {
             return Err(Status::new(
                 Code::PermissionDenied,
                 "You do not have permission to create access for this model",
@@ -550,6 +550,60 @@ impl EcdarApi for ConcreteEcdarApi {
         request: Request<UpdateAccessRequest>,
     ) -> Result<Response<()>, Status> {
         let message = request.get_ref().clone();
+
+        let uid = request
+            .uid()
+            .ok_or(Status::internal("Could not get uid from request metadata"))?;
+
+        let user_access = self
+            .contexts
+            .access_context
+            .get_by_id(message.id)
+            .await
+            .map_err(|err| Status::new(Code::Internal, err.to_string()))?
+            .ok_or_else(|| {
+                Status::new(
+                    Code::NotFound,
+                    "No access entity found for user".to_string(),
+                )
+            })?;
+
+        let requester_access = self
+            .contexts
+            .access_context
+            .get_access_by_uid_and_model_id(uid, user_access.model_id)
+            .await
+            .map_err(|err| Status::new(Code::Internal, err.to_string()))?
+            .ok_or_else(|| {
+                Status::new(
+                    Code::NotFound,
+                    "No access entity found for requester".to_string(),
+                )
+            })?;
+
+        // Check if the requester has role 'Editor'
+        if requester_access.role != "Editor" {
+            return Err(Status::new(
+                Code::PermissionDenied,
+                "Requester does not have permission to update access for this model",
+            ));
+        }
+
+        let model = self
+            .contexts
+            .model_context
+            .get_by_id(user_access.model_id)
+            .await
+            .map_err(|err| Status::new(Code::Internal, err.to_string()))?
+            .ok_or_else(|| Status::new(Code::NotFound, "No model found for access".to_string()))?;
+
+        // Check that the requester is not trying to update the owner's access
+        if model.owner_id == message.id {
+            return Err(Status::new(
+                Code::PermissionDenied,
+                "Requester does not have permission to update access for this user",
+            ));
+        }
 
         let access = access::Model {
             id: message.id,
