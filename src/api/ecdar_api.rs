@@ -1,18 +1,15 @@
-use super::{
-    reveaal_context::ReveaalContext,
-    server::server::{
-        ecdar_api_auth_server::EcdarApiAuth,
-        ecdar_api_server::EcdarApi,
-        ecdar_backend_server::EcdarBackend,
-        get_auth_token_request::{user_credentials, UserCredentials},
-        CreateAccessRequest, CreateModelRequest, CreateModelResponse, CreateQueryRequest,
-        CreateUserRequest, DeleteAccessRequest, DeleteModelRequest, DeleteQueryRequest,
-        GetAuthTokenRequest, GetAuthTokenResponse, GetModelRequest, GetModelResponse,
-        ListModelsInfoResponse, Query, QueryRequest, QueryResponse, SendQueryRequest,
-        SendQueryResponse, SimulationStartRequest, SimulationStepRequest, SimulationStepResponse,
-        UpdateAccessRequest, UpdateModelRequest, UpdateQueryRequest, UpdateUserRequest,
-        UserTokenResponse,
-    },
+use super::server::server::{
+    ecdar_api_auth_server::EcdarApiAuth,
+    ecdar_api_server::EcdarApi,
+    ecdar_backend_server::EcdarBackend,
+    get_auth_token_request::{user_credentials, UserCredentials},
+    CreateAccessRequest, CreateModelRequest, CreateModelResponse, CreateQueryRequest,
+    CreateUserRequest, DeleteAccessRequest, DeleteModelRequest, DeleteQueryRequest,
+    GetAuthTokenRequest, GetAuthTokenResponse, GetModelRequest, GetModelResponse,
+    ListModelsInfoResponse, Query, QueryRequest, QueryResponse, SendQueryRequest,
+    SendQueryResponse, SimulationStartRequest, SimulationStepRequest, SimulationStepResponse,
+    UpdateAccessRequest, UpdateModelRequest, UpdateQueryRequest, UpdateUserRequest,
+    UserTokenResponse,
 };
 use crate::api::context_collection::ContextCollection;
 use crate::api::{

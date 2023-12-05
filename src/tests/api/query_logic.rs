@@ -1,12 +1,15 @@
 use std::str::FromStr;
 
 use crate::api::server::server::ecdar_api_server::EcdarApi;
-use crate::api::server::server::{CreateQueryRequest, DeleteQueryRequest, UpdateQueryRequest};
-use crate::entities::{access, query};
+use crate::api::server::server::query_response::{self, Result};
+use crate::api::server::server::{
+    CreateQueryRequest, DeleteQueryRequest, QueryResponse, SendQueryRequest, UpdateQueryRequest,
+};
+use crate::entities::{access, model, query};
 use crate::tests::api::helpers::{get_mock_concrete_ecdar_api, get_mock_services};
 use mockall::predicate;
 use sea_orm::DbErr;
-use tonic::{metadata, Code, Request};
+use tonic::{metadata, Code, Request, Response};
 
 #[tokio::test]
 async fn create_invalid_query_returns_err() {
@@ -475,4 +478,86 @@ async fn update_query_invalid_role_returns_err() {
     let res = api.update_query(request).await.unwrap_err();
 
     assert_eq!(res.code(), Code::PermissionDenied);
+}
+
+#[tokio::test]
+async fn send_query_returns_ok() {
+    let mut mock_services = get_mock_services();
+
+    let query = query::Model {
+        id: Default::default(),
+        string: "".to_string(),
+        result: Default::default(),
+        model_id: Default::default(),
+        outdated: Default::default(),
+    };
+
+    let access = access::Model {
+        id: Default::default(),
+        role: "Editor".to_string(),
+        model_id: Default::default(),
+        user_id: 1,
+    };
+
+    let model = model::Model {
+        id: Default::default(),
+        name: "model".to_string(),
+        components_info: Default::default(),
+        owner_id: 0,
+    };
+
+    let query_response = QueryResponse {
+        query_id: Default::default(),
+        info: Default::default(),
+        result: Some(Result::Success(query_response::Success {})),
+    };
+
+    let updated_query = query::Model {
+        result: Some(serde_json::to_value(query_response.clone().result).unwrap()),
+        ..query.clone()
+    };
+
+    mock_services
+        .model_context_mock
+        .expect_get_by_id()
+        .with(predicate::eq(0))
+        .returning(move |_| Ok(Some(model.clone())));
+
+    mock_services
+        .access_context_mock
+        .expect_get_access_by_uid_and_model_id()
+        .with(predicate::eq(1), predicate::eq(0))
+        .returning(move |_, _| Ok(Some(access.clone())));
+
+    mock_services
+        .query_context_mock
+        .expect_get_by_id()
+        .with(predicate::eq(0))
+        .returning(move |_| Ok(Some(query.clone())));
+
+    mock_services
+        .reveaal_context_mock
+        .expect_send_query()
+        .returning(move |_| Ok(Response::new(query_response.clone())));
+
+    mock_services
+        .query_context_mock
+        .expect_update()
+        .with(predicate::eq(updated_query.clone()))
+        .returning(move |_| Ok(updated_query.clone()));
+
+    let mut request = Request::new(SendQueryRequest {
+        id: Default::default(),
+        model_id: Default::default(),
+    });
+
+    request
+        .metadata_mut()
+        .insert("uid", metadata::MetadataValue::from_str("1").unwrap());
+
+    let api = get_mock_concrete_ecdar_api(mock_services);
+
+    let res = api.send_query(request).await;
+
+    assert!(res.is_ok());
 }
