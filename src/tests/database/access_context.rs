@@ -367,9 +367,9 @@ async fn get_access_by_model_id_test_returns_ok() {
     let (access_context, expected_access, _, model) = seed_db().await;
 
     let expected_access_access_info_vector = vec![AccessInfo {
-        id: expected_access.id.clone(),
-        model_id: expected_access.model_id.clone(),
-        user_id: expected_access.user_id.clone(),
+        id: expected_access.id,
+        model_id: expected_access.model_id,
+        user_id: expected_access.user_id,
         role: expected_access.role.clone(),
     }];
 
