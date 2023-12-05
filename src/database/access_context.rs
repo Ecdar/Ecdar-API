@@ -1,3 +1,4 @@
+use crate::api::server::server::AccessInfo;
 use crate::database::database_context::DatabaseContextTrait;
 use crate::database::entity_context::EntityContextTrait;
 use crate::entities::access;
@@ -17,6 +18,11 @@ pub trait AccessContextTrait: EntityContextTrait<access::Model> {
         uid: i32,
         model_id: i32,
     ) -> Result<Option<access::Model>, DbErr>;
+
+    async fn get_access_by_model_id(
+        &self,
+        model_id: i32,
+    ) -> Result<Vec<AccessInfo>, DbErr>;
 }
 
 #[async_trait]
@@ -35,6 +41,18 @@ impl AccessContextTrait for AccessContext {
             .one(&self.db_context.get_connection())
             .await
     }
+
+    async fn get_access_by_model_id(
+        &self,
+        model_id: i32,
+    ) -> Result<Vec<AccessInfo>, DbErr> {
+        access::Entity::find()
+            .filter(access::Column::ModelId.eq(model_id))
+            .into_model::<AccessInfo>()
+            .all(&self.db_context.get_connection())
+            .await
+    }
+
 }
 
 impl AccessContext {
