@@ -1,4 +1,5 @@
 use super::server::server::{
+    create_access_request::User,
     ecdar_api_auth_server::EcdarApiAuth,
     ecdar_api_server::EcdarApi,
     ecdar_backend_server::EcdarBackend,
@@ -6,9 +7,10 @@ use super::server::server::{
     CreateAccessRequest, CreateModelRequest, CreateModelResponse, CreateQueryRequest,
     CreateUserRequest, DeleteAccessRequest, DeleteModelRequest, DeleteQueryRequest,
     GetAuthTokenRequest, GetAuthTokenResponse, GetModelRequest, GetModelResponse,
-    ListModelsInfoResponse, Query, QueryRequest, QueryResponse, SimulationStartRequest,
-    SimulationStepRequest, SimulationStepResponse, UpdateAccessRequest, UpdateModelRequest,
-    UpdateQueryRequest, UpdateUserRequest, UserTokenResponse,
+    ListAccessInfoRequest, ListAccessInfoResponse, ListModelsInfoResponse, Query, QueryRequest,
+    QueryResponse, SimulationStartRequest, SimulationStepRequest, SimulationStepResponse,
+    UpdateAccessRequest, UpdateModelRequest, UpdateQueryRequest, UpdateUserRequest,
+    UserTokenResponse,
 };
 use crate::api::context_collection::ContextCollection;
 use crate::api::{
@@ -102,6 +104,13 @@ impl ConcreteEcdarApi {
 
 #[tonic::async_trait]
 impl EcdarApi for ConcreteEcdarApi {
+    async fn list_access_info(
+        &self,
+        _request: Request<ListAccessInfoRequest>,
+    ) -> Result<Response<ListAccessInfoResponse>, Status> {
+        todo!()
+    }
+
     /// Gets a Model and its queries from the database.
     ///
     /// If the Model is not in use, it will now be in use by the requestees session,
@@ -481,10 +490,12 @@ impl EcdarApi for ConcreteEcdarApi {
         request: Request<CreateAccessRequest>,
     ) -> Result<Response<()>, Status> {
         let message = request.get_ref().clone();
+
         let uid = request
             .uid()
             .ok_or(Status::internal("Could not get uid from request metadata"))?;
 
+        // Check if user (the requester) has access to model
         let access = self
             .contexts
             .access_context
@@ -495,7 +506,7 @@ impl EcdarApi for ConcreteEcdarApi {
                 Status::new(Code::PermissionDenied, "User does not have access to model")
             })?;
 
-        // Check if user has access to model with role 'Editor'
+        // Check if user (the requester) has role 'Editor'
         if access.role != "Editor" {
             return Err(Status::new(
                 Code::PermissionDenied,
@@ -503,18 +514,27 @@ impl EcdarApi for ConcreteEcdarApi {
             ));
         }
 
-        let access = request.get_ref();
+        if let Some(user) = message.user {
+            let user_from_db =
+                create_access_find_user_helper(Arc::clone(&self.contexts.user_context), user)
+                    .await?;
 
-        let access = access::Model {
-            id: Default::default(),
-            role: access.role.to_string(),
-            model_id: access.model_id,
-            user_id: access.user_id,
-        };
+            let access = access::Model {
+                id: Default::default(),
+                role: message.role.to_string(),
+                model_id: message.model_id,
+                user_id: user_from_db.id,
+            };
 
-        match self.contexts.access_context.create(access).await {
-            Ok(_) => Ok(Response::new(())),
-            Err(error) => Err(Status::new(Code::Internal, error.to_string())),
+            match self.contexts.access_context.create(access).await {
+                Ok(_) => Ok(Response::new(())),
+                Err(error) => Err(Status::new(Code::Internal, error.to_string())),
+            }
+        } else {
+            Err(Status::new(
+                Code::InvalidArgument,
+                "No user identification provided",
+            ))
         }
     }
 
@@ -723,6 +743,31 @@ impl EcdarApi for ConcreteEcdarApi {
                 _ => Err(Status::new(Code::Internal, error.to_string())),
             },
         }
+    }
+}
+
+async fn create_access_find_user_helper(
+    user_context: Arc<dyn UserContextTrait>,
+    user: User,
+) -> Result<user::Model, Status> {
+    match user {
+        User::UserId(user_id) => Ok(user_context
+            .get_by_id(user_id)
+            .await
+            .map_err(|err| Status::new(Code::Internal, err.to_string()))?
+            .ok_or_else(|| Status::new(Code::NotFound, "No user found with given id"))?),
+
+        User::Username(username) => Ok(user_context
+            .get_by_username(username)
+            .await
+            .map_err(|err| Status::new(Code::Internal, err.to_string()))?
+            .ok_or_else(|| Status::new(Code::NotFound, "No user found with given username"))?),
+
+        User::Email(email) => Ok(user_context
+            .get_by_email(email)
+            .await
+            .map_err(|err| Status::new(Code::Internal, err.to_string()))?
+            .ok_or_else(|| Status::new(Code::NotFound, "No user found with given email"))?),
     }
 }
 

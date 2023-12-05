@@ -1,8 +1,9 @@
 use std::str::FromStr;
 
+use crate::api::server::server::create_access_request::User;
 use crate::api::server::server::ecdar_api_server::EcdarApi;
 use crate::api::server::server::{CreateAccessRequest, DeleteAccessRequest, UpdateAccessRequest};
-use crate::entities::access;
+use crate::entities::{access, user};
 use crate::tests::api::helpers::{get_mock_concrete_ecdar_api, get_mock_services};
 use mockall::predicate;
 use sea_orm::DbErr;
@@ -28,7 +29,7 @@ async fn create_incorrect_role_returns_err() {
     let mut request = Request::new(CreateAccessRequest {
         role: "Viewer".to_string(),
         model_id: 1,
-        user_id: 1,
+        user: Default::default(),
     });
 
     request.metadata_mut().insert(
@@ -56,7 +57,7 @@ async fn create_no_access_returns_err() {
     let mut request = Request::new(CreateAccessRequest {
         role: "Editor".to_string(),
         model_id: 1,
-        user_id: 1,
+        user: Default::default(),
     });
 
     request.metadata_mut().insert(
@@ -101,10 +102,23 @@ async fn create_invalid_access_returns_err() {
             }))
         });
 
+    mock_services
+        .user_context_mock
+        .expect_get_by_id()
+        .with(predicate::eq(1))
+        .returning(move |_| {
+            Ok(Some(user::Model {
+                id: 1,
+                email: Default::default(),
+                username: "test".to_string(),
+                password: "test".to_string(),
+            }))
+        });
+
     let mut request = Request::new(CreateAccessRequest {
         role: "Editor".to_string(),
         model_id: 1,
-        user_id: 1,
+        user: Some(User::UserId(1)),
     });
 
     request.metadata_mut().insert(
@@ -137,7 +151,7 @@ async fn create_access_returns_ok() {
         .returning(move |_, _| {
             Ok(Some(access::Model {
                 id: Default::default(),
-                role: "Editor".to_owned(),
+                role: "Editor".to_string(),
                 user_id: 1,
                 model_id: 1,
             }))
@@ -149,10 +163,23 @@ async fn create_access_returns_ok() {
         .with(predicate::eq(access.clone()))
         .returning(move |_| Ok(access.clone()));
 
+    mock_services
+        .user_context_mock
+        .expect_get_by_id()
+        .with(predicate::eq(1))
+        .returning(move |_| {
+            Ok(Some(user::Model {
+                id: 1,
+                email: Default::default(),
+                username: "test".to_string(),
+                password: "test".to_string(),
+            }))
+        });
+
     let mut request = Request::new(CreateAccessRequest {
         role: "Editor".to_string(),
         model_id: 1,
-        user_id: 1,
+        user: Some(User::UserId(1)),
     });
 
     request.metadata_mut().insert(
