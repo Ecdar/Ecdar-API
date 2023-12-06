@@ -3,19 +3,17 @@ use super::server::server::{
     ecdar_api_server::EcdarApi,
     ecdar_backend_server::EcdarBackend,
     get_auth_token_request::{user_credentials, UserCredentials},
-    get_users_response::UserInfo,
-    CreateAccessRequest, CreateAccessRequest, CreateProjectRequest, CreateProjectResponse,
-    CreateQueryRequest, CreateQueryRequest, CreateUserRequest, CreateUserRequest,
-    DeleteAccessRequest, DeleteAccessRequest, DeleteProjectRequest, DeleteQueryRequest,
-    DeleteQueryRequest, GetAuthTokenRequest, GetAuthTokenRequest, GetAuthTokenResponse,
-    GetAuthTokenResponse, GetProjectRequest, GetProjectResponse, GetUsersRequest, GetUsersResponse,
-    ListProjectsInfoResponse, Query, Query, QueryRequest, QueryRequest, QueryResponse,
-    QueryResponse, SendQueryRequest, SendQueryRequest, SendQueryResponse, SimulationStartRequest,
+    CreateAccessRequest, CreateProjectRequest, CreateProjectResponse, CreateQueryRequest,
+    CreateUserRequest, DeleteAccessRequest, DeleteProjectRequest, DeleteQueryRequest,
+    GetAuthTokenRequest, GetAuthTokenResponse, GetProjectRequest, GetProjectResponse,
+    GetUsersRequest, GetUsersResponse, ListProjectsInfoResponse, Query, QueryRequest,
+    QueryResponse, SendQueryRequest, SendQueryResponse, SimulationStartRequest,
     SimulationStepRequest, SimulationStepResponse, UpdateAccessRequest, UpdateProjectRequest,
     UpdateQueryRequest, UpdateUserRequest, UserTokenResponse,
 };
 use crate::api::auth::TokenError;
 use crate::api::context_collection::ContextCollection;
+use crate::api::server::server::get_users_response::UserInfo;
 use crate::api::{
     auth::{RequestExt, Token, TokenType},
     server::server::Project,
@@ -23,7 +21,6 @@ use crate::api::{
 use crate::database::{session_context::SessionContextTrait, user_context::UserContextTrait};
 use crate::entities::{access, in_use, project, query, session, user};
 use chrono::{Duration, Utc};
-
 use regex::Regex;
 use sea_orm::{DbErr, SqlErr};
 use serde_json;
