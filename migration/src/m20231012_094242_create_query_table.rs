@@ -1,6 +1,6 @@
 use sea_orm_migration::prelude::*;
 
-use super::m20231012_094228_create_model_table::Model;
+use super::m20231012_094228_create_project_table::Project;
 
 #[derive(DeriveMigrationName)]
 pub struct Migration;
@@ -28,11 +28,11 @@ impl MigrationTrait for Migration {
                             .not_null()
                             .default(true),
                     )
-                    .col(ColumnDef::new(Query::ModelId).integer().not_null())
+                    .col(ColumnDef::new(Query::ProjectId).integer().not_null())
                     .foreign_key(
                         ForeignKey::create()
-                            .from(Query::Table, Query::ModelId)
-                            .to(Model::Table, Model::Id)
+                            .from(Query::Table, Query::ProjectId)
+                            .to(Project::Table, Project::Id)
                             .on_delete(ForeignKeyAction::Cascade),
                     )
                     .to_owned(),
@@ -53,6 +53,6 @@ enum Query {
     Id,
     String,
     Result,
-    ModelId,
+    ProjectId,
     Outdated,
 }

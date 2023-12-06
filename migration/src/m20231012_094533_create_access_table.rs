@@ -1,7 +1,7 @@
 use sea_orm_migration::prelude::*;
 
 use super::m20231012_094213_create_user_table::User;
-use super::m20231012_094228_create_model_table::Model;
+use super::m20231012_094228_create_project_table::Project;
 use super::m20231111_205633_create_role_table::Role;
 
 #[derive(DeriveMigrationName)]
@@ -23,11 +23,11 @@ impl MigrationTrait for Migration {
                             .primary_key(),
                     )
                     .col(ColumnDef::new(Access::Role).string().not_null())
-                    .col(ColumnDef::new(Access::ModelId).integer().not_null())
+                    .col(ColumnDef::new(Access::ProjectId).integer().not_null())
                     .col(ColumnDef::new(Access::UserId).integer().not_null())
                     .index(
                         Index::create()
-                            .col(Access::ModelId)
+                            .col(Access::ProjectId)
                             .col(Access::UserId)
                             .unique(),
                     )
@@ -39,8 +39,8 @@ impl MigrationTrait for Migration {
                     )
                     .foreign_key(
                         ForeignKey::create()
-                            .from(Access::Table, Access::ModelId)
-                            .to(Model::Table, Model::Id)
+                            .from(Access::Table, Access::ProjectId)
+                            .to(Project::Table, Project::Id)
                             .on_delete(ForeignKeyAction::Cascade),
                     )
                     .foreign_key(
@@ -66,6 +66,6 @@ enum Access {
     Id,
     Table,
     Role,
-    ModelId,
+    ProjectId,
     UserId,
 }

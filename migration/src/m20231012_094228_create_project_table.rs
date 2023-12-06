@@ -11,27 +11,27 @@ impl MigrationTrait for Migration {
         manager
             .create_table(
                 Table::create()
-                    .table(Model::Table)
+                    .table(Project::Table)
                     .if_not_exists()
                     .col(
-                        ColumnDef::new(Model::Id)
+                        ColumnDef::new(Project::Id)
                             .integer()
                             .not_null()
                             .auto_increment()
                             .primary_key(),
                     )
-                    .col(ColumnDef::new(Model::Name).string().not_null())
-                    .col(ColumnDef::new(Model::ComponentsInfo).json().not_null())
-                    .col(ColumnDef::new(Model::OwnerId).integer().not_null())
+                    .col(ColumnDef::new(Project::Name).string().not_null())
+                    .col(ColumnDef::new(Project::ComponentsInfo).json().not_null())
+                    .col(ColumnDef::new(Project::OwnerId).integer().not_null())
                     .index(
                         Index::create()
-                            .col(Model::OwnerId)
-                            .col(Model::Name)
+                            .col(Project::OwnerId)
+                            .col(Project::Name)
                             .unique(),
                     )
                     .foreign_key(
                         ForeignKey::create()
-                            .from(Model::Table, Model::OwnerId)
+                            .from(Project::Table, Project::OwnerId)
                             .to(User::Table, User::Id)
                             .on_delete(ForeignKeyAction::Cascade),
                     )
@@ -42,13 +42,13 @@ impl MigrationTrait for Migration {
 
     async fn down(&self, manager: &SchemaManager) -> Result<(), DbErr> {
         manager
-            .drop_table(Table::drop().table(Model::Table).to_owned())
+            .drop_table(Table::drop().table(Project::Table).to_owned())
             .await
     }
 }
 
 #[derive(DeriveIden)]
-pub enum Model {
+pub enum Project {
     Table,
     Id,
     Name,
