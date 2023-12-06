@@ -1,6 +1,6 @@
 use sea_orm_migration::prelude::*;
 
-use super::m20231012_094228_create_model_table::Model;
+use super::m20231012_094228_create_project_table::Project;
 use super::m20231012_094422_create_session_table::Session;
 
 #[derive(DeriveMigrationName)]
@@ -15,7 +15,7 @@ impl MigrationTrait for Migration {
                     .table(InUse::Table)
                     .if_not_exists()
                     .col(
-                        ColumnDef::new(InUse::ModelId)
+                        ColumnDef::new(InUse::ProjectId)
                             .integer()
                             .not_null()
                             .primary_key(),
@@ -29,8 +29,8 @@ impl MigrationTrait for Migration {
                     )
                     .foreign_key(
                         ForeignKey::create()
-                            .from(InUse::Table, InUse::ModelId)
-                            .to(Model::Table, Model::Id)
+                            .from(InUse::Table, InUse::ProjectId)
+                            .to(Project::Table, Project::Id)
                             .on_delete(ForeignKeyAction::Cascade),
                     )
                     .foreign_key(
@@ -54,7 +54,7 @@ impl MigrationTrait for Migration {
 #[derive(DeriveIden)]
 enum InUse {
     Table,
-    ModelId,
+    ProjectId,
     SessionId,
     LatestActivity,
 }

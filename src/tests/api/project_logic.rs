@@ -3,10 +3,11 @@ use crate::{
         auth::TokenType,
         server::server::{
             component::Rep, ecdar_api_server::EcdarApi, Component, ComponentsInfo,
-            CreateModelRequest, DeleteModelRequest, GetModelRequest, ModelInfo, UpdateModelRequest,
+            CreateProjectRequest, DeleteProjectRequest, GetProjectRequest, ProjectInfo,
+            UpdateProjectRequest,
         },
     },
-    entities::{access, in_use, model, query, session},
+    entities::{access, in_use, project, query, session},
     tests::api::helpers::{get_mock_concrete_ecdar_api, get_mock_services},
 };
 use chrono::Utc;
@@ -16,7 +17,7 @@ use std::str::FromStr;
 use tonic::{metadata, Code, Request};
 
 #[tokio::test]
-async fn create_model_returns_ok() {
+async fn create_project_returns_ok() {
     let mut mock_services = get_mock_services();
 
     let uid = 0;
@@ -26,7 +27,7 @@ async fn create_model_returns_ok() {
         components_hash: 0,
     };
 
-    let model = model::Model {
+    let project = project::Model {
         id: Default::default(),
         name: Default::default(),
         components_info: serde_json::to_value(components_info.clone()).unwrap(),
@@ -37,7 +38,7 @@ async fn create_model_returns_ok() {
         id: Default::default(),
         role: "Editor".to_string(),
         user_id: uid,
-        model_id: model.id,
+        project_id: project.id,
     };
 
     let session = session::Model {
@@ -49,16 +50,16 @@ async fn create_model_returns_ok() {
     };
 
     let in_use = in_use::Model {
-        model_id: model.id,
+        project_id: project.id,
         session_id: session.id,
         latest_activity: Default::default(),
     };
 
     mock_services
-        .model_context_mock
+        .project_context_mock
         .expect_create()
-        .with(predicate::eq(model.clone()))
-        .returning(move |_| Ok(model.clone()));
+        .with(predicate::eq(project.clone()))
+        .returning(move |_| Ok(project.clone()));
 
     mock_services
         .access_context_mock
@@ -81,7 +82,7 @@ async fn create_model_returns_ok() {
         .with(predicate::eq(in_use.clone()))
         .returning(move |_| Ok(in_use.clone()));
 
-    let mut request = Request::new(CreateModelRequest {
+    let mut request = Request::new(CreateProjectRequest {
         name: Default::default(),
         components_info: Option::from(components_info),
     });
@@ -97,32 +98,32 @@ async fn create_model_returns_ok() {
 
     let api = get_mock_concrete_ecdar_api(mock_services);
 
-    let res = api.create_model(request).await;
+    let res = api.create_project(request).await;
 
     assert!(res.is_ok());
 }
 
 #[tokio::test]
-async fn create_model_existing_name_returns_err() {
+async fn create_project_existing_name_returns_err() {
     let mut mock_services = get_mock_services();
 
     let uid = 0;
 
-    let model = model::Model {
+    let project = project::Model {
         id: Default::default(),
-        name: "model".to_string(),
+        name: "project".to_string(),
         components_info: Default::default(),
         owner_id: uid,
     };
 
     mock_services
-        .model_context_mock
+        .project_context_mock
         .expect_create()
-        .with(predicate::eq(model.clone()))
+        .with(predicate::eq(project.clone()))
         .returning(move |_| Err(DbErr::RecordNotInserted)); //todo!("Needs to be a SqlError with UniqueConstraintViolation with 'name' in message)
 
-    let mut request = Request::new(CreateModelRequest {
-        name: "model".to_string(),
+    let mut request = Request::new(CreateProjectRequest {
+        name: "project".to_string(),
         components_info: Default::default(),
     });
 
@@ -132,18 +133,18 @@ async fn create_model_existing_name_returns_err() {
 
     let api = get_mock_concrete_ecdar_api(mock_services);
 
-    let res = api.create_model(request).await;
+    let res = api.create_project(request).await;
 
     assert_eq!(res.unwrap_err().code(), Code::InvalidArgument); //todo!("Needs to be code AlreadyExists when mocked Error is corrected)
 }
 
 #[tokio::test]
-async fn get_model_user_has_access_returns_ok() {
+async fn get_project_user_has_access_returns_ok() {
     let mut mock_services = get_mock_services();
 
-    let model = model::Model {
+    let project = project::Model {
         id: Default::default(),
-        name: "model".to_string(),
+        name: "project".to_string(),
         components_info: Default::default(),
         owner_id: 0,
     };
@@ -151,12 +152,12 @@ async fn get_model_user_has_access_returns_ok() {
     let access = access::Model {
         id: Default::default(),
         role: "Editor".to_string(),
-        model_id: 1,
+        project_id: 1,
         user_id: 1,
     };
 
     let in_use = in_use::Model {
-        model_id: Default::default(),
+        project_id: Default::default(),
         session_id: 0,
         latest_activity: Utc::now().naive_utc(),
     };
@@ -165,15 +166,15 @@ async fn get_model_user_has_access_returns_ok() {
 
     mock_services
         .access_context_mock
-        .expect_get_access_by_uid_and_model_id()
+        .expect_get_access_by_uid_and_project_id()
         .with(predicate::eq(0), predicate::eq(0))
         .returning(move |_, _| Ok(Some(access.clone())));
 
     mock_services
-        .model_context_mock
+        .project_context_mock
         .expect_get_by_id()
         .with(predicate::eq(0))
-        .returning(move |_| Ok(Some(model.clone())));
+        .returning(move |_| Ok(Some(project.clone())));
 
     mock_services
         .in_use_context_mock
@@ -183,17 +184,17 @@ async fn get_model_user_has_access_returns_ok() {
 
     mock_services
         .query_context_mock
-        .expect_get_all_by_model_id()
+        .expect_get_all_by_project_id()
         .with(predicate::eq(0))
         .returning(move |_| Ok(queries.clone()));
 
-    let mut request = Request::new(GetModelRequest { id: 0 });
+    let mut request = Request::new(GetProjectRequest { id: 0 });
 
     request.metadata_mut().insert("uid", "0".parse().unwrap());
 
     let api = get_mock_concrete_ecdar_api(mock_services);
 
-    let res = api.get_model(request).await;
+    let res = api.get_project(request).await;
 
     assert!(res.is_ok());
 }
@@ -203,11 +204,11 @@ async fn delete_not_owner_returns_err() {
     let mut mock_services = get_mock_services();
 
     mock_services
-        .model_context_mock
+        .project_context_mock
         .expect_get_by_id()
         .with(predicate::eq(1))
         .returning(move |_| {
-            Ok(Some(model::Model {
+            Ok(Some(project::Model {
                 id: 1,
                 name: Default::default(),
                 components_info: Default::default(),
@@ -215,7 +216,7 @@ async fn delete_not_owner_returns_err() {
             }))
         });
 
-    let mut request = Request::new(DeleteModelRequest { id: 1 });
+    let mut request = Request::new(DeleteProjectRequest { id: 1 });
 
     request
         .metadata_mut()
@@ -223,22 +224,22 @@ async fn delete_not_owner_returns_err() {
 
     let api = get_mock_concrete_ecdar_api(mock_services);
 
-    let res = api.delete_model(request).await.unwrap_err();
+    let res = api.delete_project(request).await.unwrap_err();
 
     assert_eq!(res.code(), Code::PermissionDenied);
 }
 
 #[tokio::test]
-async fn delete_invalid_model_returns_err() {
+async fn delete_invalid_project_returns_err() {
     let mut mock_services = get_mock_services();
 
     mock_services
-        .model_context_mock
+        .project_context_mock
         .expect_get_by_id()
         .with(predicate::eq(2))
         .returning(move |_| Ok(None));
 
-    let mut request = Request::new(DeleteModelRequest { id: 2 });
+    let mut request = Request::new(DeleteProjectRequest { id: 2 });
 
     request
         .metadata_mut()
@@ -246,21 +247,21 @@ async fn delete_invalid_model_returns_err() {
 
     let api = get_mock_concrete_ecdar_api(mock_services);
 
-    let res = api.delete_model(request).await.unwrap_err();
+    let res = api.delete_project(request).await.unwrap_err();
 
     assert_eq!(res.code(), Code::NotFound);
 }
 
 #[tokio::test]
-async fn delete_model_returns_ok() {
+async fn delete_project_returns_ok() {
     let mut mock_services = get_mock_services();
 
     mock_services
-        .model_context_mock
+        .project_context_mock
         .expect_get_by_id()
         .with(predicate::eq(1))
         .returning(move |_| {
-            Ok(Some(model::Model {
+            Ok(Some(project::Model {
                 id: 1,
                 name: Default::default(),
                 components_info: Default::default(),
@@ -269,11 +270,11 @@ async fn delete_model_returns_ok() {
         });
 
     mock_services
-        .model_context_mock
+        .project_context_mock
         .expect_delete()
         .with(predicate::eq(1))
         .returning(move |_| {
-            Ok(model::Model {
+            Ok(project::Model {
                 id: 1,
                 name: Default::default(),
                 components_info: Default::default(),
@@ -281,7 +282,7 @@ async fn delete_model_returns_ok() {
             })
         });
 
-    let mut request = Request::new(DeleteModelRequest { id: 1 });
+    let mut request = Request::new(DeleteProjectRequest { id: 1 });
 
     request
         .metadata_mut()
@@ -289,24 +290,24 @@ async fn delete_model_returns_ok() {
 
     let api = get_mock_concrete_ecdar_api(mock_services);
 
-    let res = api.delete_model(request).await;
+    let res = api.delete_project(request).await;
 
     assert!(res.is_ok());
 }
 
 #[tokio::test]
-async fn get_model_user_has_no_access_returns_err() {
+async fn get_project_user_has_no_access_returns_err() {
     let mut mock_services = get_mock_services();
 
-    let model = model::Model {
+    let project = project::Model {
         id: Default::default(),
-        name: "model".to_string(),
+        name: "project".to_string(),
         components_info: Default::default(),
         owner_id: 0,
     };
 
     let in_use = in_use::Model {
-        model_id: Default::default(),
+        project_id: Default::default(),
         session_id: 0,
         latest_activity: Default::default(),
     };
@@ -315,15 +316,15 @@ async fn get_model_user_has_no_access_returns_err() {
 
     mock_services
         .access_context_mock
-        .expect_get_access_by_uid_and_model_id()
+        .expect_get_access_by_uid_and_project_id()
         .with(predicate::eq(0), predicate::eq(0))
         .returning(move |_, _| Ok(None));
 
     mock_services
-        .model_context_mock
+        .project_context_mock
         .expect_get_by_id()
         .with(predicate::eq(0))
-        .returning(move |_| Ok(Some(model.clone())));
+        .returning(move |_| Ok(Some(project.clone())));
 
     mock_services
         .in_use_context_mock
@@ -333,28 +334,28 @@ async fn get_model_user_has_no_access_returns_err() {
 
     mock_services
         .query_context_mock
-        .expect_get_all_by_model_id()
+        .expect_get_all_by_project_id()
         .with(predicate::eq(0))
         .returning(move |_| Ok(queries.clone()));
 
-    let mut request = Request::new(GetModelRequest { id: 0 });
+    let mut request = Request::new(GetProjectRequest { id: 0 });
 
     request.metadata_mut().insert("uid", "0".parse().unwrap());
 
     let api = get_mock_concrete_ecdar_api(mock_services);
 
-    let res = api.get_model(request).await.unwrap_err();
+    let res = api.get_project(request).await.unwrap_err();
 
     assert!(res.code() == Code::PermissionDenied);
 }
 
 #[tokio::test]
-async fn get_model_is_in_use_is_true() {
+async fn get_project_is_in_use_is_true() {
     let mut mock_services = get_mock_services();
 
-    let model = model::Model {
+    let project = project::Model {
         id: Default::default(),
-        name: "model".to_string(),
+        name: "project".to_string(),
         components_info: Default::default(),
         owner_id: 0,
     };
@@ -362,12 +363,12 @@ async fn get_model_is_in_use_is_true() {
     let access = access::Model {
         id: Default::default(),
         role: "Editor".to_string(),
-        model_id: 1,
+        project_id: 1,
         user_id: 1,
     };
 
     let in_use = in_use::Model {
-        model_id: Default::default(),
+        project_id: Default::default(),
         session_id: 0,
         latest_activity: Utc::now().naive_utc(),
     };
@@ -376,15 +377,15 @@ async fn get_model_is_in_use_is_true() {
 
     mock_services
         .access_context_mock
-        .expect_get_access_by_uid_and_model_id()
+        .expect_get_access_by_uid_and_project_id()
         .with(predicate::eq(0), predicate::eq(0))
         .returning(move |_, _| Ok(Some(access.clone())));
 
     mock_services
-        .model_context_mock
+        .project_context_mock
         .expect_get_by_id()
         .with(predicate::eq(0))
-        .returning(move |_| Ok(Some(model.clone())));
+        .returning(move |_| Ok(Some(project.clone())));
 
     mock_services
         .in_use_context_mock
@@ -394,28 +395,28 @@ async fn get_model_is_in_use_is_true() {
 
     mock_services
         .query_context_mock
-        .expect_get_all_by_model_id()
+        .expect_get_all_by_project_id()
         .with(predicate::eq(0))
         .returning(move |_| Ok(queries.clone()));
 
-    let mut request = Request::new(GetModelRequest { id: 0 });
+    let mut request = Request::new(GetProjectRequest { id: 0 });
 
     request.metadata_mut().insert("uid", "0".parse().unwrap());
 
     let api = get_mock_concrete_ecdar_api(mock_services);
 
-    let res = api.get_model(request).await;
+    let res = api.get_project(request).await;
 
     assert!(res.unwrap().get_ref().in_use);
 }
 
 #[tokio::test]
-async fn get_model_is_in_use_is_false() {
+async fn get_project_is_in_use_is_false() {
     let mut mock_services = get_mock_services();
 
-    let model = model::Model {
+    let project = project::Model {
         id: Default::default(),
-        name: "model".to_string(),
+        name: "project".to_string(),
         components_info: Default::default(),
         owner_id: 0,
     };
@@ -423,18 +424,18 @@ async fn get_model_is_in_use_is_false() {
     let access = access::Model {
         id: Default::default(),
         role: "Editor".to_string(),
-        model_id: 1,
+        project_id: 1,
         user_id: 1,
     };
 
     let in_use = in_use::Model {
-        model_id: 0,
+        project_id: 0,
         session_id: 0,
         latest_activity: Default::default(),
     };
 
     let updated_in_use = in_use::Model {
-        model_id: 0,
+        project_id: 0,
         session_id: 1,
         latest_activity: Default::default(),
     };
@@ -451,15 +452,15 @@ async fn get_model_is_in_use_is_false() {
 
     mock_services
         .access_context_mock
-        .expect_get_access_by_uid_and_model_id()
+        .expect_get_access_by_uid_and_project_id()
         .with(predicate::eq(0), predicate::eq(0))
         .returning(move |_, _| Ok(Some(access.clone())));
 
     mock_services
-        .model_context_mock
+        .project_context_mock
         .expect_get_by_id()
         .with(predicate::eq(0))
-        .returning(move |_| Ok(Some(model.clone())));
+        .returning(move |_| Ok(Some(project.clone())));
 
     mock_services
         .in_use_context_mock
@@ -478,7 +479,7 @@ async fn get_model_is_in_use_is_false() {
 
     mock_services
         .query_context_mock
-        .expect_get_all_by_model_id()
+        .expect_get_all_by_project_id()
         .with(predicate::eq(0))
         .returning(move |_| Ok(queries.clone()));
 
@@ -487,7 +488,7 @@ async fn get_model_is_in_use_is_false() {
         .expect_update()
         .returning(move |_| Ok(updated_in_use.clone()));
 
-    let mut request = Request::new(GetModelRequest { id: 0 });
+    let mut request = Request::new(GetProjectRequest { id: 0 });
 
     request
         .metadata_mut()
@@ -496,18 +497,18 @@ async fn get_model_is_in_use_is_false() {
 
     let api = get_mock_concrete_ecdar_api(mock_services);
 
-    let res = api.get_model(request).await;
+    let res = api.get_project(request).await;
 
     assert!(!res.unwrap().get_ref().in_use);
 }
 
 #[tokio::test]
-async fn get_model_model_has_no_queries_queries_are_empty() {
+async fn get_project_project_has_no_queries_queries_are_empty() {
     let mut mock_services = get_mock_services();
 
-    let model = model::Model {
+    let project = project::Model {
         id: Default::default(),
-        name: "model".to_string(),
+        name: "project".to_string(),
         components_info: Default::default(),
         owner_id: 0,
     };
@@ -515,12 +516,12 @@ async fn get_model_model_has_no_queries_queries_are_empty() {
     let access = access::Model {
         id: Default::default(),
         role: "Editor".to_string(),
-        model_id: 1,
+        project_id: 1,
         user_id: 1,
     };
 
     let in_use = in_use::Model {
-        model_id: Default::default(),
+        project_id: Default::default(),
         session_id: 0,
         latest_activity: Utc::now().naive_utc(),
     };
@@ -529,15 +530,15 @@ async fn get_model_model_has_no_queries_queries_are_empty() {
 
     mock_services
         .access_context_mock
-        .expect_get_access_by_uid_and_model_id()
+        .expect_get_access_by_uid_and_project_id()
         .with(predicate::eq(0), predicate::eq(0))
         .returning(move |_, _| Ok(Some(access.clone())));
 
     mock_services
-        .model_context_mock
+        .project_context_mock
         .expect_get_by_id()
         .with(predicate::eq(0))
-        .returning(move |_| Ok(Some(model.clone())));
+        .returning(move |_| Ok(Some(project.clone())));
 
     mock_services
         .in_use_context_mock
@@ -547,28 +548,28 @@ async fn get_model_model_has_no_queries_queries_are_empty() {
 
     mock_services
         .query_context_mock
-        .expect_get_all_by_model_id()
+        .expect_get_all_by_project_id()
         .with(predicate::eq(0))
         .returning(move |_| Ok(queries.clone()));
 
-    let mut request = Request::new(GetModelRequest { id: 0 });
+    let mut request = Request::new(GetProjectRequest { id: 0 });
 
     request.metadata_mut().insert("uid", "0".parse().unwrap());
 
     let api = get_mock_concrete_ecdar_api(mock_services);
 
-    let res = api.get_model(request).await;
+    let res = api.get_project(request).await;
 
     assert!(res.unwrap().get_ref().queries.is_empty());
 }
 
 #[tokio::test]
-async fn get_model_query_has_no_result_query_is_empty() {
+async fn get_project_query_has_no_result_query_is_empty() {
     let mut mock_services = get_mock_services();
 
-    let model = model::Model {
+    let project = project::Model {
         id: Default::default(),
-        name: "model".to_string(),
+        name: "project".to_string(),
         components_info: Default::default(),
         owner_id: 0,
     };
@@ -576,19 +577,19 @@ async fn get_model_query_has_no_result_query_is_empty() {
     let access = access::Model {
         id: Default::default(),
         role: "Editor".to_string(),
-        model_id: 1,
+        project_id: 1,
         user_id: 1,
     };
 
     let in_use = in_use::Model {
-        model_id: Default::default(),
+        project_id: Default::default(),
         session_id: 0,
         latest_activity: Utc::now().naive_utc(),
     };
 
     let query = query::Model {
         id: 0,
-        model_id: 1,
+        project_id: 1,
         string: "query".to_owned(),
         result: None,
         outdated: false,
@@ -598,15 +599,15 @@ async fn get_model_query_has_no_result_query_is_empty() {
 
     mock_services
         .access_context_mock
-        .expect_get_access_by_uid_and_model_id()
+        .expect_get_access_by_uid_and_project_id()
         .with(predicate::eq(0), predicate::eq(0))
         .returning(move |_, _| Ok(Some(access.clone())));
 
     mock_services
-        .model_context_mock
+        .project_context_mock
         .expect_get_by_id()
         .with(predicate::eq(0))
-        .returning(move |_| Ok(Some(model.clone())));
+        .returning(move |_| Ok(Some(project.clone())));
 
     mock_services
         .in_use_context_mock
@@ -616,70 +617,70 @@ async fn get_model_query_has_no_result_query_is_empty() {
 
     mock_services
         .query_context_mock
-        .expect_get_all_by_model_id()
+        .expect_get_all_by_project_id()
         .with(predicate::eq(0))
         .returning(move |_| Ok(queries.clone()));
 
-    let mut request = Request::new(GetModelRequest { id: 0 });
+    let mut request = Request::new(GetProjectRequest { id: 0 });
 
     request.metadata_mut().insert("uid", "0".parse().unwrap());
 
     let api = get_mock_concrete_ecdar_api(mock_services);
 
-    let res = api.get_model(request).await;
+    let res = api.get_project(request).await;
 
     assert!(res.unwrap().get_ref().queries[0].result.is_empty());
 }
 
 #[tokio::test]
-async fn list_models_info_returns_ok() {
+async fn list_projects_info_returns_ok() {
     let mut mock_services = get_mock_services();
 
-    let model_info = ModelInfo {
-        model_id: 1,
-        model_name: "model::Model name".to_owned(),
-        model_owner_id: 1,
-        user_role_on_model: "Editor".to_owned(),
+    let project_info = ProjectInfo {
+        project_id: 1,
+        project_name: "project::Model name".to_owned(),
+        project_owner_id: 1,
+        user_role_on_project: "Editor".to_owned(),
     };
 
     mock_services
-        .model_context_mock
-        .expect_get_models_info_by_uid()
+        .project_context_mock
+        .expect_get_project_info_by_uid()
         .with(predicate::eq(1))
-        .returning(move |_| Ok(vec![model_info.clone()]));
+        .returning(move |_| Ok(vec![project_info.clone()]));
 
-    let mut list_models_info_request = Request::new(());
+    let mut list_projects_info_request = Request::new(());
 
-    list_models_info_request
+    list_projects_info_request
         .metadata_mut()
         .insert("uid", metadata::MetadataValue::from_str("1").unwrap());
 
     let api = get_mock_concrete_ecdar_api(mock_services);
 
-    let res = api.list_models_info(list_models_info_request).await;
+    let res = api.list_projects_info(list_projects_info_request).await;
 
     assert!(res.is_ok());
 }
 
 #[tokio::test]
-async fn list_models_info_returns_err() {
+async fn list_projects_info_returns_err() {
     let mut mock_services = get_mock_services();
 
     mock_services
-        .model_context_mock
-        .expect_get_models_info_by_uid()
+        .project_context_mock
+        .expect_get_project_info_by_uid()
         .with(predicate::eq(1))
         .returning(move |_| Ok(vec![]));
 
-    let mut list_models_info_request = Request::new(());
+    let mut list_projects_info_request = Request::new(());
 
-    list_models_info_request
+    list_projects_info_request
         .metadata_mut()
         .insert("uid", metadata::MetadataValue::from_str("1").unwrap());
 
     let api = get_mock_concrete_ecdar_api(mock_services);
 
-    let res = api.list_models_info(list_models_info_request).await;
+    let res = api.list_projects_info(list_projects_info_request).await;
 
     assert!(res.is_err());
 }
@@ -689,33 +690,33 @@ async fn update_name_returns_ok() {
     let mut mock_services = get_mock_services();
 
     let user_id = 1;
-    let model_id = 1;
-    let new_model_name = "new_name".to_string();
+    let project_id = 1;
+    let new_project_name = "new_name".to_string();
 
-    let mut update_model_request = Request::new(UpdateModelRequest {
-        id: model_id,
-        name: Some(new_model_name.clone()),
+    let mut update_project_request = Request::new(UpdateProjectRequest {
+        id: project_id,
+        name: Some(new_project_name.clone()),
         components_info: None,
         owner_id: None,
     });
 
-    update_model_request.metadata_mut().insert(
+    update_project_request.metadata_mut().insert(
         "authorization",
         metadata::MetadataValue::from_str("Bearer access_token").unwrap(),
     );
 
-    update_model_request.metadata_mut().insert(
+    update_project_request.metadata_mut().insert(
         "uid",
         metadata::MetadataValue::from_str(user_id.to_string().as_str()).unwrap(),
     );
 
     mock_services
-        .model_context_mock
+        .project_context_mock
         .expect_get_by_id()
-        .with(predicate::eq(model_id))
+        .with(predicate::eq(project_id))
         .returning(move |_| {
-            Ok(Some(model::Model {
-                id: model_id,
+            Ok(Some(project::Model {
+                id: project_id,
                 name: "old_name".to_owned(),
                 components_info: Default::default(),
                 owner_id: user_id,
@@ -724,13 +725,13 @@ async fn update_name_returns_ok() {
 
     mock_services
         .access_context_mock
-        .expect_get_access_by_uid_and_model_id()
-        .with(predicate::eq(1), predicate::eq(model_id))
+        .expect_get_access_by_uid_and_project_id()
+        .with(predicate::eq(1), predicate::eq(project_id))
         .returning(move |_, _| {
             Ok(Some(access::Model {
                 id: 1,
                 user_id,
-                model_id,
+                project_id,
                 role: "Editor".to_string(),
             }))
         });
@@ -753,12 +754,12 @@ async fn update_name_returns_ok() {
         });
 
     mock_services
-        .model_context_mock
+        .project_context_mock
         .expect_update()
         .returning(move |_| {
-            Ok(model::Model {
-                id: model_id,
-                name: new_model_name.clone(),
+            Ok(project::Model {
+                id: project_id,
+                name: new_project_name.clone(),
                 components_info: Default::default(),
                 owner_id: user_id,
             })
@@ -769,7 +770,7 @@ async fn update_name_returns_ok() {
         .expect_get_by_id()
         .returning(move |_| {
             Ok(Some(in_use::Model {
-                model_id,
+                project_id,
                 session_id: 1,
                 latest_activity: Utc::now().naive_utc(),
             }))
@@ -780,7 +781,7 @@ async fn update_name_returns_ok() {
         .expect_update()
         .returning(move |_| {
             Ok(in_use::Model {
-                model_id: 1,
+                project_id: 1,
                 session_id: 1,
                 latest_activity: Utc::now().naive_utc(),
             })
@@ -788,7 +789,7 @@ async fn update_name_returns_ok() {
 
     let api = get_mock_concrete_ecdar_api(mock_services);
 
-    let res = api.update_model(update_model_request).await;
+    let res = api.update_project(update_project_request).await;
 
     assert!(res.is_ok());
 }
@@ -798,7 +799,7 @@ async fn update_components_info_returns_ok() {
     let mut mock_services = get_mock_services();
 
     let user_id = 1;
-    let model_id = 1;
+    let project_id = 1;
     let components_info_non_json = ComponentsInfo {
         components: vec![Component {
             rep: Some(Rep::Json("a".to_owned())),
@@ -807,30 +808,30 @@ async fn update_components_info_returns_ok() {
     };
     let components_info = serde_json::to_value(components_info_non_json.clone()).unwrap();
 
-    let mut update_model_request = Request::new(UpdateModelRequest {
-        id: model_id,
+    let mut update_project_request = Request::new(UpdateProjectRequest {
+        id: project_id,
         name: None,
         components_info: Some(components_info_non_json.clone()),
         owner_id: None,
     });
 
-    update_model_request.metadata_mut().insert(
+    update_project_request.metadata_mut().insert(
         "authorization",
         metadata::MetadataValue::from_str("Bearer access_token").unwrap(),
     );
 
-    update_model_request.metadata_mut().insert(
+    update_project_request.metadata_mut().insert(
         "uid",
         metadata::MetadataValue::from_str(user_id.to_string().as_str()).unwrap(),
     );
 
     mock_services
-        .model_context_mock
+        .project_context_mock
         .expect_get_by_id()
-        .with(predicate::eq(model_id))
+        .with(predicate::eq(project_id))
         .returning(move |_| {
-            Ok(Some(model::Model {
-                id: model_id,
+            Ok(Some(project::Model {
+                id: project_id,
                 name: Default::default(),
                 components_info: Default::default(),
                 owner_id: user_id,
@@ -839,13 +840,13 @@ async fn update_components_info_returns_ok() {
 
     mock_services
         .access_context_mock
-        .expect_get_access_by_uid_and_model_id()
-        .with(predicate::eq(1), predicate::eq(model_id))
+        .expect_get_access_by_uid_and_project_id()
+        .with(predicate::eq(1), predicate::eq(project_id))
         .returning(move |_, _| {
             Ok(Some(access::Model {
                 id: 1,
                 user_id,
-                model_id,
+                project_id,
                 role: "Editor".to_string(),
             }))
         });
@@ -868,11 +869,11 @@ async fn update_components_info_returns_ok() {
         });
 
     mock_services
-        .model_context_mock
+        .project_context_mock
         .expect_update()
         .returning(move |_| {
-            Ok(model::Model {
-                id: model_id,
+            Ok(project::Model {
+                id: project_id,
                 name: Default::default(),
                 components_info: components_info.clone(),
                 owner_id: user_id,
@@ -884,7 +885,7 @@ async fn update_components_info_returns_ok() {
         .expect_get_by_id()
         .returning(move |_| {
             Ok(Some(in_use::Model {
-                model_id,
+                project_id,
                 session_id: 1,
                 latest_activity: Utc::now().naive_utc(),
             }))
@@ -895,7 +896,7 @@ async fn update_components_info_returns_ok() {
         .expect_update()
         .returning(move |_| {
             Ok(in_use::Model {
-                model_id: 1,
+                project_id: 1,
                 session_id: 1,
                 latest_activity: Utc::now().naive_utc(),
             })
@@ -903,7 +904,7 @@ async fn update_components_info_returns_ok() {
 
     let api = get_mock_concrete_ecdar_api(mock_services);
 
-    let res = api.update_model(update_model_request).await;
+    let res = api.update_project(update_project_request).await;
 
     assert!(res.is_ok());
 }
@@ -913,33 +914,33 @@ async fn update_owner_id_returns_ok() {
     let mut mock_services = get_mock_services();
 
     let user_id = 1;
-    let model_id = 1;
+    let project_id = 1;
     let new_owner_id = 2;
 
-    let mut update_model_request = Request::new(UpdateModelRequest {
-        id: model_id,
+    let mut update_project_request = Request::new(UpdateProjectRequest {
+        id: project_id,
         name: None,
         components_info: None,
         owner_id: Some(new_owner_id),
     });
 
-    update_model_request.metadata_mut().insert(
+    update_project_request.metadata_mut().insert(
         "authorization",
         metadata::MetadataValue::from_str("Bearer access_token").unwrap(),
     );
 
-    update_model_request.metadata_mut().insert(
+    update_project_request.metadata_mut().insert(
         "uid",
         metadata::MetadataValue::from_str(user_id.to_string().as_str()).unwrap(),
     );
 
     mock_services
-        .model_context_mock
+        .project_context_mock
         .expect_get_by_id()
-        .with(predicate::eq(model_id))
+        .with(predicate::eq(project_id))
         .returning(move |_| {
-            Ok(Some(model::Model {
-                id: model_id,
+            Ok(Some(project::Model {
+                id: project_id,
                 name: Default::default(),
                 components_info: Default::default(),
                 owner_id: user_id,
@@ -948,13 +949,13 @@ async fn update_owner_id_returns_ok() {
 
     mock_services
         .access_context_mock
-        .expect_get_access_by_uid_and_model_id()
-        .with(predicate::eq(1), predicate::eq(model_id))
+        .expect_get_access_by_uid_and_project_id()
+        .with(predicate::eq(1), predicate::eq(project_id))
         .returning(move |_, _| {
             Ok(Some(access::Model {
                 id: 1,
                 user_id,
-                model_id,
+                project_id,
                 role: "Editor".to_string(),
             }))
         });
@@ -977,11 +978,11 @@ async fn update_owner_id_returns_ok() {
         });
 
     mock_services
-        .model_context_mock
+        .project_context_mock
         .expect_update()
         .returning(move |_| {
-            Ok(model::Model {
-                id: model_id,
+            Ok(project::Model {
+                id: project_id,
                 name: Default::default(),
                 components_info: Default::default(),
                 owner_id: new_owner_id,
@@ -993,7 +994,7 @@ async fn update_owner_id_returns_ok() {
         .expect_get_by_id()
         .returning(move |_| {
             Ok(Some(in_use::Model {
-                model_id,
+                project_id,
                 session_id: 1,
                 latest_activity: Utc::now().naive_utc(),
             }))
@@ -1004,7 +1005,7 @@ async fn update_owner_id_returns_ok() {
         .expect_update()
         .returning(move |_| {
             Ok(in_use::Model {
-                model_id: 1,
+                project_id: 1,
                 session_id: 1,
                 latest_activity: Utc::now().naive_utc(),
             })
@@ -1012,7 +1013,7 @@ async fn update_owner_id_returns_ok() {
 
     let api = get_mock_concrete_ecdar_api(mock_services);
 
-    let res = api.update_model(update_model_request).await;
+    let res = api.update_project(update_project_request).await;
 
     assert!(res.is_ok());
 }
@@ -1022,8 +1023,8 @@ async fn update_returns_ok() {
     let mut mock_services = get_mock_services();
 
     let user_id = 1;
-    let model_id = 1;
-    let new_model_name = "new_name".to_string();
+    let project_id = 1;
+    let new_project_name = "new_name".to_string();
     let new_components_info_non_json = ComponentsInfo {
         components: vec![Component {
             rep: Some(Rep::Json("a".to_owned())),
@@ -1033,30 +1034,30 @@ async fn update_returns_ok() {
     let new_components_info = serde_json::to_value(new_components_info_non_json.clone()).unwrap();
     let new_owner_id = 2;
 
-    let mut update_model_request = Request::new(UpdateModelRequest {
-        id: model_id,
-        name: Some(new_model_name.clone()),
+    let mut update_project_request = Request::new(UpdateProjectRequest {
+        id: project_id,
+        name: Some(new_project_name.clone()),
         components_info: Some(new_components_info_non_json.clone()),
         owner_id: Some(new_owner_id),
     });
 
-    update_model_request.metadata_mut().insert(
+    update_project_request.metadata_mut().insert(
         "authorization",
         metadata::MetadataValue::from_str("Bearer access_token").unwrap(),
     );
 
-    update_model_request.metadata_mut().insert(
+    update_project_request.metadata_mut().insert(
         "uid",
         metadata::MetadataValue::from_str(user_id.to_string().as_str()).unwrap(),
     );
 
     mock_services
-        .model_context_mock
+        .project_context_mock
         .expect_get_by_id()
-        .with(predicate::eq(model_id))
+        .with(predicate::eq(project_id))
         .returning(move |_| {
-            Ok(Some(model::Model {
-                id: model_id,
+            Ok(Some(project::Model {
+                id: project_id,
                 name: "old_name".to_owned(),
                 components_info: serde_json::to_value("{\"old_components\":1}".clone()).unwrap(),
                 owner_id: user_id,
@@ -1065,13 +1066,13 @@ async fn update_returns_ok() {
 
     mock_services
         .access_context_mock
-        .expect_get_access_by_uid_and_model_id()
-        .with(predicate::eq(1), predicate::eq(model_id))
+        .expect_get_access_by_uid_and_project_id()
+        .with(predicate::eq(1), predicate::eq(project_id))
         .returning(move |_, _| {
             Ok(Some(access::Model {
                 id: 1,
                 user_id,
-                model_id,
+                project_id,
                 role: "Editor".to_string(),
             }))
         });
@@ -1094,12 +1095,12 @@ async fn update_returns_ok() {
         });
 
     mock_services
-        .model_context_mock
+        .project_context_mock
         .expect_update()
         .returning(move |_| {
-            Ok(model::Model {
-                id: model_id,
-                name: new_model_name.clone(),
+            Ok(project::Model {
+                id: project_id,
+                name: new_project_name.clone(),
                 components_info: new_components_info.clone(),
                 owner_id: new_owner_id,
             })
@@ -1110,7 +1111,7 @@ async fn update_returns_ok() {
         .expect_get_by_id()
         .returning(move |_| {
             Ok(Some(in_use::Model {
-                model_id,
+                project_id,
                 session_id: 1,
                 latest_activity: Utc::now().naive_utc(),
             }))
@@ -1121,7 +1122,7 @@ async fn update_returns_ok() {
         .expect_update()
         .returning(move |_| {
             Ok(in_use::Model {
-                model_id: 1,
+                project_id: 1,
                 session_id: 1,
                 latest_activity: Utc::now().naive_utc(),
             })
@@ -1129,7 +1130,7 @@ async fn update_returns_ok() {
 
     let api = get_mock_concrete_ecdar_api(mock_services);
 
-    let res = api.update_model(update_model_request).await;
+    let res = api.update_project(update_project_request).await;
 
     assert!(res.is_ok());
 }
@@ -1139,11 +1140,11 @@ async fn update_owner_not_owner_returns_err() {
     let mut mock_services = get_mock_services();
 
     mock_services
-        .model_context_mock
+        .project_context_mock
         .expect_get_by_id()
         .with(predicate::eq(1))
         .returning(move |_| {
-            Ok(Some(model::Model {
+            Ok(Some(project::Model {
                 id: 1,
                 name: Default::default(),
                 components_info: Default::default(),
@@ -1153,13 +1154,13 @@ async fn update_owner_not_owner_returns_err() {
 
     mock_services
         .access_context_mock
-        .expect_get_access_by_uid_and_model_id()
+        .expect_get_access_by_uid_and_project_id()
         .with(predicate::eq(1), predicate::eq(1))
         .returning(move |_, _| {
             Ok(Some(access::Model {
                 id: 1,
                 user_id: 1,
-                model_id: 1,
+                project_id: 1,
                 role: "Editor".to_owned(),
             }))
         });
@@ -1189,7 +1190,7 @@ async fn update_owner_not_owner_returns_err() {
             Ok(Some(in_use::Model {
                 session_id: 1,
                 latest_activity: Default::default(),
-                model_id: 1,
+                project_id: 1,
             }))
         });
 
@@ -1200,11 +1201,11 @@ async fn update_owner_not_owner_returns_err() {
             Ok(in_use::Model {
                 session_id: 1,
                 latest_activity: Default::default(),
-                model_id: 1,
+                project_id: 1,
             })
         });
 
-    let mut request = Request::new(UpdateModelRequest {
+    let mut request = Request::new(UpdateProjectRequest {
         id: 1,
         name: None,
         components_info: None,
@@ -1222,7 +1223,7 @@ async fn update_owner_not_owner_returns_err() {
 
     let api = get_mock_concrete_ecdar_api(mock_services);
 
-    let res = api.update_model(request).await.unwrap_err();
+    let res = api.update_project(request).await.unwrap_err();
 
     assert_eq!(res.code(), Code::PermissionDenied);
 }
@@ -1232,11 +1233,11 @@ async fn update_no_in_use_returns_err() {
     let mut mock_services = get_mock_services();
 
     mock_services
-        .model_context_mock
+        .project_context_mock
         .expect_get_by_id()
         .with(predicate::eq(1))
         .returning(move |_| {
-            Ok(Some(model::Model {
+            Ok(Some(project::Model {
                 id: 1,
                 name: Default::default(),
                 components_info: Default::default(),
@@ -1246,13 +1247,13 @@ async fn update_no_in_use_returns_err() {
 
     mock_services
         .access_context_mock
-        .expect_get_access_by_uid_and_model_id()
+        .expect_get_access_by_uid_and_project_id()
         .with(predicate::eq(1), predicate::eq(1))
         .returning(move |_, _| {
             Ok(Some(access::Model {
                 id: 1,
                 user_id: 1,
-                model_id: 1,
+                project_id: 1,
                 role: "Editor".to_owned(),
             }))
         });
@@ -1282,11 +1283,11 @@ async fn update_no_in_use_returns_err() {
             Ok(Some(in_use::Model {
                 session_id: 2,
                 latest_activity: Utc::now().naive_utc(),
-                model_id: 1,
+                project_id: 1,
             }))
         });
 
-    let mut request = Request::new(UpdateModelRequest {
+    let mut request = Request::new(UpdateProjectRequest {
         id: 1,
         name: None,
         components_info: None,
@@ -1304,7 +1305,7 @@ async fn update_no_in_use_returns_err() {
 
     let api = get_mock_concrete_ecdar_api(mock_services);
 
-    let res = api.update_model(request).await.unwrap_err();
+    let res = api.update_project(request).await.unwrap_err();
 
     assert_eq!(res.code(), Code::FailedPrecondition);
 }
@@ -1314,11 +1315,11 @@ async fn update_no_access_returns_err() {
     let mut mock_services = get_mock_services();
 
     mock_services
-        .model_context_mock
+        .project_context_mock
         .expect_get_by_id()
         .with(predicate::eq(1))
         .returning(move |_| {
-            Ok(Some(model::Model {
+            Ok(Some(project::Model {
                 id: 1,
                 name: Default::default(),
                 components_info: Default::default(),
@@ -1328,11 +1329,11 @@ async fn update_no_access_returns_err() {
 
     mock_services
         .access_context_mock
-        .expect_get_access_by_uid_and_model_id()
+        .expect_get_access_by_uid_and_project_id()
         .with(predicate::eq(1), predicate::eq(1))
         .returning(move |_, _| Ok(None));
 
-    let mut request = Request::new(UpdateModelRequest {
+    let mut request = Request::new(UpdateProjectRequest {
         id: 1,
         name: None,
         components_info: None,
@@ -1345,7 +1346,7 @@ async fn update_no_access_returns_err() {
 
     let api = get_mock_concrete_ecdar_api(mock_services);
 
-    let res = api.update_model(request).await.unwrap_err();
+    let res = api.update_project(request).await.unwrap_err();
 
     assert_eq!(res.code(), Code::PermissionDenied);
 }
@@ -1355,11 +1356,11 @@ async fn update_incorrect_role_returns_err() {
     let mut mock_services = get_mock_services();
 
     mock_services
-        .model_context_mock
+        .project_context_mock
         .expect_get_by_id()
         .with(predicate::eq(1))
         .returning(move |_| {
-            Ok(Some(model::Model {
+            Ok(Some(project::Model {
                 id: 1,
                 name: Default::default(),
                 components_info: Default::default(),
@@ -1369,18 +1370,18 @@ async fn update_incorrect_role_returns_err() {
 
     mock_services
         .access_context_mock
-        .expect_get_access_by_uid_and_model_id()
+        .expect_get_access_by_uid_and_project_id()
         .with(predicate::eq(1), predicate::eq(1))
         .returning(move |_, _| {
             Ok(Some(access::Model {
                 id: 1,
                 user_id: 1,
-                model_id: 1,
+                project_id: 1,
                 role: "Viewer".to_owned(),
             }))
         });
 
-    let mut request = Request::new(UpdateModelRequest {
+    let mut request = Request::new(UpdateProjectRequest {
         id: 1,
         name: None,
         components_info: None,
@@ -1393,7 +1394,7 @@ async fn update_incorrect_role_returns_err() {
 
     let api = get_mock_concrete_ecdar_api(mock_services);
 
-    let res = api.update_model(request).await.unwrap_err();
+    let res = api.update_project(request).await.unwrap_err();
 
     assert_eq!(res.code(), Code::PermissionDenied);
 }
@@ -1403,11 +1404,11 @@ async fn update_no_session_returns_err() {
     let mut mock_services = get_mock_services();
 
     mock_services
-        .model_context_mock
+        .project_context_mock
         .expect_get_by_id()
         .with(predicate::eq(1))
         .returning(move |_| {
-            Ok(Some(model::Model {
+            Ok(Some(project::Model {
                 id: 1,
                 name: Default::default(),
                 components_info: Default::default(),
@@ -1417,13 +1418,13 @@ async fn update_no_session_returns_err() {
 
     mock_services
         .access_context_mock
-        .expect_get_access_by_uid_and_model_id()
+        .expect_get_access_by_uid_and_project_id()
         .with(predicate::eq(1), predicate::eq(1))
         .returning(move |_, _| {
             Ok(Some(access::Model {
                 id: 1,
                 user_id: 1,
-                model_id: 1,
+                project_id: 1,
                 role: "Editor".to_owned(),
             }))
         });
@@ -1437,7 +1438,7 @@ async fn update_no_session_returns_err() {
         )
         .returning(move |_, _| Ok(None));
 
-    let mut request = Request::new(UpdateModelRequest {
+    let mut request = Request::new(UpdateProjectRequest {
         id: 1,
         name: None,
         components_info: None,
@@ -1455,22 +1456,22 @@ async fn update_no_session_returns_err() {
 
     let api = get_mock_concrete_ecdar_api(mock_services);
 
-    let res = api.update_model(request).await.unwrap_err();
+    let res = api.update_project(request).await.unwrap_err();
 
     assert_eq!(res.code(), Code::Unauthenticated);
 }
 
 #[tokio::test]
-async fn update_no_model_returns_err() {
+async fn update_no_project_returns_err() {
     let mut mock_services = get_mock_services();
 
     mock_services
-        .model_context_mock
+        .project_context_mock
         .expect_get_by_id()
         .with(predicate::eq(2))
         .returning(move |_| Ok(None));
 
-    let mut request = Request::new(UpdateModelRequest {
+    let mut request = Request::new(UpdateProjectRequest {
         id: 2,
         name: None,
         components_info: None,
@@ -1483,7 +1484,7 @@ async fn update_no_model_returns_err() {
 
     let api = get_mock_concrete_ecdar_api(mock_services);
 
-    let res = api.update_model(request).await.unwrap_err();
+    let res = api.update_project(request).await.unwrap_err();
 
     assert_eq!(res.code(), Code::NotFound);
 }

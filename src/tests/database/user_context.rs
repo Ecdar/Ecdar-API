@@ -5,7 +5,7 @@ use crate::{
         entity_context::EntityContextTrait,
         user_context::{DbErr, UserContext},
     },
-    entities::{access, model, session, user},
+    entities::{access, project, session, user},
     to_active_models,
 };
 use sea_orm::{entity::prelude::*, IntoActiveModel};
@@ -384,17 +384,17 @@ async fn delete_test() {
 }
 
 #[tokio::test]
-async fn delete_cascade_model_test() {
+async fn delete_cascade_project_test() {
     // Setting up database and user context
     let (user_context, user) = seed_db().await;
 
-    let model = create_models(1, user.clone().id)[0].clone();
+    let project = create_projects(1, user.clone().id)[0].clone();
 
     user::Entity::insert(user.clone().into_active_model())
         .exec(&user_context.db_context.get_connection())
         .await
         .unwrap();
-    model::Entity::insert(model.clone().into_active_model())
+    project::Entity::insert(project.clone().into_active_model())
         .exec(&user_context.db_context.get_connection())
         .await
         .unwrap();
@@ -405,28 +405,28 @@ async fn delete_cascade_model_test() {
         .all(&user_context.db_context.get_connection())
         .await
         .unwrap();
-    let all_models = model::Entity::find()
+    let all_projects = project::Entity::find()
         .all(&user_context.db_context.get_connection())
         .await
         .unwrap();
 
     assert_eq!(all_users.len(), 0);
-    assert_eq!(all_models.len(), 0);
+    assert_eq!(all_projects.len(), 0);
 }
 
 #[tokio::test]
-async fn delete_access_model_test() {
+async fn delete_cascade_access_test() {
     // Setting up database and user context
     let (user_context, user) = seed_db().await;
 
-    let model = create_models(1, user.clone().id)[0].clone();
-    let access = create_accesses(1, user.clone().id, model.clone().id)[0].clone();
+    let project = create_projects(1, user.clone().id)[0].clone();
+    let access = create_accesses(1, user.clone().id, project.clone().id)[0].clone();
 
     user::Entity::insert(user.clone().into_active_model())
         .exec(&user_context.db_context.get_connection())
         .await
         .unwrap();
-    model::Entity::insert(model.clone().into_active_model())
+    project::Entity::insert(project.clone().into_active_model())
         .exec(&user_context.db_context.get_connection())
         .await
         .unwrap();
@@ -441,7 +441,7 @@ async fn delete_access_model_test() {
         .all(&user_context.db_context.get_connection())
         .await
         .unwrap();
-    let all_models = model::Entity::find()
+    let all_projects = project::Entity::find()
         .all(&user_context.db_context.get_connection())
         .await
         .unwrap();
@@ -451,7 +451,7 @@ async fn delete_access_model_test() {
         .unwrap();
 
     assert_eq!(all_users.len(), 0);
-    assert_eq!(all_models.len(), 0);
+    assert_eq!(all_projects.len(), 0);
     assert_eq!(all_accesses.len(), 0);
 }
 

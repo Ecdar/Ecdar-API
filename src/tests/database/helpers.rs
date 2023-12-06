@@ -3,7 +3,7 @@
 use crate::database::database_context::{
     DatabaseContextTrait, PostgresDatabaseContext, SQLiteDatabaseContext,
 };
-use crate::entities::{access, in_use, model, query, session, user};
+use crate::entities::{access, in_use, project, query, session, user};
 use dotenv::dotenv;
 use sea_orm::{ConnectionTrait, Database, DbBackend};
 use std::env;
@@ -43,13 +43,13 @@ pub async fn get_reset_database_context() -> Arc<dyn DatabaseContextTrait> {
 /// );
 /// ```
 
-pub fn create_entities<M, F>(amount: i32, model_creator: F) -> Vec<M>
+pub fn create_entities<M, F>(amount: i32, project_creator: F) -> Vec<M>
 where
     F: Fn(i32) -> M,
 {
     let mut vector: Vec<M> = vec![];
     for i in 0..amount {
-        vector.push(model_creator(i));
+        vector.push(project_creator(i));
     }
     vector
 }
@@ -63,8 +63,8 @@ pub fn create_users(amount: i32) -> Vec<user::Model> {
     })
 }
 
-pub fn create_models(amount: i32, user_id: i32) -> Vec<model::Model> {
-    create_entities(amount, |i| model::Model {
+pub fn create_projects(amount: i32, user_id: i32) -> Vec<project::Model> {
+    create_entities(amount, |i| project::Model {
         id: i + 1,
         name: format!("name {}", i),
         components_info: "{}".to_owned().parse().unwrap(),
@@ -72,11 +72,11 @@ pub fn create_models(amount: i32, user_id: i32) -> Vec<model::Model> {
     })
 }
 
-pub fn create_accesses(amount: i32, user_id: i32, model_id: i32) -> Vec<access::Model> {
+pub fn create_accesses(amount: i32, user_id: i32, project_id: i32) -> Vec<access::Model> {
     create_entities(amount, |i| access::Model {
         id: i + 1,
         role: "Reader".into(),
-        model_id: model_id + i,
+        project_id: project_id + i,
         user_id: user_id + i,
     })
 }
@@ -91,21 +91,21 @@ pub fn create_sessions(amount: i32, user_id: i32) -> Vec<session::Model> {
     })
 }
 
-pub fn create_in_uses(amount: i32, model_id: i32, session_id: i32) -> Vec<in_use::Model> {
+pub fn create_in_uses(amount: i32, project_id: i32, session_id: i32) -> Vec<in_use::Model> {
     create_entities(amount, |i| in_use::Model {
-        model_id: model_id + i,
+        project_id: project_id + i,
         session_id,
         latest_activity: Default::default(),
     })
 }
 
-pub fn create_queries(amount: i32, model_id: i32) -> Vec<query::Model> {
+pub fn create_queries(amount: i32, project_id: i32) -> Vec<query::Model> {
     create_entities(amount, |i| query::Model {
         id: i + 1,
         string: "".to_string(),
         result: None,
         outdated: true,
-        model_id,
+        project_id,
     })
 }
 

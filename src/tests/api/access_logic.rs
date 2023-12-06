@@ -6,7 +6,7 @@ use crate::api::server::server::{
     AccessInfo, CreateAccessRequest, DeleteAccessRequest, ListAccessInfoRequest,
     UpdateAccessRequest,
 };
-use crate::entities::{access, model, user};
+use crate::entities::{access, project, user};
 use crate::tests::api::helpers::{get_mock_concrete_ecdar_api, get_mock_services};
 use mockall::predicate;
 use sea_orm::DbErr;
@@ -19,7 +19,7 @@ async fn create_invalid_access_returns_err() {
     let access = access::Model {
         id: Default::default(),
         role: "Editor".to_string(),
-        model_id: 1,
+        project_id: 1,
         user_id: 1,
     };
 
@@ -31,14 +31,14 @@ async fn create_invalid_access_returns_err() {
 
     mock_services
         .access_context_mock
-        .expect_get_access_by_uid_and_model_id()
+        .expect_get_access_by_uid_and_project_id()
         .with(predicate::eq(1), predicate::eq(1))
         .returning(move |_, _| {
             Ok(Some(access::Model {
                 id: Default::default(),
                 role: "Editor".to_owned(),
                 user_id: 1,
-                model_id: 1,
+                project_id: 1,
             }))
         });
 
@@ -57,7 +57,7 @@ async fn create_invalid_access_returns_err() {
 
     let mut request = Request::new(CreateAccessRequest {
         role: "Editor".to_string(),
-        model_id: 1,
+        project_id: 1,
         user: Some(User::UserId(1)),
     });
 
@@ -80,20 +80,20 @@ async fn create_access_returns_ok() {
     let access = access::Model {
         id: Default::default(),
         role: "Editor".to_string(),
-        model_id: 1,
+        project_id: 1,
         user_id: 1,
     };
 
     mock_services
         .access_context_mock
-        .expect_get_access_by_uid_and_model_id()
+        .expect_get_access_by_uid_and_project_id()
         .with(predicate::eq(1), predicate::eq(1))
         .returning(move |_, _| {
             Ok(Some(access::Model {
                 id: Default::default(),
                 role: "Editor".to_string(),
                 user_id: 1,
-                model_id: 1,
+                project_id: 1,
             }))
         });
 
@@ -118,7 +118,7 @@ async fn create_access_returns_ok() {
 
     let mut request = Request::new(CreateAccessRequest {
         role: "Editor".to_string(),
-        model_id: 1,
+        project_id: 1,
         user: Some(User::UserId(1)),
     });
 
@@ -141,7 +141,7 @@ async fn update_invalid_access_returns_err() {
     let access = access::Model {
         id: 2,
         role: "Editor".to_string(),
-        model_id: Default::default(),
+        project_id: Default::default(),
         user_id: Default::default(),
     };
 
@@ -159,30 +159,30 @@ async fn update_invalid_access_returns_err() {
             Ok(Some(access::Model {
                 id: 1,
                 role: "Editor".to_string(),
-                model_id: 1,
+                project_id: 1,
                 user_id: 2,
             }))
         });
 
     mock_services
         .access_context_mock
-        .expect_get_access_by_uid_and_model_id()
+        .expect_get_access_by_uid_and_project_id()
         .with(predicate::eq(1), predicate::eq(1))
         .returning(move |_, _| {
             Ok(Some(access::Model {
                 id: 1,
                 role: "Editor".to_string(),
-                model_id: 1,
+                project_id: 1,
                 user_id: 1,
             }))
         });
 
     mock_services
-        .model_context_mock
+        .project_context_mock
         .expect_get_by_id()
         .with(predicate::eq(1))
         .returning(move |_| {
-            Ok(Some(model::Model {
+            Ok(Some(project::Model {
                 id: 1,
                 name: "test".to_string(),
                 owner_id: 1,
@@ -214,7 +214,7 @@ async fn update_access_returns_ok() {
     let access = access::Model {
         id: 2,
         role: "Editor".to_string(),
-        model_id: Default::default(),
+        project_id: Default::default(),
         user_id: Default::default(),
     };
 
@@ -232,30 +232,30 @@ async fn update_access_returns_ok() {
             Ok(Some(access::Model {
                 id: 1,
                 role: "Editor".to_string(),
-                model_id: 1,
+                project_id: 1,
                 user_id: 2,
             }))
         });
 
     mock_services
         .access_context_mock
-        .expect_get_access_by_uid_and_model_id()
+        .expect_get_access_by_uid_and_project_id()
         .with(predicate::eq(1), predicate::eq(1))
         .returning(move |_, _| {
             Ok(Some(access::Model {
                 id: 1,
                 role: "Editor".to_string(),
-                model_id: 1,
+                project_id: 1,
                 user_id: 1,
             }))
         });
 
     mock_services
-        .model_context_mock
+        .project_context_mock
         .expect_get_by_id()
         .with(predicate::eq(1))
         .returning(move |_| {
-            Ok(Some(model::Model {
+            Ok(Some(project::Model {
                 id: 1,
                 name: "test".to_string(),
                 owner_id: 1,
@@ -300,30 +300,30 @@ async fn delete_invalid_access_returns_err() {
             Ok(Some(access::Model {
                 id: 1,
                 role: "Editor".to_string(),
-                model_id: 1,
+                project_id: 1,
                 user_id: 2,
             }))
         });
 
     mock_services
         .access_context_mock
-        .expect_get_access_by_uid_and_model_id()
+        .expect_get_access_by_uid_and_project_id()
         .with(predicate::eq(1), predicate::eq(1))
         .returning(move |_, _| {
             Ok(Some(access::Model {
                 id: 1,
                 role: "Editor".to_string(),
-                model_id: 1,
+                project_id: 1,
                 user_id: 1,
             }))
         });
 
     mock_services
-        .model_context_mock
+        .project_context_mock
         .expect_get_by_id()
         .with(predicate::eq(1))
         .returning(move |_| {
-            Ok(Some(model::Model {
+            Ok(Some(project::Model {
                 id: 1,
                 name: "test".to_string(),
                 owner_id: 1,
@@ -352,7 +352,7 @@ async fn delete_access_returns_ok() {
     let access = access::Model {
         id: 2,
         role: "Editor".to_string(),
-        model_id: Default::default(),
+        project_id: Default::default(),
         user_id: Default::default(),
     };
 
@@ -370,30 +370,30 @@ async fn delete_access_returns_ok() {
             Ok(Some(access::Model {
                 id: 1,
                 role: "Editor".to_string(),
-                model_id: 1,
+                project_id: 1,
                 user_id: 2,
             }))
         });
 
     mock_services
         .access_context_mock
-        .expect_get_access_by_uid_and_model_id()
+        .expect_get_access_by_uid_and_project_id()
         .with(predicate::eq(1), predicate::eq(1))
         .returning(move |_, _| {
             Ok(Some(access::Model {
                 id: 1,
                 role: "Editor".to_string(),
-                model_id: 1,
+                project_id: 1,
                 user_id: 1,
             }))
         });
 
     mock_services
-        .model_context_mock
+        .project_context_mock
         .expect_get_by_id()
         .with(predicate::eq(1))
         .returning(move |_| {
-            Ok(Some(model::Model {
+            Ok(Some(project::Model {
                 id: 1,
                 name: "test".to_string(),
                 owner_id: 1,
@@ -420,7 +420,7 @@ async fn list_access_info_returns_ok() {
     let mut mock_services = get_mock_services();
 
     let mut request: Request<ListAccessInfoRequest> =
-        Request::new(ListAccessInfoRequest { model_id: 1 });
+        Request::new(ListAccessInfoRequest { project_id: 1 });
 
     request
         .metadata_mut()
@@ -429,25 +429,25 @@ async fn list_access_info_returns_ok() {
     let access = AccessInfo {
         id: 1,
         role: "Editor".to_string(),
-        model_id: 1,
+        project_id: 1,
         user_id: 1,
     };
 
     mock_services
         .access_context_mock
-        .expect_get_access_by_uid_and_model_id()
+        .expect_get_access_by_uid_and_project_id()
         .returning(move |_, _| {
             Ok(Some(access::Model {
                 id: 1,
                 role: "Editor".to_string(),
-                model_id: Default::default(),
+                project_id: Default::default(),
                 user_id: Default::default(),
             }))
         });
 
     mock_services
         .access_context_mock
-        .expect_get_access_by_model_id()
+        .expect_get_access_by_project_id()
         .returning(move |_| Ok(vec![access.clone()]));
 
     let api = get_mock_concrete_ecdar_api(mock_services);
@@ -461,7 +461,7 @@ async fn list_access_info_returns_ok() {
 async fn list_access_info_returns_not_found() {
     let mut mock_services = get_mock_services();
 
-    let mut request = Request::new(ListAccessInfoRequest { model_id: 1 });
+    let mut request = Request::new(ListAccessInfoRequest { project_id: 1 });
 
     request
         .metadata_mut()
@@ -470,18 +470,18 @@ async fn list_access_info_returns_not_found() {
     let access = access::Model {
         id: 1,
         role: "Editor".to_string(),
-        model_id: 1,
+        project_id: 1,
         user_id: 1,
     };
 
     mock_services
         .access_context_mock
-        .expect_get_access_by_model_id()
+        .expect_get_access_by_project_id()
         .returning(move |_| Ok(vec![]));
 
     mock_services
         .access_context_mock
-        .expect_get_access_by_uid_and_model_id()
+        .expect_get_access_by_uid_and_project_id()
         .returning(move |_, _| Ok(Some(access.clone())));
 
     let api = get_mock_concrete_ecdar_api(mock_services);
@@ -493,7 +493,7 @@ async fn list_access_info_returns_not_found() {
 
 #[tokio::test]
 async fn list_access_info_returns_no_permission() {
-    let mut request = Request::new(ListAccessInfoRequest { model_id: 1 });
+    let mut request = Request::new(ListAccessInfoRequest { project_id: 1 });
 
     request
         .metadata_mut()
@@ -503,7 +503,7 @@ async fn list_access_info_returns_no_permission() {
 
     mock_services
         .access_context_mock
-        .expect_get_access_by_uid_and_model_id()
+        .expect_get_access_by_uid_and_project_id()
         .returning(move |_, _| Ok(None));
 
     let api = get_mock_concrete_ecdar_api(mock_services);

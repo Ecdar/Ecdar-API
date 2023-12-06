@@ -13,35 +13,35 @@ pub struct AccessContext {
 
 #[async_trait]
 pub trait AccessContextTrait: EntityContextTrait<access::Model> {
-    async fn get_access_by_uid_and_model_id(
+    async fn get_access_by_uid_and_project_id(
         &self,
         uid: i32,
-        model_id: i32,
+        project_id: i32,
     ) -> Result<Option<access::Model>, DbErr>;
 
-    async fn get_access_by_model_id(&self, model_id: i32) -> Result<Vec<AccessInfo>, DbErr>;
+    async fn get_access_by_project_id(&self, project_id: i32) -> Result<Vec<AccessInfo>, DbErr>;
 }
 
 #[async_trait]
 impl AccessContextTrait for AccessContext {
-    async fn get_access_by_uid_and_model_id(
+    async fn get_access_by_uid_and_project_id(
         &self,
         uid: i32,
-        model_id: i32,
+        project_id: i32,
     ) -> Result<Option<access::Model>, DbErr> {
         access::Entity::find()
             .filter(
                 Condition::all()
                     .add(access::Column::UserId.eq(uid))
-                    .add(access::Column::ModelId.eq(model_id)),
+                    .add(access::Column::ProjectId.eq(project_id)),
             )
             .one(&self.db_context.get_connection())
             .await
     }
 
-    async fn get_access_by_model_id(&self, model_id: i32) -> Result<Vec<AccessInfo>, DbErr> {
+    async fn get_access_by_project_id(&self, project_id: i32) -> Result<Vec<AccessInfo>, DbErr> {
         access::Entity::find()
-            .filter(access::Column::ModelId.eq(model_id))
+            .filter(access::Column::ProjectId.eq(project_id))
             .into_model::<AccessInfo>()
             .all(&self.db_context.get_connection())
             .await
@@ -63,7 +63,7 @@ impl EntityContextTrait<access::Model> for AccessContext {
     ///     id: Default::default(),
     ///     role: Role::Editor,
     ///     user_id: 1,
-    ///     model_id: 1
+    ///     project_id: 1
     /// };
     /// let context : AccessContext = AccessContext::new(...);
     /// context.create(model);
@@ -72,7 +72,7 @@ impl EntityContextTrait<access::Model> for AccessContext {
         let access = access::ActiveModel {
             id: Default::default(),
             role: Set(entity.role),
-            model_id: Set(entity.model_id),
+            project_id: Set(entity.project_id),
             user_id: Set(entity.user_id),
         };
         let access: access::Model = access.insert(&self.db_context.get_connection()).await?;
@@ -112,7 +112,7 @@ impl EntityContextTrait<access::Model> for AccessContext {
     ///     id: access.id,
     ///     role: Role::Reader,
     ///     user_id: access.user_id,
-    ///     model_id: access.model_id
+    ///     project_id: access.project_id
     /// }
     /// ```
     /// # Note
@@ -121,7 +121,7 @@ impl EntityContextTrait<access::Model> for AccessContext {
         access::ActiveModel {
             id: Unchanged(entity.id),
             role: Set(entity.role),
-            model_id: Unchanged(entity.model_id),
+            project_id: Unchanged(entity.project_id),
             user_id: Unchanged(entity.user_id),
         }
         .update(&self.db_context.get_connection())
