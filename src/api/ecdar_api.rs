@@ -6,8 +6,8 @@ use super::server::server::{
     get_users_response::UserInfo,
     CreateAccessRequest, CreateModelRequest, CreateModelResponse, CreateQueryRequest,
     CreateUserRequest, DeleteAccessRequest, DeleteModelRequest, DeleteQueryRequest,
-    GetAuthTokenRequest, GetAuthTokenResponse, GetModelRequest, GetModelResponse,
-    ListModelsInfoResponse, Query, QueryRequest, QueryResponse, SendQueryRequest,
+    GetAuthTokenRequest, GetAuthTokenResponse, GetModelRequest, GetModelResponse, GetUsersRequest,
+    GetUsersResponse, ListModelsInfoResponse, Query, QueryRequest, QueryResponse, SendQueryRequest,
     SendQueryResponse, SimulationStartRequest, SimulationStepRequest, SimulationStepResponse,
     UpdateAccessRequest, UpdateModelRequest, UpdateQueryRequest, UpdateUserRequest,
     UserTokenResponse,
@@ -332,7 +332,7 @@ impl EcdarApi for ConcreteEcdarApi {
             Ok(None) => {
                 return Err(Status::unauthenticated(
                     "No session found with given access token",
-                ))
+                ));
             }
             Err(error) => return Err(Status::internal(error.to_string())),
         };
