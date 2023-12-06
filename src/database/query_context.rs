@@ -12,14 +12,14 @@ pub struct QueryContext {
 
 #[async_trait]
 pub trait QueryContextTrait: EntityContextTrait<query::Model> {
-    async fn get_all_by_model_id(&self, model_id: i32) -> Result<Vec<query::Model>, DbErr>;
+    async fn get_all_by_project_id(&self, project_id: i32) -> Result<Vec<query::Model>, DbErr>;
 }
 
 #[async_trait]
 impl QueryContextTrait for QueryContext {
-    async fn get_all_by_model_id(&self, model_id: i32) -> Result<Vec<query::Model>, DbErr> {
+    async fn get_all_by_project_id(&self, project_id: i32) -> Result<Vec<query::Model>, DbErr> {
         query::Entity::find()
-            .filter(query::Column::ModelId.eq(model_id))
+            .filter(query::Column::ProjectId.eq(project_id))
             .all(&self.db_context.get_connection())
             .await
     }
@@ -39,7 +39,7 @@ impl EntityContextTrait<query::Model> for QueryContext {
     /// let model : Model = {
     ///     id: Default::default(),
     ///     string: "query_string".into(),
-    ///     model_id: 1,
+    ///     project_id: 1,
     ///     result: "query_result".into(),
     ///     out_dated: true
     /// }
@@ -50,7 +50,7 @@ impl EntityContextTrait<query::Model> for QueryContext {
         let query = query::ActiveModel {
             id: Default::default(),
             string: Set(entity.string),
-            model_id: Set(entity.model_id),
+            project_id: Set(entity.project_id),
             result: NotSet,
             outdated: NotSet,
         };
@@ -92,14 +92,14 @@ impl EntityContextTrait<query::Model> for QueryContext {
     /// let updated_query = Model {
     ///     id: query.id,
     ///     string: query.string,
-    ///     model_id: query.model_id,
+    ///     project_id: query.project_id,
     ///     result: query.result,
     ///     out_dated: false
     /// }
     /// assert_eq!(context.update(updated_query).unwrap(),Model {
     ///     id: 1,
     ///     string: "query_string".into(),
-    ///     model_id: 1,
+    ///     project_id: 1,
     ///     result: "query_result".into(),
     ///     out_dated: false
     /// }
@@ -112,7 +112,7 @@ impl EntityContextTrait<query::Model> for QueryContext {
             string: Set(entity.string),
             result: Set(entity.result),
             outdated: Set(entity.outdated),
-            model_id: Unchanged(entity.model_id),
+            project_id: Unchanged(entity.project_id),
         }
         .update(&self.db_context.get_connection())
         .await

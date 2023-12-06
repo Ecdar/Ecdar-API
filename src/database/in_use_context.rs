@@ -24,7 +24,7 @@ impl EntityContextTrait<in_use::Model> for InUseContext {
     /// Used for creating a Model entity
     async fn create(&self, entity: in_use::Model) -> Result<in_use::Model, DbErr> {
         let in_use = in_use::ActiveModel {
-            model_id: Set(entity.model_id),
+            project_id: Set(entity.project_id),
             session_id: Set(entity.session_id),
             latest_activity: Set(Utc::now().naive_local()),
         };
@@ -46,7 +46,7 @@ impl EntityContextTrait<in_use::Model> for InUseContext {
 
     async fn update(&self, entity: in_use::Model) -> Result<in_use::Model, DbErr> {
         in_use::ActiveModel {
-            model_id: Unchanged(entity.model_id),
+            project_id: Unchanged(entity.project_id),
             session_id: Set(entity.session_id),
             latest_activity: Set(entity.latest_activity),
         }

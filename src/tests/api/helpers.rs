@@ -5,7 +5,8 @@ use crate::api::context_collection::ContextCollection;
 use crate::api::ecdar_api::ConcreteEcdarApi;
 use crate::api::hashing_context::HashingContextTrait;
 use crate::api::server::server::ecdar_backend_server::EcdarBackend;
-use crate::api::server::server::ModelInfo;
+use crate::api::server::server::AccessInfo;
+use crate::api::server::server::ProjectInfo;
 use crate::api::server::server::{
     QueryRequest, QueryResponse, SimulationStartRequest, SimulationStepRequest,
     SimulationStepResponse, UserTokenResponse,
@@ -13,11 +14,11 @@ use crate::api::server::server::{
 use crate::database::access_context::AccessContextTrait;
 use crate::database::entity_context::EntityContextTrait;
 use crate::database::in_use_context::InUseContextTrait;
-use crate::database::model_context::ModelContextTrait;
+use crate::database::project_context::ProjectContextTrait;
 use crate::database::query_context::QueryContextTrait;
 use crate::database::session_context::SessionContextTrait;
 use crate::database::user_context::UserContextTrait;
-use crate::entities::{access, in_use, model, query, session, user};
+use crate::entities::{access, in_use, project, query, session, user};
 use async_trait::async_trait;
 use mockall::mock;
 use sea_orm::DbErr;
@@ -28,7 +29,7 @@ pub fn get_mock_concrete_ecdar_api(mock_services: MockServices) -> ConcreteEcdar
     let contexts = ContextCollection {
         access_context: Arc::new(mock_services.access_context_mock),
         in_use_context: Arc::new(mock_services.in_use_context_mock),
-        model_context: Arc::new(mock_services.model_context_mock),
+        project_context: Arc::new(mock_services.project_context_mock),
         query_context: Arc::new(mock_services.query_context_mock),
         session_context: Arc::new(mock_services.session_context_mock),
         user_context: Arc::new(mock_services.user_context_mock),
@@ -42,7 +43,7 @@ pub fn get_mock_services() -> MockServices {
     MockServices {
         access_context_mock: MockAccessContext::new(),
         in_use_context_mock: MockInUseContext::new(),
-        model_context_mock: MockModelContext::new(),
+        project_context_mock: MockProjectContext::new(),
         query_context_mock: MockQueryContext::new(),
         session_context_mock: MockSessionContext::new(),
         user_context_mock: MockUserContext::new(),
@@ -54,7 +55,7 @@ pub fn get_mock_services() -> MockServices {
 pub struct MockServices {
     pub(crate) access_context_mock: MockAccessContext,
     pub(crate) in_use_context_mock: MockInUseContext,
-    pub(crate) model_context_mock: MockModelContext,
+    pub(crate) project_context_mock: MockProjectContext,
     pub(crate) query_context_mock: MockQueryContext,
     pub(crate) session_context_mock: MockSessionContext,
     pub(crate) user_context_mock: MockUserContext,
@@ -74,11 +75,31 @@ mock! {
     }
     #[async_trait]
     impl AccessContextTrait for AccessContext {
-        async fn get_access_by_uid_and_model_id(
+        async fn get_access_by_uid_and_project_id(
             &self,
             uid: i32,
-            model_id: i32,
-        ) -> Result<Option<access::Model>, DbErr>;
+            project_id: i32,
+        ) -> Result<Option<access::Model>, DbErr> {
+            access::Entity::find()
+                .filter(
+                    Condition::all()
+                        .add(access::Column::UserId.eq(uid))
+                        .add(access::Column::ModelId.eq(project_id)),
+                )
+                .one(&self.db_context.get_connection())
+                .await
+        }
+
+        async fn get_access_by_project_id(
+            &self,
+            project_id: i32,
+        ) -> Result<Vec<AccessInfo>, DbErr> {
+            access::Entity::find()
+                .filter(access::Column::ModelId.eq(project_id))
+                .into_model::<AccessInfo>()
+                .all(&self.db_context.get_connection())
+                .await
+        }
     }
 }
 
@@ -97,18 +118,18 @@ mock! {
 }
 
 mock! {
-    pub ModelContext {}
+    pub ProjectContext {}
     #[async_trait]
-    impl EntityContextTrait<model::Model> for ModelContext {
-        async fn create(&self, entity: model::Model) -> Result<model::Model, DbErr>;
-        async fn get_by_id(&self, entity_id: i32) -> Result<Option<model::Model>, DbErr>;
-        async fn get_all(&self) -> Result<Vec<model::Model>, DbErr>;
-        async fn update(&self, entity: model::Model) -> Result<model::Model, DbErr>;
-        async fn delete(&self, entity_id: i32) -> Result<model::Model, DbErr>;
+    impl EntityContextTrait<project::Model> for ProjectContext {
+        async fn create(&self, entity: project::Model) -> Result<project::Model, DbErr>;
+        async fn get_by_id(&self, entity_id: i32) -> Result<Option<project::Model>, DbErr>;
+        async fn get_all(&self) -> Result<Vec<project::Model>, DbErr>;
+        async fn update(&self, entity: project::Model) -> Result<project::Model, DbErr>;
+        async fn delete(&self, entity_id: i32) -> Result<project::Model, DbErr>;
     }
     #[async_trait]
-    impl ModelContextTrait for ModelContext {
-        async fn get_models_info_by_uid(&self, uid: i32) -> Result<Vec<ModelInfo>, DbErr>;
+    impl ProjectContextTrait for ProjectContext {
+        async fn get_project_info_by_uid(&self, uid: i32) -> Result<Vec<ProjectInfo>, DbErr>;
     }
 }
 
@@ -124,12 +145,7 @@ mock! {
     }
     #[async_trait]
     impl QueryContextTrait for QueryContext {
-        async fn get_all_by_model_id(&self, model_id: i32) -> Result<Vec<query::Model>, DbErr> {
-            query::Entity::find()
-                .filter(query::Column::ModelId.eq(model_id))
-                .all(&self.db_context.get_connection())
-                .await
-        }
+        async fn get_all_by_project_id(&self, project_id: i32) -> Result<Vec<query::Model>, DbErr>;
     }
 }
 
