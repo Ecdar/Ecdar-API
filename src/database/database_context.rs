@@ -36,7 +36,9 @@ impl PostgresDatabaseContext {
 #[async_trait]
 impl DatabaseContextTrait for PostgresDatabaseContext {
     async fn reset(&self) -> Result<Arc<dyn DatabaseContextTrait>, DbErr> {
-        Migrator::fresh(&self.db_connection).await.expect("failed to connect to database");
+        Migrator::fresh(&self.db_connection)
+            .await
+            .expect("failed to connect to database");
 
         Ok(Arc::new(PostgresDatabaseContext {
             db_connection: self.get_connection(),
@@ -64,7 +66,9 @@ impl SQLiteDatabaseContext {
 #[async_trait]
 impl DatabaseContextTrait for SQLiteDatabaseContext {
     async fn reset(&self) -> Result<Arc<dyn DatabaseContextTrait>, DbErr> {
-        Migrator::fresh(&self.db_connection).await.expect("failed to connect to database");
+        Migrator::fresh(&self.db_connection)
+            .await
+            .expect("failed to connect to database");
 
         Ok(Arc::new(SQLiteDatabaseContext {
             db_connection: self.get_connection(),

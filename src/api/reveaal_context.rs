@@ -15,7 +15,9 @@ pub struct ReveaalContext;
 impl ReveaalContext {
     async fn get_connection() -> EcdarBackendClient<Channel> {
         let url = env::var("REVEAAL_ADDRESS").expect("Expected REVEAAL_ADDRESS to be set.");
-        EcdarBackendClient::connect(url).await.expect("failed to connect to Ecdar backend") //? Perhaps the error handling should be more graceful
+        EcdarBackendClient::connect(url)
+            .await
+            .expect("failed to connect to Ecdar backend") //? Perhaps the error handling should be more graceful
     }
 }
 
@@ -39,7 +41,6 @@ impl EcdarBackend for ReveaalContext {
             .await
             .send_query(request)
             .await
-            
     }
 
     async fn start_simulation(
@@ -50,7 +51,6 @@ impl EcdarBackend for ReveaalContext {
             .await
             .start_simulation(request)
             .await
-            
     }
 
     async fn take_simulation_step(

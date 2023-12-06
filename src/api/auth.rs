@@ -18,7 +18,8 @@ pub fn validation_interceptor(mut req: Request<()>) -> Result<Request<()>, Statu
         Ok(token_data) => {
             req.metadata_mut().insert(
                 "uid",
-                metadata::MetadataValue::from_str(&token_data.claims.sub).map_err(|err| Status::internal(err.to_string()))?,
+                metadata::MetadataValue::from_str(&token_data.claims.sub)
+                    .map_err(|err| Status::internal(err.to_string()))?,
             );
             Ok(req)
         }
@@ -260,7 +261,7 @@ impl<T> RequestExt for Request<T> {
         self.metadata().get("authorization").map(|token| {
             token
                 .to_str()
-                .expect("failed to parse token string")//TODO better error handling
+                .expect("failed to parse token string") //TODO better error handling
                 .trim_start_matches("Bearer ")
                 .to_string()
         })
@@ -269,7 +270,12 @@ impl<T> RequestExt for Request<T> {
     fn token_str(&self) -> Option<&str> {
         match self.metadata().get("authorization") {
             //TODO better error handling
-            Some(token) => Some(token.to_str().expect("failed to parse token string").trim_start_matches("Bearer ")),
+            Some(token) => Some(
+                token
+                    .to_str()
+                    .expect("failed to parse token string")
+                    .trim_start_matches("Bearer "),
+            ),
             None => None,
         }
     }
@@ -277,7 +283,12 @@ impl<T> RequestExt for Request<T> {
     /// Returns the uid from the request metadata.
     fn uid(&self) -> Option<i32> {
         //TODO better error handling
-        let uid = match self.metadata().get("uid").expect("failed to parse user id").to_str() { 
+        let uid = match self
+            .metadata()
+            .get("uid")
+            .expect("failed to parse user id")
+            .to_str()
+        {
             Ok(uid) => uid,
             Err(_) => return None,
         };

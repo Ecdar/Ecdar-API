@@ -84,13 +84,20 @@ pub async fn handle_session(
                 access_token: access_token.clone(),
                 refresh_token: refresh_token.clone(),
                 updated_at: Default::default(),
-                user_id: uid.parse().map_err(|err| Status::internal(format!("failed to parse user id (uid) ({err})")))?,
+                user_id: uid.parse().map_err(|err| {
+                    Status::internal(format!("failed to parse user id (uid) ({err})"))
+                })?,
             })
             .await
             .map_err(|err| Status::new(Code::Internal, err.to_string()))?;
     } else {
         let mut session = match session_context
-            .get_by_token(TokenType::RefreshToken, request.token_string().ok_or(Status::internal("failed to get token from request metadata"))?)
+            .get_by_token(
+                TokenType::RefreshToken,
+                request.token_string().ok_or(Status::internal(
+                    "failed to get token from request metadata",
+                ))?,
+            )
             .await
         {
             Ok(Some(session)) => session,
@@ -171,7 +178,8 @@ impl EcdarApi for ConcreteEcdarApi {
         let model = Model {
             id: model.id,
             name: model.name,
-            components_info: serde_json::from_value(model.components_info).map_err(|err| Status::internal(err.to_string()))?,
+            components_info: serde_json::from_value(model.components_info)
+                .map_err(|err| Status::internal(err.to_string()))?,
             owner_id: model.owner_id,
         };
 
@@ -188,7 +196,12 @@ impl EcdarApi for ConcreteEcdarApi {
                         let session = self
                             .contexts
                             .session_context
-                            .get_by_token(TokenType::AccessToken, request.token_string().ok_or(Status::internal("failed to get token from request metadata"))?)
+                            .get_by_token(
+                                TokenType::AccessToken,
+                                request.token_string().ok_or(Status::internal(
+                                    "failed to get token from request metadata",
+                                ))?,
+                            )
                             .await
                             .map_err(|err| Status::new(Code::Internal, err.to_string()))?
                             .ok_or_else(|| {
@@ -230,7 +243,9 @@ impl EcdarApi for ConcreteEcdarApi {
                 model_id: query.model_id,
                 query: query.string,
                 result: match query.result {
-                    Some(result) => serde_json::from_value(result).expect("failed to parse message"), //TODO better error handling
+                    Some(result) => {
+                        serde_json::from_value(result).expect("failed to parse message")
+                    } //TODO better error handling
                     None => "".to_owned(),
                 },
                 outdated: query.outdated,
@@ -254,7 +269,8 @@ impl EcdarApi for ConcreteEcdarApi {
             .ok_or(Status::internal("Could not get uid from request metadata"))?;
 
         let components_info = match message.clone().components_info {
-            Some(components_info) => serde_json::to_value(components_info).map_err(|err| Status::internal(err.to_string()))?,
+            Some(components_info) => serde_json::to_value(components_info)
+                .map_err(|err| Status::internal(err.to_string()))?,
             None => return Err(Status::invalid_argument("No components info provided")),
         };
 
@@ -300,7 +316,12 @@ impl EcdarApi for ConcreteEcdarApi {
         let session = self
             .contexts
             .session_context
-            .get_by_token(TokenType::AccessToken, request.token_string().ok_or(Status::internal("Failed to get token from request metadata"))?)
+            .get_by_token(
+                TokenType::AccessToken,
+                request.token_string().ok_or(Status::internal(
+                    "Failed to get token from request metadata",
+                ))?,
+            )
             .await
             .map_err(|_err| Status::internal("failed to query database"))? //TODO better error message
             .ok_or(Status::not_found("token not found"))?;
@@ -311,10 +332,16 @@ impl EcdarApi for ConcreteEcdarApi {
             latest_activity: Default::default(),
         };
 
-        self.contexts.in_use_context.create(in_use).await
+        self.contexts
+            .in_use_context
+            .create(in_use)
+            .await
             .map_err(|_err| Status::new(Code::Internal, "failed to create entity"))?;
 
-        self.contexts.access_context.create(access).await
+        self.contexts
+            .access_context
+            .create(access)
+            .await
             .map_err(|_err| Status::new(Code::Internal, "failed to create entity"))?;
 
         Ok(Response::new(CreateModelResponse { id: model.id }))
@@ -371,7 +398,13 @@ impl EcdarApi for ConcreteEcdarApi {
         let session = match self
             .contexts
             .session_context
-            .get_by_token(TokenType::AccessToken, request.token_string().ok_or(Status::new(Code::Internal,"Failed to get token from request metadata"))?) //? better error message?
+            .get_by_token(
+                TokenType::AccessToken,
+                request.token_string().ok_or(Status::new(
+                    Code::Internal,
+                    "Failed to get token from request metadata",
+                ))?,
+            ) //? better error message?
             .await
         {
             Ok(Some(session)) => session,
@@ -418,7 +451,8 @@ impl EcdarApi for ConcreteEcdarApi {
                 None => model.name,
             },
             components_info: match message.clone().components_info {
-                Some(components_info) => serde_json::to_value(components_info).map_err(|err| Status::new(Code::Internal,err.to_string()))?,
+                Some(components_info) => serde_json::to_value(components_info)
+                    .map_err(|err| Status::new(Code::Internal, err.to_string()))?,
                 None => model.components_info,
             },
             owner_id: match message.clone().owner_id {

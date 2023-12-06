@@ -45,7 +45,9 @@ async fn main() -> Result<(), Box<dyn Error>> {
         hashing_context: Arc::new(HashingContext),
     };
 
-    start_grpc_server(contexts).await.expect("failed to start grpc server");
+    start_grpc_server(contexts)
+        .await
+        .expect("failed to start grpc server");
 
     Ok(())
 }
