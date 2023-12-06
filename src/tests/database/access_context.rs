@@ -1,3 +1,4 @@
+use crate::api::server::server::AccessInfo;
 use crate::database::access_context::AccessContextTrait;
 use crate::tests::database::helpers::{
     create_accesses, create_projects, create_users, get_reset_database_context,
@@ -359,4 +360,34 @@ async fn get_by_uid_and_project_id_test() {
         .await;
 
     assert_eq!(access.unwrap().unwrap(), expected_access);
+}
+
+#[tokio::test]
+async fn get_access_by_project_id_test_returns_ok() {
+    let (access_context, expected_access, _, model) = seed_db().await;
+
+    let expected_access_access_info_vector = vec![AccessInfo {
+        id: expected_access.id,
+        project_id: expected_access.project_id,
+        user_id: expected_access.user_id,
+        role: expected_access.role.clone(),
+    }];
+
+    access::Entity::insert(expected_access.clone().into_active_model())
+        .exec(&access_context.db_context.get_connection())
+        .await
+        .unwrap();
+
+    let access = access_context.get_access_by_project_id(model.id).await;
+
+    assert!(access.unwrap() == expected_access_access_info_vector);
+}
+
+#[tokio::test]
+async fn get_access_by_project_id_test_returns_empty() {
+    let (access_context, _, _, model) = seed_db().await;
+
+    let access = access_context.get_access_by_project_id(model.id).await;
+
+    assert!(access.unwrap().is_empty());
 }
