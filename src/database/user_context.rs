@@ -58,14 +58,14 @@ impl EntityContextTrait<user::Model> for UserContext {
     /// Used for creating a User entity
     /// # Example
     /// ```
-    /// let model : Model = {
+    /// let user : Model = {
     ///     id: Default::default(),
     ///     email: "anders@aau.dk".into(),
     ///     username: "Anders".into(),
     ///     password: "qwerty".into()
     /// }
     /// let context : UserContext = UserContext::new(...);
-    /// context.create(model);
+    /// context.create(user);
     /// ```
     async fn create(&self, entity: user::Model) -> Result<user::Model, DbErr> {
         let user = user::ActiveModel {
@@ -82,8 +82,8 @@ impl EntityContextTrait<user::Model> for UserContext {
     /// # Example
     /// ```
     /// let context : UserContext = UserContext::new(...);
-    /// let model : Model = context.get_by_id(1).unwrap();
-    /// assert_eq!(model.username,"Anders".into());
+    /// let user : Model = context.get_by_id(1).unwrap();
+    /// assert_eq!(user.username,"Anders".into());
     /// ```
     async fn get_by_id(&self, entity_id: i32) -> Result<Option<user::Model>, DbErr> {
         user::Entity::find_by_id(entity_id)
@@ -95,8 +95,8 @@ impl EntityContextTrait<user::Model> for UserContext {
     /// # Example
     /// ```
     /// let context : UserContext = UserContext::new(...);
-    /// let model : vec<Model> = context.get_all().unwrap();
-    /// assert_eq!(model.len(),1);
+    /// let user : vec<Model> = context.get_all().unwrap();
+    /// assert_eq!(user.len(),1);
     /// ```
     async fn get_all(&self) -> Result<Vec<user::Model>, DbErr> {
         user::Entity::find()

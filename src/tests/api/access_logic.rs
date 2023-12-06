@@ -13,7 +13,7 @@ async fn create_invalid_access_returns_err() {
     let access = access::Model {
         id: Default::default(),
         role: "Editor".to_string(),
-        model_id: 1,
+        project_id: 1,
         user_id: 1,
     };
 
@@ -25,7 +25,7 @@ async fn create_invalid_access_returns_err() {
 
     let request = Request::new(CreateAccessRequest {
         role: "Editor".to_string(),
-        model_id: 1,
+        project_id: 1,
         user_id: 1,
     });
 
@@ -43,7 +43,7 @@ async fn create_access_returns_ok() {
     let access = access::Model {
         id: Default::default(),
         role: "Editor".to_string(),
-        model_id: 1,
+        project_id: 1,
         user_id: 1,
     };
 
@@ -55,7 +55,7 @@ async fn create_access_returns_ok() {
 
     let request = Request::new(CreateAccessRequest {
         role: "Editor".to_string(),
-        model_id: 1,
+        project_id: 1,
         user_id: 1,
     });
 
@@ -73,7 +73,7 @@ async fn update_invalid_access_returns_err() {
     let access = access::Model {
         id: 1,
         role: "Editor".to_string(),
-        model_id: Default::default(),
+        project_id: Default::default(),
         user_id: Default::default(),
     };
 
@@ -102,7 +102,7 @@ async fn update_access_returns_ok() {
     let access = access::Model {
         id: 1,
         role: "Editor".to_string(),
-        model_id: Default::default(),
+        project_id: Default::default(),
         user_id: Default::default(),
     };
 
@@ -150,7 +150,7 @@ async fn delete_access_returns_ok() {
     let access = access::Model {
         id: 1,
         role: "Editor".to_string(),
-        model_id: Default::default(),
+        project_id: Default::default(),
         user_id: Default::default(),
     };
 

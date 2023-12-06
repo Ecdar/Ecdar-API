@@ -4,32 +4,32 @@ use std::ops::Add;
 
 use crate::{
     database::{entity_context::EntityContextTrait, session_context::SessionContext},
-    entities::{in_use, model, session, user},
+    entities::{in_use, project, session, user},
     to_active_models,
 };
 
 use crate::database::session_context::SessionContextTrait;
 use chrono::{Duration, Utc};
 
-async fn seed_db() -> (SessionContext, session::Model, user::Model, model::Model) {
+async fn seed_db() -> (SessionContext, session::Model, user::Model, project::Model) {
     let db_context = get_reset_database_context().await;
 
     let session_context = SessionContext::new(db_context);
 
     let user = create_users(1)[0].clone();
-    let model = create_models(1, user.id)[0].clone();
+    let project = create_projects(1, user.id)[0].clone();
     let session = create_sessions(1, user.id)[0].clone();
 
     user::Entity::insert(user.clone().into_active_model())
         .exec(&session_context.db_context.get_connection())
         .await
         .unwrap();
-    model::Entity::insert(model.clone().into_active_model())
+    project::Entity::insert(project.clone().into_active_model())
         .exec(&session_context.db_context.get_connection())
         .await
         .unwrap();
 
-    (session_context, session, user, model)
+    (session_context, session, user, project)
 }
 
 #[tokio::test]
@@ -300,9 +300,9 @@ async fn delete_test() {
 
 #[tokio::test]
 async fn delete_cascade_in_use_test() {
-    let (session_context, session, _, model) = seed_db().await;
+    let (session_context, session, _, project) = seed_db().await;
 
-    let in_use = create_in_uses(1, model.id, session.id)[0].clone();
+    let in_use = create_in_uses(1, project.id, session.id)[0].clone();
 
     session::Entity::insert(session.clone().into_active_model())
         .exec(&session_context.db_context.get_connection())

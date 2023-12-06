@@ -12,14 +12,14 @@ pub struct QueryContext {
 
 #[async_trait]
 pub trait QueryContextTrait: EntityContextTrait<query::Model> {
-    async fn get_all_by_model_id(&self, model_id: i32) -> Result<Vec<query::Model>, DbErr>;
+    async fn get_all_by_project_id(&self, project_id: i32) -> Result<Vec<query::Model>, DbErr>;
 }
 
 #[async_trait]
 impl QueryContextTrait for QueryContext {
-    async fn get_all_by_model_id(&self, model_id: i32) -> Result<Vec<query::Model>, DbErr> {
+    async fn get_all_by_project_id(&self, project_id: i32) -> Result<Vec<query::Model>, DbErr> {
         query::Entity::find()
-            .filter(query::Column::ModelId.eq(model_id))
+            .filter(query::Column::ProjectId.eq(project_id))
             .all(&self.db_context.get_connection())
             .await
     }
@@ -50,7 +50,7 @@ impl EntityContextTrait<query::Model> for QueryContext {
         let query = query::ActiveModel {
             id: Default::default(),
             string: Set(entity.string),
-            model_id: Set(entity.model_id),
+            project_id: Set(entity.project_id),
             result: NotSet,
             outdated: NotSet,
         };
@@ -112,7 +112,7 @@ impl EntityContextTrait<query::Model> for QueryContext {
             string: Set(entity.string),
             result: Set(entity.result),
             outdated: Set(entity.outdated),
-            model_id: Unchanged(entity.model_id),
+            project_id: Unchanged(entity.project_id),
         }
         .update(&self.db_context.get_connection())
         .await
