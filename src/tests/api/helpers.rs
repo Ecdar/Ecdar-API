@@ -28,7 +28,7 @@ pub fn get_mock_concrete_ecdar_api(mock_services: MockServices) -> ConcreteEcdar
     let contexts = ContextCollection {
         access_context: Arc::new(mock_services.access_context_mock),
         in_use_context: Arc::new(mock_services.in_use_context_mock),
-        model_context: Arc::new(mock_services.model_context_mock),
+        project_context: Arc::new(mock_services.model_context_mock),
         query_context: Arc::new(mock_services.query_context_mock),
         session_context: Arc::new(mock_services.session_context_mock),
         user_context: Arc::new(mock_services.user_context_mock),

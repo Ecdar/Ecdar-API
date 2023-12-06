@@ -37,7 +37,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let contexts = ContextCollection {
         access_context: Arc::new(AccessContext::new(db_context.clone())),
         in_use_context: Arc::new(InUseContext::new(db_context.clone())),
-        model_context: Arc::new(ProjectContext::new(db_context.clone())),
+        project_context: Arc::new(ProjectContext::new(db_context.clone())),
         query_context: Arc::new(QueryContext::new(db_context.clone())),
         session_context: Arc::new(SessionContext::new(db_context.clone())),
         user_context: Arc::new(UserContext::new(db_context.clone())),
