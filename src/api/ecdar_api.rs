@@ -12,6 +12,7 @@ use super::server::server::{
     UpdateAccessRequest, UpdateModelRequest, UpdateQueryRequest, UpdateUserRequest,
     UserTokenResponse,
 };
+use crate::api::auth::{Claims, TokenError};
 use crate::api::context_collection::ContextCollection;
 use crate::api::{
     auth::{RequestExt, Token, TokenType},
@@ -20,6 +21,7 @@ use crate::api::{
 use crate::database::{session_context::SessionContextTrait, user_context::UserContextTrait};
 use crate::entities::{access, in_use, model, query, session, user};
 use chrono::{Duration, Utc};
+use jsonwebtoken::TokenData;
 use regex::Regex;
 use sea_orm::{DbErr, SqlErr};
 use serde_json;
@@ -886,7 +888,21 @@ impl EcdarApiAuth for ConcreteEcdarApi {
                         .ok_or(Status::unauthenticated("No refresh token provided"))?,
                 );
 
-                refresh_token.validate()?;
+                // Validate refresh token
+                match refresh_token.validate() {
+                    Ok(_) => (),
+                    Err(TokenError::ExpiredSignature) => {
+                        // Delete session if expired
+                        let _ = self
+                            .contexts
+                            .session_context
+                            .delete_by_token(TokenType::RefreshToken, refresh_token.to_string())
+                            .await;
+
+                        return Err(Status::from(TokenError::ExpiredSignature));
+                    }
+                    Err(err) => return Err(Status::from(err)),
+                }
 
                 update_session(
                     self.contexts.session_context.clone(),
