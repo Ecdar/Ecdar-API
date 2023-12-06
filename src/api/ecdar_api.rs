@@ -12,7 +12,7 @@ use super::server::server::{
     UpdateAccessRequest, UpdateModelRequest, UpdateQueryRequest, UpdateUserRequest,
     UserTokenResponse,
 };
-use crate::api::auth::{Claims, TokenError};
+use crate::api::auth::TokenError;
 use crate::api::context_collection::ContextCollection;
 use crate::api::{
     auth::{RequestExt, Token, TokenType},
@@ -21,7 +21,7 @@ use crate::api::{
 use crate::database::{session_context::SessionContextTrait, user_context::UserContextTrait};
 use crate::entities::{access, in_use, model, query, session, user};
 use chrono::{Duration, Utc};
-use jsonwebtoken::TokenData;
+
 use regex::Regex;
 use sea_orm::{DbErr, SqlErr};
 use serde_json;
@@ -867,7 +867,6 @@ fn is_valid_username(username: &str) -> bool {
         .is_match(username)
 }
 
-
 #[tonic::async_trait]
 impl EcdarApiAuth for ConcreteEcdarApi {
     /// This method is used to get a new access and refresh token for a user.
@@ -911,7 +910,7 @@ impl EcdarApiAuth for ConcreteEcdarApi {
                     self.contexts.session_context.clone(),
                     refresh_token.to_string(),
                 )
-                    .await?
+                .await?
             }
             Some(user_credentials) => {
                 let input_password = user_credentials.password.clone();
@@ -919,9 +918,9 @@ impl EcdarApiAuth for ConcreteEcdarApi {
                     self.contexts.user_context.clone(),
                     user_credentials,
                 )
-                    .await
-                    .map_err(|err| Status::internal(err.to_string()))?
-                    .ok_or_else(|| Status::unauthenticated("Wrong username or password"))?;
+                .await
+                .map_err(|err| Status::internal(err.to_string()))?
+                .ok_or_else(|| Status::unauthenticated("Wrong username or password"))?;
 
                 // Check if password in request matches users password
                 if !self
