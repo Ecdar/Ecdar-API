@@ -117,10 +117,6 @@ impl EcdarApi for ConcreteEcdarApi {
         todo!()
     }
 
-    async fn delete_session(&self, _request: Request<()>) -> Result<Response<()>, Status> {
-        todo!()
-    }
-
     /// Gets a Model and its queries from the database.
     ///
     /// If the Model is not in use, it will now be in use by the requestees session,
