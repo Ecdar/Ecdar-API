@@ -3,22 +3,21 @@ use super::server::server::{
     ecdar_api_server::EcdarApi,
     ecdar_backend_server::EcdarBackend,
     get_auth_token_request::{user_credentials, UserCredentials},
-    get_users_response::UserInfo,
-    CreateAccessRequest, CreateModelRequest, CreateModelResponse, CreateQueryRequest,
-    CreateUserRequest, DeleteAccessRequest, DeleteModelRequest, DeleteQueryRequest,
-    GetAuthTokenRequest, GetAuthTokenResponse, GetModelRequest, GetModelResponse,
-    ListModelsInfoResponse, Query, QueryRequest, QueryResponse, SendQueryRequest,
+    CreateAccessRequest, CreateProjectRequest, CreateProjectResponse, CreateQueryRequest,
+    CreateUserRequest, DeleteAccessRequest, DeleteProjectRequest, DeleteQueryRequest,
+    GetAuthTokenRequest, GetAuthTokenResponse, GetProjectRequest, GetProjectResponse,
+    ListProjectsInfoResponse, Query, QueryRequest, QueryResponse, SendQueryRequest,
     SendQueryResponse, SimulationStartRequest, SimulationStepRequest, SimulationStepResponse,
-    UpdateAccessRequest, UpdateModelRequest, UpdateQueryRequest, UpdateUserRequest,
+    UpdateAccessRequest, UpdateProjectRequest, UpdateQueryRequest, UpdateUserRequest,
     UserTokenResponse,
 };
 use crate::api::context_collection::ContextCollection;
 use crate::api::{
     auth::{RequestExt, Token, TokenType},
-    server::server::Model,
+    server::server::Project,
 };
 use crate::database::{session_context::SessionContextTrait, user_context::UserContextTrait};
-use crate::entities::{access, in_use, model, query, session, user};
+use crate::entities::{access, in_use, project, query, session, user};
 use chrono::{Duration, Utc};
 use regex::Regex;
 use sea_orm::{DbErr, SqlErr};
@@ -95,13 +94,13 @@ impl EcdarApi for ConcreteEcdarApi {
     ///
     /// If the Model is not in use, it will now be in use by the requestees session,
     /// given that they are an Editor.
-    async fn get_model(
+    async fn get_project(
         &self,
-        request: Request<GetModelRequest>,
-    ) -> Result<Response<GetModelResponse>, Status> {
+        request: Request<GetProjectRequest>,
+    ) -> Result<Response<GetProjectResponse>, Status> {
         let message = request.get_ref().clone();
 
-        let model_id = message.id;
+        let project_id = message.id;
 
         let uid = request
             .uid()
@@ -110,32 +109,35 @@ impl EcdarApi for ConcreteEcdarApi {
         let access = self
             .contexts
             .access_context
-            .get_access_by_uid_and_model_id(uid, model_id)
+            .get_access_by_uid_and_project_id(uid, project_id)
             .await
             .map_err(|err| Status::new(Code::Internal, err.to_string()))?
             .ok_or_else(|| {
-                Status::new(Code::PermissionDenied, "User does not have access to model")
+                Status::new(
+                    Code::PermissionDenied,
+                    "User does not have access to project",
+                )
             })?;
 
-        let model = self
+        let project = self
             .contexts
-            .model_context
-            .get_by_id(model_id)
+            .project_context
+            .get_by_id(project_id)
             .await
             .map_err(|err| Status::new(Code::Internal, err.to_string()))?
             .ok_or_else(|| Status::new(Code::Internal, "Model not found"))?;
 
-        let model = Model {
-            id: model.id,
-            name: model.name,
-            components_info: serde_json::from_value(model.components_info).unwrap(),
-            owner_id: model.owner_id,
+        let project = Project {
+            id: project.id,
+            name: project.name,
+            components_info: serde_json::from_value(project.components_info).unwrap(),
+            owner_id: project.owner_id,
         };
 
         let mut in_use_bool = true;
-        match self.contexts.in_use_context.get_by_id(model_id).await {
+        match self.contexts.in_use_context.get_by_id(project_id).await {
             Ok(Some(in_use)) => {
-                // If model is not in use and user is an Editor, update the in use with the users session.
+                // If project is not in use and user is an Editor, update the in use with the users session.
                 if in_use.latest_activity
                     <= (Utc::now().naive_utc() - Duration::minutes(IN_USE_DURATION_MINUTES))
                 {
@@ -156,7 +158,7 @@ impl EcdarApi for ConcreteEcdarApi {
                             })?;
 
                         let in_use = in_use::Model {
-                            model_id: in_use.model_id,
+                            project_id: in_use.project_id,
                             session_id: session.id,
                             latest_activity: Utc::now().naive_utc(),
                         };
@@ -169,14 +171,14 @@ impl EcdarApi for ConcreteEcdarApi {
                     }
                 }
             }
-            Ok(None) => return Err(Status::new(Code::Internal, "No in use found for model")),
+            Ok(None) => return Err(Status::new(Code::Internal, "No in use found for project")),
             Err(err) => return Err(Status::new(Code::Internal, err.to_string())),
         }
 
         let queries = self
             .contexts
             .query_context
-            .get_all_by_model_id(model_id)
+            .get_all_by_project_id(project_id)
             .await
             .map_err(|err| Status::new(Code::Internal, err.to_string()))?;
 
@@ -184,7 +186,7 @@ impl EcdarApi for ConcreteEcdarApi {
             .into_iter()
             .map(|query| Query {
                 id: query.id,
-                model_id: query.model_id,
+                project_id: query.project_id,
                 query: query.string,
                 result: match query.result {
                     Some(result) => serde_json::from_value(result).unwrap(),
@@ -194,17 +196,17 @@ impl EcdarApi for ConcreteEcdarApi {
             })
             .collect::<Vec<Query>>();
 
-        Ok(Response::new(GetModelResponse {
-            model: Some(model),
+        Ok(Response::new(GetProjectResponse {
+            project: Some(project),
             queries,
             in_use: in_use_bool,
         }))
     }
 
-    async fn create_model(
+    async fn create_project(
         &self,
-        request: Request<CreateModelRequest>,
-    ) -> Result<Response<CreateModelResponse>, Status> {
+        request: Request<CreateProjectRequest>,
+    ) -> Result<Response<CreateProjectResponse>, Status> {
         let message = request.get_ref().clone();
         let uid = request
             .uid()
@@ -215,20 +217,20 @@ impl EcdarApi for ConcreteEcdarApi {
             None => return Err(Status::invalid_argument("No components info provided")),
         };
 
-        let mut model = model::Model {
+        let mut project = project::Model {
             id: Default::default(),
             name: message.clone().name,
             components_info,
             owner_id: uid,
         };
 
-        model = match self.contexts.model_context.create(model).await {
-            Ok(model) => model,
+        project = match self.contexts.project_context.create(project).await {
+            Ok(project) => project,
             Err(error) => {
                 return match error.sql_err() {
                     Some(SqlErr::UniqueConstraintViolation(e)) => {
                         let error_msg = match e.to_lowercase() {
-                            _ if e.contains("name") => "A model with that name already exists",
+                            _ if e.contains("name") => "A project with that name already exists",
                             _ => "Model already exists",
                         };
                         println!("{}", e);
@@ -237,7 +239,7 @@ impl EcdarApi for ConcreteEcdarApi {
                     Some(SqlErr::ForeignKeyConstraintViolation(e)) => {
                         let error_msg = match e.to_lowercase() {
                             _ if e.contains("owner_id") => "No user with that id exists",
-                            _ => "Could not create model",
+                            _ => "Could not create project",
                         };
                         println!("{}", e);
                         Err(Status::invalid_argument(error_msg))
@@ -250,7 +252,7 @@ impl EcdarApi for ConcreteEcdarApi {
         let access = access::Model {
             id: Default::default(),
             role: "Editor".to_string(), //todo!("Use role enum")
-            model_id: model.clone().id,
+            project_id: project.clone().id,
             user_id: uid,
         };
 
@@ -263,7 +265,7 @@ impl EcdarApi for ConcreteEcdarApi {
             .unwrap();
 
         let in_use = in_use::Model {
-            model_id: model.clone().id,
+            project_id: project.clone().id,
             session_id: session.id,
             latest_activity: Default::default(),
         };
@@ -271,35 +273,35 @@ impl EcdarApi for ConcreteEcdarApi {
         self.contexts.in_use_context.create(in_use).await.unwrap();
         self.contexts.access_context.create(access).await.unwrap();
 
-        Ok(Response::new(CreateModelResponse { id: model.id }))
+        Ok(Response::new(CreateProjectResponse { id: project.id }))
     }
 
     /// Updates a Model in the database given its id.
     ///
     /// # Errors
-    /// This function will return an error if the model does not exist in the database
-    /// or if the user does not have access to the model with role 'Editor'.
-    async fn update_model(
+    /// This function will return an error if the project does not exist in the database
+    /// or if the user does not have access to the project with role 'Editor'.
+    async fn update_project(
         &self,
-        request: Request<UpdateModelRequest>,
+        request: Request<UpdateProjectRequest>,
     ) -> Result<Response<()>, Status> {
         let message = request.get_ref().clone();
         let uid = request
             .uid()
             .ok_or(Status::internal("Could not get uid from request metadata"))?;
 
-        // Check if the model exists
-        let model = match self.contexts.model_context.get_by_id(message.id).await {
-            Ok(Some(model)) => model,
-            Ok(None) => return Err(Status::not_found("No model found with given id")),
+        // Check if the project exists
+        let project = match self.contexts.project_context.get_by_id(message.id).await {
+            Ok(Some(project)) => project,
+            Ok(None) => return Err(Status::not_found("No project found with given id")),
             Err(error) => return Err(Status::internal(error.to_string())),
         };
 
-        // Check if the user has access to the model
+        // Check if the user has access to the project
         match self
             .contexts
             .access_context
-            .get_access_by_uid_and_model_id(uid, model.id)
+            .get_access_by_uid_and_project_id(uid, project.id)
             .await
         {
             Ok(access) => {
@@ -314,7 +316,7 @@ impl EcdarApi for ConcreteEcdarApi {
 
                 if !is_editor || access.is_none() {
                     return Err(Status::permission_denied(
-                        "You do not have permission to update this model",
+                        "You do not have permission to update this project",
                     ));
                 }
             }
@@ -337,8 +339,8 @@ impl EcdarApi for ConcreteEcdarApi {
             Err(error) => return Err(Status::internal(error.to_string())),
         };
 
-        // Get in_use for model
-        match self.contexts.in_use_context.get_by_id(model.id).await {
+        // Get in_use for project
+        match self.contexts.in_use_context.get_by_id(project.id).await {
             Ok(Some(in_use)) => {
                 // Check if in_use latest activity is older than the max allowed
                 if in_use.latest_activity
@@ -351,7 +353,7 @@ impl EcdarApi for ConcreteEcdarApi {
                 }
 
                 let new_in_use = in_use::Model {
-                    model_id: in_use.model_id,
+                    project_id: in_use.project_id,
                     session_id: session.id,
                     latest_activity: Utc::now().naive_utc(),
                 };
@@ -361,35 +363,35 @@ impl EcdarApi for ConcreteEcdarApi {
                     Err(error) => return Err(Status::internal(error.to_string())),
                 }
             }
-            Ok(None) => return Err(Status::internal("No in_use found for model")),
+            Ok(None) => return Err(Status::internal("No in_use found for project")),
             Err(error) => return Err(Status::internal(error.to_string())),
         };
 
-        let new_model = model::Model {
-            id: model.id,
+        let new_project = project::Model {
+            id: project.id,
             name: match message.clone().name {
                 Some(name) => name,
-                None => model.name,
+                None => project.name,
             },
             components_info: match message.clone().components_info {
                 Some(components_info) => serde_json::to_value(components_info).unwrap(),
-                None => model.components_info,
+                None => project.components_info,
             },
             owner_id: match message.clone().owner_id {
                 Some(new_owner_id) => {
-                    if model.owner_id == uid {
+                    if project.owner_id == uid {
                         new_owner_id
                     } else {
                         return Err(Status::permission_denied(
-                            "You do not have permission to change the owner of this model",
+                            "You do not have permission to change the owner of this project",
                         ));
                     }
                 }
-                None => model.owner_id,
+                None => project.owner_id,
             },
         };
 
-        match self.contexts.model_context.update(new_model).await {
+        match self.contexts.project_context.update(new_project).await {
             Ok(_) => Ok(Response::new(())),
             Err(error) => Err(Status::new(Code::Internal, error.to_string())),
         }
@@ -398,32 +400,37 @@ impl EcdarApi for ConcreteEcdarApi {
     /// Deletes a Model from the database.
     ///
     /// # Errors
-    /// This function will return an error if the model does not exist in the database
-    /// or if the user is not the model owner.
-    async fn delete_model(
+    /// This function will return an error if the project does not exist in the database
+    /// or if the user is not the project owner.
+    async fn delete_project(
         &self,
-        request: Request<DeleteModelRequest>,
+        request: Request<DeleteProjectRequest>,
     ) -> Result<Response<()>, Status> {
         let uid = request
             .uid()
             .ok_or(Status::internal("Could not get uid from request metadata"))?;
-        let model_id = request.get_ref().id;
+        let project_id = request.get_ref().id;
 
-        let model = match self.contexts.model_context.get_by_id(model_id).await {
-            Ok(Some(model)) => model,
-            Ok(None) => return Err(Status::new(Code::NotFound, "No model found with given id")),
+        let project = match self.contexts.project_context.get_by_id(project_id).await {
+            Ok(Some(project)) => project,
+            Ok(None) => {
+                return Err(Status::new(
+                    Code::NotFound,
+                    "No project found with given id",
+                ))
+            }
             Err(err) => return Err(Status::new(Code::Internal, err.to_string())),
         };
 
-        // Check if user is owner and thereby has permission to delete model
-        if model.owner_id != uid {
+        // Check if user is owner and thereby has permission to delete project
+        if project.owner_id != uid {
             return Err(Status::new(
                 Code::PermissionDenied,
-                "You do not have permission to delete this model",
+                "You do not have permission to delete this project",
             ));
         }
 
-        match self.contexts.model_context.delete(model_id).await {
+        match self.contexts.project_context.delete(project_id).await {
             Ok(_) => Ok(Response::new(())),
             Err(error) => match error {
                 sea_orm::DbErr::RecordNotFound(message) => {
@@ -434,28 +441,30 @@ impl EcdarApi for ConcreteEcdarApi {
         }
     }
 
-    async fn list_models_info(
+    async fn list_projects_info(
         &self,
         request: Request<()>,
-    ) -> Result<Response<ListModelsInfoResponse>, Status> {
+    ) -> Result<Response<ListProjectsInfoResponse>, Status> {
         let uid = request
             .uid()
             .ok_or(Status::internal("Could not get uid from request metadata"))?;
 
         match self
             .contexts
-            .model_context
-            .get_models_info_by_uid(uid)
+            .project_context
+            .get_project_info_by_uid(uid)
             .await
         {
-            Ok(model_info_list) => {
-                if model_info_list.is_empty() {
+            Ok(project_info_list) => {
+                if project_info_list.is_empty() {
                     return Err(Status::new(
                         Code::NotFound,
                         "No access found for given user",
                     ));
                 } else {
-                    Ok(Response::new(ListModelsInfoResponse { model_info_list }))
+                    Ok(Response::new(ListProjectsInfoResponse {
+                        project_info_list,
+                    }))
                 }
             }
             Err(error) => Err(Status::new(Code::Internal, error.to_string())),
@@ -474,7 +483,7 @@ impl EcdarApi for ConcreteEcdarApi {
         let access = access::Model {
             id: Default::default(),
             role: access.role.to_string(),
-            model_id: access.model_id,
+            project_id: access.project_id,
             user_id: access.user_id,
         };
 
@@ -490,7 +499,7 @@ impl EcdarApi for ConcreteEcdarApi {
     ///
     /// Returns a `Status` as response
     ///
-    /// `model_id` and `user_id` is set to 'default' since they won't be updated in the database.
+    /// `project_id` and `user_id` is set to 'default' since they won't be updated in the database.
     async fn update_access(
         &self,
         request: Request<UpdateAccessRequest>,
@@ -500,7 +509,7 @@ impl EcdarApi for ConcreteEcdarApi {
         let access = access::Model {
             id: message.id,
             role: message.role,
-            model_id: Default::default(),
+            project_id: Default::default(),
             user_id: Default::default(),
         };
 
@@ -646,11 +655,14 @@ impl EcdarApi for ConcreteEcdarApi {
         let access = self
             .contexts
             .access_context
-            .get_access_by_uid_and_model_id(request.uid().unwrap(), query_request.model_id)
+            .get_access_by_uid_and_project_id(request.uid().unwrap(), query_request.project_id)
             .await
             .map_err(|err| Status::new(Code::Internal, err.to_string()))?
             .ok_or_else(|| {
-                Status::new(Code::PermissionDenied, "User does not have access to model")
+                Status::new(
+                    Code::PermissionDenied,
+                    "User does not have access to project",
+                )
             })?;
 
         if access.role != "Editor" {
@@ -665,7 +677,7 @@ impl EcdarApi for ConcreteEcdarApi {
             string: query_request.string.to_string(),
             result: Default::default(),
             outdated: Default::default(),
-            model_id: query_request.model_id,
+            project_id: query_request.project_id,
         };
 
         match self.contexts.query_context.create(query).await {
@@ -700,11 +712,14 @@ impl EcdarApi for ConcreteEcdarApi {
         let access = self
             .contexts
             .access_context
-            .get_access_by_uid_and_model_id(request.uid().unwrap(), old_query.model_id)
+            .get_access_by_uid_and_project_id(request.uid().unwrap(), old_query.project_id)
             .await
             .map_err(|err| Status::new(Code::Internal, err.to_string()))?
             .ok_or_else(|| {
-                Status::new(Code::PermissionDenied, "User does not have access to model")
+                Status::new(
+                    Code::PermissionDenied,
+                    "User does not have access to project",
+                )
             })?;
 
         if access.role != "Editor" {
@@ -716,7 +731,7 @@ impl EcdarApi for ConcreteEcdarApi {
 
         let query = query::Model {
             id: message.id,
-            model_id: Default::default(),
+            project_id: Default::default(),
             string: message.string,
             result: old_query.result,
             outdated: old_query.outdated,
@@ -748,11 +763,14 @@ impl EcdarApi for ConcreteEcdarApi {
         let access = self
             .contexts
             .access_context
-            .get_access_by_uid_and_model_id(request.uid().unwrap(), query.model_id)
+            .get_access_by_uid_and_project_id(request.uid().unwrap(), query.project_id)
             .await
             .map_err(|err| Status::new(Code::Internal, err.to_string()))?
             .ok_or_else(|| {
-                Status::new(Code::PermissionDenied, "User does not have access to model")
+                Status::new(
+                    Code::PermissionDenied,
+                    "User does not have access to project",
+                )
             })?;
 
         if access.role != "Editor" {
@@ -788,18 +806,21 @@ impl EcdarApi for ConcreteEcdarApi {
         // Verify user access
         self.contexts
             .access_context
-            .get_access_by_uid_and_model_id(uid, message.model_id)
+            .get_access_by_uid_and_project_id(uid, message.project_id)
             .await
             .map_err(|err| Status::new(Code::Internal, err.to_string()))?
             .ok_or_else(|| {
-                Status::new(Code::PermissionDenied, "User does not have access to model")
+                Status::new(
+                    Code::PermissionDenied,
+                    "User does not have access to project",
+                )
             })?;
 
-        // Get model from database
-        let model = self
+        // Get project from database
+        let project = self
             .contexts
-            .model_context
-            .get_by_id(message.model_id)
+            .project_context
+            .get_by_id(message.project_id)
             .await
             .map_err(|err| Status::new(Code::Internal, err.to_string()))?
             .ok_or_else(|| Status::new(Code::NotFound, "Model not found"))?;
@@ -818,7 +839,7 @@ impl EcdarApi for ConcreteEcdarApi {
             user_id: uid,
             query_id: message.id,
             query: query.string.clone(),
-            components_info: serde_json::from_value(model.components_info).unwrap(),
+            components_info: serde_json::from_value(project.components_info).unwrap(),
             settings: Default::default(), //TODO
         });
 
@@ -839,7 +860,7 @@ impl EcdarApi for ConcreteEcdarApi {
                     serde_json::to_value(query_result.get_ref().result.clone().unwrap()).unwrap(),
                 ),
                 outdated: false,
-                model_id: query.model_id,
+                project_id: query.project_id,
             })
             .await
             .map_err(|err| Status::new(Code::Internal, err.to_string()))?;
@@ -1030,8 +1051,8 @@ mod query_logic_tests;
 mod access_logic_tests;
 
 #[cfg(test)]
-#[path = "../tests/api/model_logic.rs"]
-mod model_logic_tests;
+#[path = "../tests/api/project_logic.rs"]
+mod project_logic_tests;
 
 #[cfg(test)]
 #[path = "../tests/api/user_logic.rs"]

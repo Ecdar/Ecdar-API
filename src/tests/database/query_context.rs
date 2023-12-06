@@ -1,32 +1,32 @@
 use crate::tests::database::helpers::{
-    create_models, create_queries, create_users, get_reset_database_context,
+    create_projects, create_queries, create_users, get_reset_database_context,
 };
 use crate::{
     database::{entity_context::EntityContextTrait, query_context::QueryContext},
-    entities::{model, query, user},
+    entities::{project, query, user},
     to_active_models,
 };
 use sea_orm::{entity::prelude::*, IntoActiveModel};
 
-async fn seed_db() -> (QueryContext, query::Model, model::Model) {
+async fn seed_db() -> (QueryContext, query::Model, project::Model) {
     let db_context = get_reset_database_context().await;
 
     let query_context = QueryContext::new(db_context);
 
     let user = create_users(1)[0].clone();
-    let model = create_models(1, user.id)[0].clone();
-    let query = create_queries(1, model.id)[0].clone();
+    let project = create_projects(1, user.id)[0].clone();
+    let query = create_queries(1, project.id)[0].clone();
 
     user::Entity::insert(user.clone().into_active_model())
         .exec(&query_context.db_context.get_connection())
         .await
         .unwrap();
-    model::Entity::insert(model.clone().into_active_model())
+    project::Entity::insert(project.clone().into_active_model())
         .exec(&query_context.db_context.get_connection())
         .await
         .unwrap();
 
-    (query_context, query, model)
+    (query_context, query, project)
 }
 
 #[tokio::test]
@@ -52,7 +52,7 @@ async fn create_default_outdated_test() {
 
     let _inserted_query = query_context.create(query.clone()).await.unwrap();
 
-    let fetched_query = query::Entity::find_by_id(query.model_id)
+    let fetched_query = query::Entity::find_by_id(query.project_id)
         .one(&query_context.db_context.get_connection())
         .await
         .unwrap()
@@ -96,7 +96,7 @@ async fn get_by_id_test() {
         .unwrap();
 
     let fetched_in_use = query_context
-        .get_by_id(query.model_id)
+        .get_by_id(query.project_id)
         .await
         .unwrap()
         .unwrap();
@@ -115,9 +115,9 @@ async fn get_by_non_existing_id_test() {
 
 #[tokio::test]
 async fn get_all_test() {
-    let (query_context, _, model) = seed_db().await;
+    let (query_context, _, project) = seed_db().await;
 
-    let queries = create_queries(10, model.id);
+    let queries = create_queries(10, project.id);
 
     query::Entity::insert_many(to_active_models!(queries.clone()))
         .exec(&query_context.db_context.get_connection())
@@ -127,7 +127,7 @@ async fn get_all_test() {
     assert_eq!(query_context.get_all().await.unwrap().len(), 10);
 
     let mut sorted = queries.clone();
-    sorted.sort_by_key(|k| k.model_id);
+    sorted.sort_by_key(|k| k.project_id);
 
     for (i, query) in sorted.into_iter().enumerate() {
         assert_eq!(query, queries[i]);
@@ -156,7 +156,7 @@ async fn update_test() {
 
     let updated_query = query_context.update(new_query.clone()).await.unwrap();
 
-    let fetched_query = query::Entity::find_by_id(updated_query.model_id)
+    let fetched_query = query::Entity::find_by_id(updated_query.project_id)
         .one(&query_context.db_context.get_connection())
         .await
         .unwrap()
@@ -251,7 +251,7 @@ async fn update_does_not_modify_id_test() {
 }
 
 #[tokio::test]
-async fn update_does_not_modify_model_id_test() {
+async fn update_does_not_modify_project_id_test() {
     let (query_context, query, _) = seed_db().await;
 
     query::Entity::insert(query.clone().into_active_model())
@@ -260,7 +260,7 @@ async fn update_does_not_modify_model_id_test() {
         .unwrap();
 
     let new_query = query::Model {
-        model_id: query.model_id + 1,
+        project_id: query.project_id + 1,
         ..query.clone()
     };
 
@@ -290,7 +290,7 @@ async fn delete_test() {
         .await
         .unwrap();
 
-    let deleted_query = query_context.delete(query.model_id).await.unwrap();
+    let deleted_query = query_context.delete(query.project_id).await.unwrap();
 
     let all_queries = query::Entity::find()
         .all(&query_context.db_context.get_connection())

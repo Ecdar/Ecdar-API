@@ -1,33 +1,33 @@
 use crate::database::access_context::AccessContextTrait;
 use crate::tests::database::helpers::{
-    create_accesses, create_models, create_users, get_reset_database_context,
+    create_accesses, create_projects, create_users, get_reset_database_context,
 };
 use crate::{
     database::{access_context::AccessContext, entity_context::EntityContextTrait},
-    entities::{access, model, user},
+    entities::{access, project, user},
     to_active_models,
 };
 use sea_orm::{entity::prelude::*, IntoActiveModel};
 
-async fn seed_db() -> (AccessContext, access::Model, user::Model, model::Model) {
+async fn seed_db() -> (AccessContext, access::Model, user::Model, project::Model) {
     let db_context = get_reset_database_context().await;
 
     let access_context = AccessContext::new(db_context);
 
     let user = create_users(1)[0].clone();
-    let model = create_models(1, user.id)[0].clone();
-    let access = create_accesses(1, user.id, model.id)[0].clone();
+    let project = create_projects(1, user.id)[0].clone();
+    let access = create_accesses(1, user.id, project.id)[0].clone();
 
     user::Entity::insert(user.clone().into_active_model())
         .exec(&access_context.db_context.get_connection())
         .await
         .unwrap();
-    model::Entity::insert(model.clone().into_active_model())
+    project::Entity::insert(project.clone().into_active_model())
         .exec(&access_context.db_context.get_connection())
         .await
         .unwrap();
 
-    (access_context, access, user, model)
+    (access_context, access, user, project)
 }
 
 // Test the functionality of the 'create' function, which creates a access in the database
@@ -49,7 +49,7 @@ async fn create_test() {
 }
 
 #[tokio::test]
-async fn create_check_unique_pair_model_id_user_id_test() {
+async fn create_check_unique_pair_project_id_user_id_test() {
     let (access_context, access, _, _) = seed_db().await;
 
     let _created_access_1 = access_context.create(access.clone()).await.unwrap();
@@ -77,13 +77,13 @@ async fn create_invalid_role_test() {
 
 #[tokio::test]
 async fn create_auto_increment_test() {
-    let (access_context, _, user, model_1) = seed_db().await;
+    let (access_context, _, user, project_1) = seed_db().await;
 
-    let mut model_2 = create_models(1, user.id)[0].clone();
-    model_2.id = model_1.id + 1;
-    model_2.name = "model_2".to_string();
+    let mut project_2 = create_projects(1, user.id)[0].clone();
+    project_2.id = project_1.id + 1;
+    project_2.name = "project_2".to_string();
 
-    model::Entity::insert(model_2.into_active_model())
+    project::Entity::insert(project_2.into_active_model())
         .exec(&access_context.db_context.get_connection())
         .await
         .unwrap();
@@ -91,14 +91,14 @@ async fn create_auto_increment_test() {
     let access_1 = access::Model {
         id: 0,
         role: "Editor".to_string(),
-        model_id: 1,
+        project_id: 1,
         user_id: user.id,
     };
 
     let access_2 = access::Model {
         id: 0,
         role: "Editor".to_string(),
-        model_id: 2,
+        project_id: 2,
         user_id: user.id,
     };
 
@@ -150,10 +150,10 @@ async fn get_by_non_existing_id_test() {
 
 #[tokio::test]
 async fn get_all_test() {
-    let (access_context, _, user, model) = seed_db().await;
+    let (access_context, _, user, project) = seed_db().await;
 
     // Creates a model of the access which will be created
-    let new_accesses = create_accesses(1, user.id, model.id);
+    let new_accesses = create_accesses(1, user.id, project.id);
 
     // Creates the access in the database using the 'create' function
     access::Entity::insert_many(to_active_models!(new_accesses.clone()))
@@ -247,7 +247,7 @@ async fn update_does_not_modify_id_test() {
 }
 
 #[tokio::test]
-async fn update_does_not_modify_model_id_test() {
+async fn update_does_not_modify_project_id_test() {
     let (access_context, access, _, _) = seed_db().await;
 
     access::Entity::insert(access.clone().into_active_model())
@@ -256,7 +256,7 @@ async fn update_does_not_modify_model_id_test() {
         .unwrap();
 
     let updated_access = access::Model {
-        model_id: &access.model_id + 1,
+        project_id: &access.project_id + 1,
         ..access.clone()
     };
     let res = access_context.update(updated_access.clone()).await.unwrap();
@@ -346,8 +346,8 @@ async fn delete_non_existing_id_test() {
 }
 
 #[tokio::test]
-async fn get_by_uid_and_model_id_test() {
-    let (access_context, expected_access, user, model) = seed_db().await;
+async fn get_by_uid_and_project_id_test() {
+    let (access_context, expected_access, user, project) = seed_db().await;
 
     access::Entity::insert(expected_access.clone().into_active_model())
         .exec(&access_context.db_context.get_connection())
@@ -355,8 +355,8 @@ async fn get_by_uid_and_model_id_test() {
         .unwrap();
 
     let access = access_context
-        .get_access_by_uid_and_model_id(user.id, model.id)
+        .get_access_by_uid_and_project_id(user.id, project.id)
         .await;
 
-    assert!(access.unwrap().unwrap() == expected_access);
+    assert_eq!(access.unwrap().unwrap(), expected_access);
 }
