@@ -78,16 +78,7 @@ mock! {
             &self,
             uid: i32,
             model_id: i32,
-        ) -> Result<Option<access::Model>, DbErr> {
-            access::Entity::find()
-                .filter(
-                    Condition::all()
-                        .add(access::Column::UserId.eq(uid))
-                        .add(access::Column::ModelId.eq(model_id)),
-                )
-                .one(&self.db_context.get_connection())
-                .await
-        }
+        ) -> Result<Option<access::Model>, DbErr>;
     }
 }
 
