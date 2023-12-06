@@ -4,7 +4,7 @@ use crate::{
         entity_context::EntityContextTrait,
         in_use_context::{DbErr, InUseContext},
     },
-    entities::{in_use, model, session, user},
+    entities::{in_use, project, session, user},
     to_active_models,
 };
 use chrono::{Duration, Utc};
@@ -16,7 +16,7 @@ async fn seed_db() -> (
     InUseContext,
     in_use::Model,
     session::Model,
-    model::Model,
+    project::Model,
     user::Model,
 ) {
     let db_context = get_reset_database_context().await;
@@ -24,15 +24,15 @@ async fn seed_db() -> (
     let in_use_context = InUseContext::new(db_context);
 
     let user = create_users(1)[0].clone();
-    let model = create_models(1, user.id)[0].clone();
+    let project = create_projects(1, user.id)[0].clone();
     let session = create_sessions(1, user.id)[0].clone();
-    let in_use = create_in_uses(1, model.id, session.id)[0].clone();
+    let in_use = create_in_uses(1, project.id, session.id)[0].clone();
 
     user::Entity::insert(user.clone().into_active_model())
         .exec(&in_use_context.db_context.get_connection())
         .await
         .unwrap();
-    model::Entity::insert(model.clone().into_active_model())
+    project::Entity::insert(project.clone().into_active_model())
         .exec(&in_use_context.db_context.get_connection())
         .await
         .unwrap();
@@ -41,7 +41,7 @@ async fn seed_db() -> (
         .await
         .unwrap();
 
-    (in_use_context, in_use, session, model, user)
+    (in_use_context, in_use, session, project, user)
 }
 
 #[tokio::test]
@@ -52,7 +52,7 @@ async fn create_test() {
 
     in_use.latest_activity = inserted_in_use.latest_activity;
 
-    let fetched_in_use = in_use::Entity::find_by_id(inserted_in_use.clone().model_id)
+    let fetched_in_use = in_use::Entity::find_by_id(inserted_in_use.clone().project_id)
         .one(&in_use_context.db_context.get_connection())
         .await
         .unwrap()
@@ -70,7 +70,7 @@ async fn create_default_latest_activity_test() {
 
     let inserted_in_use = in_use_context.create(in_use.clone()).await.unwrap();
 
-    let fetched_in_use = in_use::Entity::find_by_id(inserted_in_use.model_id)
+    let fetched_in_use = in_use::Entity::find_by_id(inserted_in_use.project_id)
         .one(&in_use_context.db_context.get_connection())
         .await
         .unwrap()
@@ -93,7 +93,7 @@ async fn get_by_id_test() {
         .unwrap();
 
     let fetched_in_use = in_use_context
-        .get_by_id(in_use.model_id)
+        .get_by_id(in_use.project_id)
         .await
         .unwrap()
         .unwrap();
@@ -112,9 +112,9 @@ async fn get_by_non_existing_id_test() {
 
 #[tokio::test]
 async fn get_all_test() {
-    let (in_use_context, _in_use, session, model, _user) = seed_db().await;
+    let (in_use_context, _in_use, session, project, _user) = seed_db().await;
 
-    let in_uses = create_in_uses(1, model.id, session.id);
+    let in_uses = create_in_uses(1, project.id, session.id);
 
     in_use::Entity::insert_many(to_active_models!(in_uses.clone()))
         .exec(&in_use_context.db_context.get_connection())
@@ -146,7 +146,7 @@ async fn update_test() {
 
     let updated_in_use = in_use_context.update(new_in_use.clone()).await.unwrap();
 
-    let fetched_in_use = in_use::Entity::find_by_id(updated_in_use.model_id)
+    let fetched_in_use = in_use::Entity::find_by_id(updated_in_use.project_id)
         .one(&in_use_context.db_context.get_connection())
         .await
         .unwrap()
@@ -207,7 +207,7 @@ async fn update_modifies_session_id_test() {
 }
 
 #[tokio::test]
-async fn update_does_not_modify_model_id_test() {
+async fn update_does_not_modify_project_id_test() {
     let (in_use_context, in_use, _, _, _) = seed_db().await;
 
     in_use::Entity::insert(in_use.clone().into_active_model())
@@ -216,7 +216,7 @@ async fn update_does_not_modify_model_id_test() {
         .unwrap();
 
     let updated_in_use = in_use::Model {
-        model_id: in_use.model_id + 1,
+        project_id: in_use.project_id + 1,
         ..in_use.clone()
     };
 
@@ -249,7 +249,7 @@ async fn delete_test() {
         .await
         .unwrap();
 
-    let deleted_in_use = in_use_context.delete(in_use.model_id).await.unwrap();
+    let deleted_in_use = in_use_context.delete(in_use.project_id).await.unwrap();
 
     let all_in_uses = in_use::Entity::find()
         .all(&in_use_context.db_context.get_connection())

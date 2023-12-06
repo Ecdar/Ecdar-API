@@ -5,7 +5,7 @@ use crate::api::server::server::query_response::{self, Result};
 use crate::api::server::server::{
     CreateQueryRequest, DeleteQueryRequest, QueryResponse, SendQueryRequest, UpdateQueryRequest,
 };
-use crate::entities::{access, model, query};
+use crate::entities::{access, project, query};
 use crate::tests::api::helpers::{get_mock_concrete_ecdar_api, get_mock_services};
 use mockall::predicate;
 use sea_orm::DbErr;
@@ -19,20 +19,20 @@ async fn create_invalid_query_returns_err() {
         id: Default::default(),
         string: "".to_string(),
         result: Default::default(),
-        model_id: 1,
+        project_id: 1,
         outdated: Default::default(),
     };
 
     let access = access::Model {
         id: Default::default(),
         role: "Editor".to_string(),
-        model_id: 1,
+        project_id: 1,
         user_id: 1,
     };
 
     mock_services
         .access_context_mock
-        .expect_get_access_by_uid_and_model_id()
+        .expect_get_access_by_uid_and_project_id()
         .with(predicate::eq(1), predicate::eq(1))
         .returning(move |_, _| Ok(Some(access.clone())));
 
@@ -44,7 +44,7 @@ async fn create_invalid_query_returns_err() {
 
     let mut request = Request::new(CreateQueryRequest {
         string: "".to_string(),
-        model_id: 1,
+        project_id: 1,
     });
 
     request
@@ -66,20 +66,20 @@ async fn create_query_returns_ok() {
         id: Default::default(),
         string: "".to_string(),
         result: Default::default(),
-        model_id: 1,
+        project_id: 1,
         outdated: Default::default(),
     };
 
     let access = access::Model {
         id: Default::default(),
         role: "Editor".to_string(),
-        model_id: 1,
+        project_id: 1,
         user_id: 1,
     };
 
     mock_services
         .access_context_mock
-        .expect_get_access_by_uid_and_model_id()
+        .expect_get_access_by_uid_and_project_id()
         .with(predicate::eq(1), predicate::eq(1))
         .returning(move |_, _| Ok(Some(access.clone())));
 
@@ -91,7 +91,7 @@ async fn create_query_returns_ok() {
 
     let mut request = Request::new(CreateQueryRequest {
         string: "".to_string(),
-        model_id: 1,
+        project_id: 1,
     });
 
     request
@@ -113,7 +113,7 @@ async fn update_invalid_query_returns_err() {
         id: 1,
         string: "".to_string(),
         result: None,
-        model_id: Default::default(),
+        project_id: Default::default(),
         outdated: true,
     };
 
@@ -125,7 +125,7 @@ async fn update_invalid_query_returns_err() {
     let access = access::Model {
         id: 1,
         role: "Editor".to_string(),
-        model_id: Default::default(),
+        project_id: Default::default(),
         user_id: 1,
     };
 
@@ -137,7 +137,7 @@ async fn update_invalid_query_returns_err() {
 
     mock_services
         .access_context_mock
-        .expect_get_access_by_uid_and_model_id()
+        .expect_get_access_by_uid_and_project_id()
         .with(predicate::eq(1), predicate::eq(0))
         .returning(move |_, _| Ok(Some(access.clone())));
 
@@ -171,7 +171,7 @@ async fn update_query_returns_ok() {
         id: 1,
         string: "".to_string(),
         result: None,
-        model_id: Default::default(),
+        project_id: Default::default(),
         outdated: true,
     };
 
@@ -183,13 +183,13 @@ async fn update_query_returns_ok() {
     let access = access::Model {
         id: Default::default(),
         role: "Editor".to_string(),
-        model_id: Default::default(),
+        project_id: Default::default(),
         user_id: 1,
     };
 
     mock_services
         .access_context_mock
-        .expect_get_access_by_uid_and_model_id()
+        .expect_get_access_by_uid_and_project_id()
         .with(predicate::eq(1), predicate::eq(0))
         .returning(move |_, _| Ok(Some(access.clone())));
 
@@ -228,7 +228,7 @@ async fn delete_invalid_query_returns_err() {
     let access = access::Model {
         id: Default::default(),
         role: "Editor".to_string(),
-        model_id: Default::default(),
+        project_id: Default::default(),
         user_id: 1,
     };
 
@@ -236,13 +236,13 @@ async fn delete_invalid_query_returns_err() {
         id: 1,
         string: "".to_string(),
         result: Default::default(),
-        model_id: Default::default(),
+        project_id: Default::default(),
         outdated: Default::default(),
     };
 
     mock_services
         .access_context_mock
-        .expect_get_access_by_uid_and_model_id()
+        .expect_get_access_by_uid_and_project_id()
         .with(predicate::eq(1), predicate::eq(0))
         .returning(move |_, _| Ok(Some(access.clone())));
 
@@ -279,7 +279,7 @@ async fn delete_query_returns_ok() {
         id: 1,
         string: "".to_string(),
         result: Default::default(),
-        model_id: Default::default(),
+        project_id: Default::default(),
         outdated: Default::default(),
     };
 
@@ -288,7 +288,7 @@ async fn delete_query_returns_ok() {
     let access = access::Model {
         id: Default::default(),
         role: "Editor".to_string(),
-        model_id: Default::default(),
+        project_id: Default::default(),
         user_id: 1,
     };
 
@@ -300,7 +300,7 @@ async fn delete_query_returns_ok() {
 
     mock_services
         .access_context_mock
-        .expect_get_access_by_uid_and_model_id()
+        .expect_get_access_by_uid_and_project_id()
         .with(predicate::eq(1), predicate::eq(0))
         .returning(move |_, _| Ok(Some(access.clone())));
 
@@ -331,20 +331,20 @@ async fn create_query_invalid_role_returns_err() {
         id: 1,
         string: "".to_string(),
         result: Default::default(),
-        model_id: Default::default(),
+        project_id: Default::default(),
         outdated: Default::default(),
     };
 
     let access = access::Model {
         id: Default::default(),
         role: "Viewer".to_string(),
-        model_id: Default::default(),
+        project_id: Default::default(),
         user_id: 1,
     };
 
     mock_services
         .access_context_mock
-        .expect_get_access_by_uid_and_model_id()
+        .expect_get_access_by_uid_and_project_id()
         .with(predicate::eq(1), predicate::eq(1))
         .returning(move |_, _| Ok(Some(access.clone())));
 
@@ -356,7 +356,7 @@ async fn create_query_invalid_role_returns_err() {
 
     let mut request = Request::new(CreateQueryRequest {
         string: "".to_string(),
-        model_id: 1,
+        project_id: 1,
     });
 
     request
@@ -378,7 +378,7 @@ async fn delete_query_invalid_role_returns_err() {
         id: 1,
         string: "".to_string(),
         result: Default::default(),
-        model_id: Default::default(),
+        project_id: Default::default(),
         outdated: Default::default(),
     };
 
@@ -387,7 +387,7 @@ async fn delete_query_invalid_role_returns_err() {
     let access = access::Model {
         id: Default::default(),
         role: "Viewer".to_string(),
-        model_id: Default::default(),
+        project_id: Default::default(),
         user_id: 1,
     };
 
@@ -399,7 +399,7 @@ async fn delete_query_invalid_role_returns_err() {
 
     mock_services
         .access_context_mock
-        .expect_get_access_by_uid_and_model_id()
+        .expect_get_access_by_uid_and_project_id()
         .with(predicate::eq(1), predicate::eq(0))
         .returning(move |_, _| Ok(Some(access.clone())));
 
@@ -430,7 +430,7 @@ async fn update_query_invalid_role_returns_err() {
         id: 1,
         string: "".to_string(),
         result: None,
-        model_id: Default::default(),
+        project_id: Default::default(),
         outdated: true,
     };
 
@@ -442,13 +442,13 @@ async fn update_query_invalid_role_returns_err() {
     let access = access::Model {
         id: Default::default(),
         role: "Viewer".to_string(),
-        model_id: Default::default(),
+        project_id: Default::default(),
         user_id: 1,
     };
 
     mock_services
         .access_context_mock
-        .expect_get_access_by_uid_and_model_id()
+        .expect_get_access_by_uid_and_project_id()
         .with(predicate::eq(1), predicate::eq(0))
         .returning(move |_, _| Ok(Some(access.clone())));
 
@@ -488,20 +488,20 @@ async fn send_query_returns_ok() {
         id: Default::default(),
         string: "".to_string(),
         result: Default::default(),
-        model_id: Default::default(),
+        project_id: Default::default(),
         outdated: Default::default(),
     };
 
     let access = access::Model {
         id: Default::default(),
         role: "Editor".to_string(),
-        model_id: Default::default(),
+        project_id: Default::default(),
         user_id: 1,
     };
 
-    let model = model::Model {
+    let project = project::Model {
         id: Default::default(),
-        name: "model".to_string(),
+        name: "project".to_string(),
         components_info: Default::default(),
         owner_id: 0,
     };
@@ -518,14 +518,14 @@ async fn send_query_returns_ok() {
     };
 
     mock_services
-        .model_context_mock
+        .project_context_mock
         .expect_get_by_id()
         .with(predicate::eq(0))
-        .returning(move |_| Ok(Some(model.clone())));
+        .returning(move |_| Ok(Some(project.clone())));
 
     mock_services
         .access_context_mock
-        .expect_get_access_by_uid_and_model_id()
+        .expect_get_access_by_uid_and_project_id()
         .with(predicate::eq(1), predicate::eq(0))
         .returning(move |_, _| Ok(Some(access.clone())));
 
@@ -548,7 +548,7 @@ async fn send_query_returns_ok() {
 
     let mut request = Request::new(SendQueryRequest {
         id: Default::default(),
-        model_id: Default::default(),
+        project_id: Default::default(),
     });
 
     request
