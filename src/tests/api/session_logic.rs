@@ -7,7 +7,7 @@ use mockall::predicate;
 use sea_orm::DbErr;
 use std::str::FromStr;
 use std::sync::Arc;
-use tonic::{metadata, Code, Request};
+use tonic::{metadata, Code, Request, Status};
 
 #[tokio::test]
 async fn handle_session_updated_session_contains_correct_fields_returns_ok() {
@@ -142,9 +142,12 @@ async fn delete_session_returns_ok() {
 
     mock_services
         .session_context_mock
-        .expect_delete()
-        .with(predicate::eq(1))
-        .returning(move |_| {
+        .expect_delete_by_token()
+        .with(
+            predicate::eq(TokenType::AccessToken),
+            predicate::eq("test_token".to_string()),
+        )
+        .returning(move |_, _| {
             Ok(session::Model {
                 id: 1,
                 refresh_token: Default::default(),
@@ -152,23 +155,6 @@ async fn delete_session_returns_ok() {
                 updated_at: Default::default(),
                 user_id: Default::default(),
             })
-        });
-
-    mock_services
-        .session_context_mock
-        .expect_get_by_token()
-        .with(
-            predicate::eq(TokenType::AccessToken),
-            predicate::eq("test_token".to_string()),
-        )
-        .returning(move |_, _| {
-            Ok(Some(session::Model {
-                id: 1,
-                refresh_token: Default::default(),
-                access_token: "test_token".to_string(),
-                updated_at: Default::default(),
-                user_id: Default::default(),
-            }))
         });
 
     let api = get_mock_concrete_ecdar_api(mock_services);
@@ -190,12 +176,16 @@ async fn delete_session_no_session_returns_err() {
 
     mock_services
         .session_context_mock
-        .expect_get_by_token()
+        .expect_delete_by_token()
         .with(
             predicate::eq(TokenType::AccessToken),
             predicate::eq("test_token".to_string()),
         )
-        .returning(move |_, _| Ok(None));
+        .returning(move |_, _| {
+            Err(DbErr::RecordNotFound(
+                "No session found with the provided access token".to_string(),
+            ))
+        });
 
     let api = get_mock_concrete_ecdar_api(mock_services);
 
@@ -207,5 +197,5 @@ async fn delete_session_no_session_returns_err() {
 
     let res = api.delete_session(request).await;
 
-    assert_eq!(res.unwrap_err().code(), Code::Unauthenticated);
+    assert_eq!(res.unwrap_err().code(), Code::Internal);
 }

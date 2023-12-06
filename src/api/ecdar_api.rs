@@ -844,20 +844,12 @@ impl EcdarApi for ConcreteEcdarApi {
             .token_string()
             .ok_or(Status::unauthenticated("No access token provided"))?;
 
-        let session = self
+        match self
             .contexts
             .session_context
-            .get_by_token(TokenType::AccessToken, access_token)
+            .delete_by_token(TokenType::AccessToken, access_token)
             .await
-            .map_err(|err| Status::new(Code::Internal, err.to_string()))?
-            .ok_or_else(|| {
-                Status::new(
-                    Code::Unauthenticated,
-                    "No session found with given access token",
-                )
-            })?;
-
-        match self.contexts.session_context.delete(session.id).await {
+        {
             Ok(_) => Ok(Response::new(())),
             Err(error) => Err(Status::new(Code::Internal, error.to_string())),
         }
