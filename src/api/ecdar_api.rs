@@ -835,6 +835,36 @@ impl EcdarApi for ConcreteEcdarApi {
             response: Some(query_result.into_inner()),
         }))
     }
+
+    /// Deletes the requester's session, found by their access token.
+    ///  
+    /// Returns the response that is received from Reveaal.
+    async fn delete_session(
+        &self,
+        _request: Request<()>,
+    ) -> Result<Response<()>, Status> {
+        let access_token = _request
+            .token_string()
+            .ok_or(Status::unauthenticated("No access token provided"))?;
+        
+        let session = self
+            .contexts
+            .session_context
+            .get_by_token(TokenType::AccessToken, access_token)
+            .await
+            .map_err(|err| Status::new(Code::Internal, err.to_string()))?
+            .ok_or_else(|| {
+                Status::new(
+                    Code::Unauthenticated,
+                    "No session found with given access token",
+                )
+            })?;
+            
+        match self.contexts.session_context.delete(session.id).await {
+            Ok(_) => Ok(Response::new(())),
+            Err(error) => Err(Status::new(Code::Internal, error.to_string())),   
+        }
+    }
 }
 
 async fn get_auth_find_user_helper(
