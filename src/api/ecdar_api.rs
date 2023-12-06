@@ -14,7 +14,7 @@ use super::server::server::{
 use crate::api::context_collection::ContextCollection;
 use crate::api::{
     auth::{RequestExt, Token, TokenType},
-    server::server::Model,
+    server::server::Project,
 };
 use crate::database::{session_context::SessionContextTrait, user_context::UserContextTrait};
 use crate::entities::{access, in_use, project, query, session, user};
@@ -140,7 +140,7 @@ impl EcdarApi for ConcreteEcdarApi {
             .map_err(|err| Status::new(Code::Internal, err.to_string()))?
             .ok_or_else(|| Status::new(Code::Internal, "Model not found"))?;
 
-        let project = Model {
+        let project = Project {
             id: project.id,
             name: project.name,
             components_info: serde_json::from_value(project.components_info).unwrap(),
@@ -457,7 +457,7 @@ impl EcdarApi for ConcreteEcdarApi {
     async fn list_projects_info(
         &self,
         request: Request<()>,
-    ) -> Result<Response<ListModelInfoResponse>, Status> {
+    ) -> Result<Response<ListProjectsInfoResponse>, Status> {
         let uid = request
             .uid()
             .ok_or(Status::internal("Could not get uid from request metadata"))?;
@@ -1040,8 +1040,8 @@ mod query_logic_tests;
 mod access_logic_tests;
 
 #[cfg(test)]
-#[path = "../tests/api/model_logic.rs"]
-mod model_logic_tests;
+#[path = "../tests/api/project_logic.rs"]
+mod project_logic_tests;
 
 #[cfg(test)]
 #[path = "../tests/api/user_logic.rs"]

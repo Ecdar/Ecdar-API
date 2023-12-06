@@ -1,7 +1,7 @@
 use crate::database::database_context::DatabaseContextTrait;
 use crate::entities::{access, project, query};
 
-use crate::api::server::server::ModelInfo;
+use crate::api::server::server::ProjectInfo;
 use crate::EntityContextTrait;
 use async_trait::async_trait;
 use sea_orm::{
@@ -16,12 +16,12 @@ pub struct ProjectContext {
 
 #[async_trait]
 pub trait ProjectContextTrait: EntityContextTrait<project::Model> {
-    async fn get_project_info_by_uid(&self, uid: i32) -> Result<Vec<ModelInfo>, DbErr>;
+    async fn get_project_info_by_uid(&self, uid: i32) -> Result<Vec<ProjectInfo>, DbErr>;
 }
 
 #[async_trait]
 impl ProjectContextTrait for ProjectContext {
-    async fn get_project_info_by_uid(&self, uid: i32) -> Result<Vec<ModelInfo>, DbErr> {
+    async fn get_project_info_by_uid(&self, uid: i32) -> Result<Vec<ProjectInfo>, DbErr> {
         //join project, access and role tables
         access::Entity::find()
             .select_only()
@@ -34,7 +34,7 @@ impl ProjectContextTrait for ProjectContext {
             .group_by(project::Column::Id)
             .group_by(access::Column::Role)
             .filter(access::Column::UserId.eq(uid))
-            .into_project::<ModelInfo>()
+            .into_model::<ProjectInfo>()
             .all(&self.db_context.get_connection())
             .await
     }
@@ -117,7 +117,7 @@ impl EntityContextTrait<project::Model> for ProjectContext {
                     .all(&self.db_context.get_connection())
                     .await?;
                 for q in queries.iter() {
-                    let mut aq = q.clone().into_active_project();
+                    let mut aq = q.clone().into_active_model();
                     aq.outdated = Set(true);
                     aq.update(&self.db_context.get_connection()).await?;
                 }
