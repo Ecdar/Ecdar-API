@@ -1,4 +1,4 @@
-use crate::api::server::server::GetAuthTokenRequest;
+use crate::api::server::protobuf::GetAuthTokenRequest;
 use crate::api::{auth::TokenType, ecdar_api::handle_session};
 use crate::entities::session;
 use crate::tests::api::helpers::get_mock_services;

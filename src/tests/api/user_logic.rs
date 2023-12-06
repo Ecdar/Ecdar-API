@@ -1,6 +1,6 @@
-use crate::api::server::server::ecdar_api_auth_server::EcdarApiAuth;
-use crate::api::server::server::ecdar_api_server::EcdarApi;
-use crate::api::server::server::{CreateUserRequest, UpdateUserRequest};
+use crate::api::server::protobuf::ecdar_api_auth_server::EcdarApiAuth;
+use crate::api::server::protobuf::ecdar_api_server::EcdarApi;
+use crate::api::server::protobuf::{CreateUserRequest, UpdateUserRequest};
 use crate::entities::user;
 use crate::tests::api::helpers::{get_mock_concrete_ecdar_api, get_mock_services};
 use mockall::predicate;

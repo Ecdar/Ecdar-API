@@ -1,7 +1,7 @@
 use crate::{
     api::{
         auth::TokenType,
-        server::server::{
+        server::protobuf::{
             component::Rep, ecdar_api_server::EcdarApi, Component, ComponentsInfo,
             CreateModelRequest, DeleteModelRequest, GetModelRequest, ModelInfo, UpdateModelRequest,
         },

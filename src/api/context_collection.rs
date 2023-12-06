@@ -1,5 +1,5 @@
 use crate::api::hashing_context::HashingContextTrait;
-use crate::api::server::server::ecdar_backend_server::EcdarBackend;
+use crate::api::server::protobuf::ecdar_backend_server::EcdarBackend;
 use crate::database::access_context::AccessContextTrait;
 use crate::database::in_use_context::InUseContextTrait;
 use crate::database::model_context::ModelContextTrait;

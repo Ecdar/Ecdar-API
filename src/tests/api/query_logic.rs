@@ -1,5 +1,5 @@
-use crate::api::server::server::ecdar_api_server::EcdarApi;
-use crate::api::server::server::{CreateQueryRequest, DeleteQueryRequest, UpdateQueryRequest};
+use crate::api::server::protobuf::ecdar_api_server::EcdarApi;
+use crate::api::server::protobuf::{CreateQueryRequest, DeleteQueryRequest, UpdateQueryRequest};
 use crate::entities::query;
 use crate::tests::api::helpers::{get_mock_concrete_ecdar_api, get_mock_services};
 use mockall::predicate;

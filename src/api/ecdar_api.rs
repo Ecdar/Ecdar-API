@@ -1,4 +1,4 @@
-use super::server::server::{
+use super::server::protobuf::{
     ecdar_api_auth_server::EcdarApiAuth,
     ecdar_api_server::EcdarApi,
     ecdar_backend_server::EcdarBackend,
@@ -13,7 +13,7 @@ use super::server::server::{
 use crate::api::context_collection::ContextCollection;
 use crate::api::{
     auth::{RequestExt, Token, TokenType},
-    server::server::Model,
+    server::protobuf::Model,
 };
 use crate::database::{session_context::SessionContextTrait, user_context::UserContextTrait};
 use crate::entities::{access, in_use, model, query, session, user};

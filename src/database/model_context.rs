@@ -1,7 +1,7 @@
 use crate::database::database_context::DatabaseContextTrait;
 use crate::entities::{access, model, query};
 
-use crate::api::server::server::ModelInfo;
+use crate::api::server::protobuf::ModelInfo;
 use crate::EntityContextTrait;
 use async_trait::async_trait;
 use sea_orm::{

@@ -5,11 +5,11 @@ use tonic::transport::Server;
 use crate::api::auth;
 use crate::api::context_collection::ContextCollection;
 use crate::api::ecdar_api::ConcreteEcdarApi;
-use crate::api::server::server::ecdar_api_auth_server::EcdarApiAuthServer;
-use crate::api::server::server::ecdar_api_server::EcdarApiServer;
-use crate::api::server::server::ecdar_backend_server::EcdarBackendServer;
+use crate::api::server::protobuf::ecdar_api_auth_server::EcdarApiAuthServer;
+use crate::api::server::protobuf::ecdar_api_server::EcdarApiServer;
+use crate::api::server::protobuf::ecdar_backend_server::EcdarBackendServer;
 
-pub mod server {
+pub mod protobuf {
     tonic::include_proto!("ecdar_proto_buf");
 }
 
