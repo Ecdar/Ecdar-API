@@ -22,22 +22,6 @@ pub trait ModelContextTrait: EntityContextTrait<model::Model> {
 #[async_trait]
 impl ModelContextTrait for ModelContext {
     async fn get_models_info_by_uid(&self, uid: i32) -> Result<Vec<ModelInfo>, DbErr> {
-        /*let querytest = access::Entity::find()
-        .select_only()
-        .column_as(model::Column::Id, "model_id")
-        .column_as(model::Column::Name, "model_name")
-        .column_as(model::Column::OwnerId, "model_owner_id")
-        .column_as(access::Column::Role, "user_role_on_model")
-        .join(JoinType::InnerJoin, access::Relation::Model.def())
-        .join(JoinType::InnerJoin, access::Relation::Role.def())
-        .group_by(model::Column::Id)
-        .group_by(access::Column::Role)
-        .filter(access::Column::UserId.eq(uid))
-        .build(DbBackend::Postgres)
-        .to_string();
-
-        println!("SQL Query: {}", querytest);*/
-
         //join model, access and role tables
         access::Entity::find()
             .select_only()

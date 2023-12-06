@@ -273,11 +273,125 @@ impl EcdarApi for ConcreteEcdarApi {
         Ok(Response::new(CreateModelResponse { id: model.id }))
     }
 
+    /// Updates a Model in the database given its id.
+    ///
+    /// # Errors
+    /// This function will return an error if the model does not exist in the database
+    /// or if the user does not have access to the model with role 'Editor'.
     async fn update_model(
         &self,
-        _request: Request<UpdateModelRequest>,
+        request: Request<UpdateModelRequest>,
     ) -> Result<Response<()>, Status> {
-        todo!()
+        let message = request.get_ref().clone();
+        let uid = request
+            .uid()
+            .ok_or(Status::internal("Could not get uid from request metadata"))?;
+
+        // Check if the model exists
+        let model = match self.contexts.model_context.get_by_id(message.id).await {
+            Ok(Some(model)) => model,
+            Ok(None) => return Err(Status::not_found("No model found with given id")),
+            Err(error) => return Err(Status::internal(error.to_string())),
+        };
+
+        // Check if the user has access to the model
+        match self
+            .contexts
+            .access_context
+            .get_access_by_uid_and_model_id(uid, model.id)
+            .await
+        {
+            Ok(access) => {
+                let mut is_editor = false;
+                let access = match access {
+                    Some(access) => {
+                        is_editor = access.role == "Editor";
+                        Some(access)
+                    }
+                    None => None,
+                };
+
+                if !is_editor || access.is_none() {
+                    return Err(Status::permission_denied(
+                        "You do not have permission to update this model",
+                    ));
+                }
+            }
+            Err(error) => return Err(Status::internal(error.to_string())),
+        };
+
+        // Get user session
+        let session = match self
+            .contexts
+            .session_context
+            .get_by_token(TokenType::AccessToken, request.token_string().unwrap())
+            .await
+        {
+            Ok(Some(session)) => session,
+            Ok(None) => {
+                return Err(Status::unauthenticated(
+                    "No session found with given access token",
+                ))
+            }
+            Err(error) => return Err(Status::internal(error.to_string())),
+        };
+
+        // Get in_use for model
+        match self.contexts.in_use_context.get_by_id(model.id).await {
+            Ok(Some(in_use)) => {
+                // Check if in_use latest activity is older than the max allowed
+                if in_use.latest_activity
+                    > (Utc::now().naive_utc() - Duration::minutes(IN_USE_DURATION_MINUTES))
+                    && in_use.session_id != session.id
+                {
+                    return Err(Status::failed_precondition(
+                        "Model is currently in use by another session",
+                    ));
+                }
+
+                let new_in_use = in_use::Model {
+                    model_id: in_use.model_id,
+                    session_id: session.id,
+                    latest_activity: Utc::now().naive_utc(),
+                };
+
+                match self.contexts.in_use_context.update(new_in_use).await {
+                    Ok(_) => (),
+                    Err(error) => return Err(Status::internal(error.to_string())),
+                }
+            }
+            Ok(None) => return Err(Status::internal("No in_use found for model")),
+            Err(error) => return Err(Status::internal(error.to_string())),
+        };
+
+        let new_model = model::Model {
+            id: model.id,
+            name: match message.clone().name {
+                Some(name) => name,
+                None => model.name,
+            },
+            components_info: match message.clone().components_info {
+                Some(components_info) => serde_json::to_value(components_info).unwrap(),
+                None => model.components_info,
+            },
+            owner_id: match message.clone().owner_id {
+                Some(new_owner_id) => {
+                    if model.owner_id == uid {
+                        new_owner_id
+                    } else {
+                        return Err(Status::permission_denied(
+                            "You do not have permission to change the owner of this model",
+                        ));
+                    }
+                }
+                None => model.owner_id,
+            },
+        };
+
+        match self.contexts.model_context.update(new_model).await {
+            Ok(_) => Ok(Response::new(())),
+            Err(error) => Err(Status::new(Code::Internal, error.to_string())),
+        }
     }
 
     /// Deletes a Model from the database.
