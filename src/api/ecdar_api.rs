@@ -35,56 +35,6 @@ pub struct ConcreteEcdarApi {
     contexts: ContextCollection,
 }
 
-/// Updates the session given by refresh token in the database.
-/// Returns the new access and refresh token.
-pub async fn update_session(
-    session_context: Arc<dyn SessionContextTrait>,
-    refresh_token: String,
-) -> Result<(Token, Token), Status> {
-    let session = match session_context
-        .get_by_token(TokenType::RefreshToken, refresh_token)
-        .await
-    {
-        Ok(Some(session)) => session,
-        Ok(None) => {
-            return Err(Status::unauthenticated(
-                "No session found with given refresh token",
-            ));
-        }
-        Err(err) => return Err(Status::internal(err.to_string())),
-    };
-
-    let uid = session.user_id.to_string();
-
-    let access_token = Token::access(&uid)?;
-    let refresh_token = Token::refresh(&uid)?;
-
-    session_context
-        .update(session::Model {
-            id: session.id,
-            access_token: access_token.to_string(),
-            refresh_token: refresh_token.to_string(),
-            updated_at: Default::default(),
-            user_id: session.user_id,
-        })
-        .await
-        .unwrap();
-
-    Ok((access_token, refresh_token))
-}
-
-fn is_valid_email(email: &str) -> bool {
-    Regex::new(r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$")
-        .unwrap()
-        .is_match(email)
-}
-
-fn is_valid_username(username: &str) -> bool {
-    Regex::new(r"^[a-zA-Z0-9_]{3,32}$")
-        .unwrap()
-        .is_match(username)
-}
-
 impl ConcreteEcdarApi {
     pub fn new(contexts: ContextCollection) -> Self {
         ConcreteEcdarApi { contexts }
@@ -865,6 +815,57 @@ async fn user_from_user_credentials(
     }
 }
 
+/// Updates the session given by refresh token in the database.
+/// Returns the new access and refresh token.
+pub async fn update_session(
+    session_context: Arc<dyn SessionContextTrait>,
+    refresh_token: String,
+) -> Result<(Token, Token), Status> {
+    let session = match session_context
+        .get_by_token(TokenType::RefreshToken, refresh_token)
+        .await
+    {
+        Ok(Some(session)) => session,
+        Ok(None) => {
+            return Err(Status::unauthenticated(
+                "No session found with given refresh token",
+            ));
+        }
+        Err(err) => return Err(Status::internal(err.to_string())),
+    };
+
+    let uid = session.user_id.to_string();
+
+    let access_token = Token::access(&uid)?;
+    let refresh_token = Token::refresh(&uid)?;
+
+    session_context
+        .update(session::Model {
+            id: session.id,
+            access_token: access_token.to_string(),
+            refresh_token: refresh_token.to_string(),
+            updated_at: Default::default(),
+            user_id: session.user_id,
+        })
+        .await
+        .unwrap();
+
+    Ok((access_token, refresh_token))
+}
+
+fn is_valid_email(email: &str) -> bool {
+    Regex::new(r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$")
+        .unwrap()
+        .is_match(email)
+}
+
+fn is_valid_username(username: &str) -> bool {
+    Regex::new(r"^[a-zA-Z0-9_]{3,32}$")
+        .unwrap()
+        .is_match(username)
+}
+
+
 #[tonic::async_trait]
 impl EcdarApiAuth for ConcreteEcdarApi {
     /// This method is used to get a new access and refresh token for a user.
@@ -908,7 +909,7 @@ impl EcdarApiAuth for ConcreteEcdarApi {
                     self.contexts.session_context.clone(),
                     refresh_token.to_string(),
                 )
-                .await?
+                    .await?
             }
             Some(user_credentials) => {
                 let input_password = user_credentials.password.clone();
@@ -916,9 +917,9 @@ impl EcdarApiAuth for ConcreteEcdarApi {
                     self.contexts.user_context.clone(),
                     user_credentials,
                 )
-                .await
-                .map_err(|err| Status::internal(err.to_string()))?
-                .ok_or_else(|| Status::unauthenticated("Wrong username or password"))?;
+                    .await
+                    .map_err(|err| Status::internal(err.to_string()))?
+                    .ok_or_else(|| Status::unauthenticated("Wrong username or password"))?;
 
                 // Check if password in request matches users password
                 if !self
