@@ -47,7 +47,7 @@ impl EntityContextTrait<in_use::Model> for InUseContext {
     async fn update(&self, entity: in_use::Model) -> Result<in_use::Model, DbErr> {
         in_use::ActiveModel {
             model_id: Unchanged(entity.model_id),
-            session_id: Unchanged(entity.session_id),
+            session_id: Set(entity.session_id),
             latest_activity: Set(entity.latest_activity),
         }
         .update(&self.db_context.get_connection())

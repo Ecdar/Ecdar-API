@@ -177,6 +177,36 @@ async fn update_modifies_latest_activity_test() {
 }
 
 #[tokio::test]
+async fn update_modifies_session_id_test() {
+    let (in_use_context, in_use, _, _, _) = seed_db().await;
+
+    in_use::Entity::insert(in_use.clone().into_active_model())
+        .exec(&in_use_context.db_context.get_connection())
+        .await
+        .unwrap();
+
+    let mut session2 = create_sessions(1, in_use.session_id)[0].clone();
+    session2.id = in_use.session_id + 1;
+    session2.refresh_token = "new_refresh_token".to_string();
+    session2.access_token = "new_access_token".to_string();
+
+    session::Entity::insert(session2.clone().into_active_model())
+        .exec(&in_use_context.db_context.get_connection())
+        .await
+        .unwrap();
+
+    let new_in_use = in_use::Model {
+        session_id: in_use.session_id + 1,
+        ..in_use
+    };
+
+    let updated_in_use = in_use_context.update(new_in_use.clone()).await.unwrap();
+
+    assert_ne!(in_use, updated_in_use);
+    assert_ne!(in_use, new_in_use);
+}
+
+#[tokio::test]
 async fn update_does_not_modify_model_id_test() {
     let (in_use_context, in_use, _, _, _) = seed_db().await;
 
@@ -196,24 +226,6 @@ async fn update_does_not_modify_model_id_test() {
         updated_in_use.unwrap_err(),
         DbErr::RecordNotUpdated
     ));
-}
-
-#[tokio::test]
-async fn update_does_not_modify_session_id_test() {
-    let (in_use_context, in_use, _, _, _) = seed_db().await;
-
-    in_use::Entity::insert(in_use.clone().into_active_model())
-        .exec(&in_use_context.db_context.get_connection())
-        .await
-        .unwrap();
-
-    let updated_in_use = in_use::Model {
-        session_id: in_use.session_id + 1,
-        ..in_use.clone()
-    };
-
-    let updated_in_use = in_use_context.update(updated_in_use.clone()).await.unwrap();
-    assert_eq!(in_use, updated_in_use);
 }
 
 #[tokio::test]
