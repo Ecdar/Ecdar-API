@@ -816,7 +816,7 @@ async fn user_from_user_credentials(
 }
 
 /// Updates the session given by refresh token in the database.
-/// Returns the new access and refresh token.
+/// Returns the new access and refresh token i.e. a tuple `(Token, Token)` where the 0th element is the access token and the 1st element refresh token.
 pub async fn update_session(
     session_context: Arc<dyn SessionContextTrait>,
     refresh_token: String,
@@ -853,12 +853,14 @@ pub async fn update_session(
     Ok((access_token, refresh_token))
 }
 
+/// Returns true if the given email is a valid format.
 fn is_valid_email(email: &str) -> bool {
     Regex::new(r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$")
         .unwrap()
         .is_match(email)
 }
 
+/// Returns true if the given username is a valid format, i.e. only contains letters and numbers and a length from 3 to 32.
 fn is_valid_username(username: &str) -> bool {
     Regex::new(r"^[a-zA-Z0-9_]{3,32}$")
         .unwrap()
