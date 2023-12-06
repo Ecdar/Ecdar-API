@@ -122,7 +122,7 @@ impl EcdarApi for ConcreteEcdarApi {
         let access = self
             .contexts
             .access_context
-            .get_access_by_uid_and_model_id(uid, model_id)
+            .get_access_by_uid_and_project_id(uid, model_id)
             .await
             .map_err(|err| Status::new(Code::Internal, err.to_string()))?
             .ok_or_else(|| {
@@ -188,7 +188,7 @@ impl EcdarApi for ConcreteEcdarApi {
         let queries = self
             .contexts
             .query_context
-            .get_all_by_model_id(model_id)
+            .get_all_by_project_id(model_id)
             .await
             .map_err(|err| Status::new(Code::Internal, err.to_string()))?;
 
@@ -311,7 +311,7 @@ impl EcdarApi for ConcreteEcdarApi {
         match self
             .contexts
             .access_context
-            .get_access_by_uid_and_model_id(uid, model.id)
+            .get_access_by_uid_and_project_id(uid, model.id)
             .await
         {
             Ok(access) => {
@@ -457,7 +457,7 @@ impl EcdarApi for ConcreteEcdarApi {
         match self
             .contexts
             .model_context
-            .get_models_info_by_uid(uid)
+            .get_project_info_by_uid(uid)
             .await
         {
             Ok(model_info_list) => {
@@ -633,7 +633,7 @@ impl EcdarApi for ConcreteEcdarApi {
         let access = self
             .contexts
             .access_context
-            .get_access_by_uid_and_model_id(request.uid().unwrap(), query_request.model_id)
+            .get_access_by_uid_and_project_id(request.uid().unwrap(), query_request.model_id)
             .await
             .map_err(|err| Status::new(Code::Internal, err.to_string()))?
             .ok_or_else(|| {
@@ -687,7 +687,7 @@ impl EcdarApi for ConcreteEcdarApi {
         let access = self
             .contexts
             .access_context
-            .get_access_by_uid_and_model_id(request.uid().unwrap(), old_query.model_id)
+            .get_access_by_uid_and_project_id(request.uid().unwrap(), old_query.model_id)
             .await
             .map_err(|err| Status::new(Code::Internal, err.to_string()))?
             .ok_or_else(|| {
@@ -735,7 +735,7 @@ impl EcdarApi for ConcreteEcdarApi {
         let access = self
             .contexts
             .access_context
-            .get_access_by_uid_and_model_id(request.uid().unwrap(), query.model_id)
+            .get_access_by_uid_and_project_id(request.uid().unwrap(), query.model_id)
             .await
             .map_err(|err| Status::new(Code::Internal, err.to_string()))?
             .ok_or_else(|| {
@@ -775,7 +775,7 @@ impl EcdarApi for ConcreteEcdarApi {
         // Verify user access
         self.contexts
             .access_context
-            .get_access_by_uid_and_model_id(uid, message.model_id)
+            .get_access_by_uid_and_project_id(uid, message.model_id)
             .await
             .map_err(|err| Status::new(Code::Internal, err.to_string()))?
             .ok_or_else(|| {

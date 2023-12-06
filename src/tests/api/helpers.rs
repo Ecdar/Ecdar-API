@@ -13,7 +13,7 @@ use crate::api::server::server::{
 use crate::database::access_context::AccessContextTrait;
 use crate::database::entity_context::EntityContextTrait;
 use crate::database::in_use_context::InUseContextTrait;
-use crate::database::model_context::ModelContextTrait;
+use crate::database::project_context::ProjectContextTrait;
 use crate::database::query_context::QueryContextTrait;
 use crate::database::session_context::SessionContextTrait;
 use crate::database::user_context::UserContextTrait;
@@ -74,7 +74,7 @@ mock! {
     }
     #[async_trait]
     impl AccessContextTrait for AccessContext {
-        async fn get_access_by_uid_and_model_id(
+        async fn get_access_by_uid_and_project_id(
             &self,
             uid: i32,
             model_id: i32,
@@ -107,8 +107,8 @@ mock! {
         async fn delete(&self, entity_id: i32) -> Result<model::Model, DbErr>;
     }
     #[async_trait]
-    impl ModelContextTrait for ModelContext {
-        async fn get_models_info_by_uid(&self, uid: i32) -> Result<Vec<ModelInfo>, DbErr>;
+    impl ProjectContextTrait for ModelContext {
+        async fn get_project_info_by_uid(&self, uid: i32) -> Result<Vec<ModelInfo>, DbErr>;
     }
 }
 
@@ -124,7 +124,7 @@ mock! {
     }
     #[async_trait]
     impl QueryContextTrait for QueryContext {
-        async fn get_all_by_model_id(&self, model_id: i32) -> Result<Vec<query::Model>, DbErr> {
+        async fn get_all_by_project_id(&self, model_id: i32) -> Result<Vec<query::Model>, DbErr> {
             query::Entity::find()
                 .filter(query::Column::ModelId.eq(model_id))
                 .all(&self.db_context.get_connection())

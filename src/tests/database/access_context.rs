@@ -355,7 +355,7 @@ async fn get_by_uid_and_model_id_test() {
         .unwrap();
 
     let access = access_context
-        .get_access_by_uid_and_model_id(user.id, model.id)
+        .get_access_by_uid_and_project_id(user.id, model.id)
         .await;
 
     assert!(access.unwrap().unwrap() == expected_access);

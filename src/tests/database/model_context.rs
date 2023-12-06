@@ -1,6 +1,6 @@
 use crate::tests::database::helpers::*;
 use crate::{
-    database::{entity_context::EntityContextTrait, model_context::ModelContext},
+    database::{entity_context::EntityContextTrait, project_context::ProjectContext},
     entities::{access, in_use, model, query, session, user},
     to_active_models,
 };
@@ -8,10 +8,10 @@ use sea_orm::error::DbErr;
 use sea_orm::{entity::prelude::*, IntoActiveModel};
 use std::matches;
 
-async fn seed_db() -> (ModelContext, model::Model, user::Model) {
+async fn seed_db() -> (ProjectContext, model::Model, user::Model) {
     let db_context = get_reset_database_context().await;
 
-    let model_context = ModelContext::new(db_context);
+    let model_context = ProjectContext::new(db_context);
 
     let user = create_users(1)[0].clone();
     let model = create_models(1, user.id)[0].clone();

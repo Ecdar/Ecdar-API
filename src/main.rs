@@ -9,7 +9,7 @@ use crate::api::reveaal_context::ReveaalContext;
 use crate::database::access_context::AccessContext;
 use crate::database::database_context::{PostgresDatabaseContext, SQLiteDatabaseContext};
 use crate::database::in_use_context::InUseContext;
-use crate::database::model_context::ModelContext;
+use crate::database::project_context::ProjectContext;
 use crate::database::query_context::QueryContext;
 use crate::database::session_context::SessionContext;
 use crate::database::user_context::UserContext;
@@ -37,7 +37,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let contexts = ContextCollection {
         access_context: Arc::new(AccessContext::new(db_context.clone())),
         in_use_context: Arc::new(InUseContext::new(db_context.clone())),
-        model_context: Arc::new(ModelContext::new(db_context.clone())),
+        model_context: Arc::new(ProjectContext::new(db_context.clone())),
         query_context: Arc::new(QueryContext::new(db_context.clone())),
         session_context: Arc::new(SessionContext::new(db_context.clone())),
         user_context: Arc::new(UserContext::new(db_context.clone())),
