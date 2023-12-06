@@ -231,38 +231,35 @@ impl Display for Token {
 #[derive(Debug, PartialEq, thiserror::Error)]
 pub enum TokenError {
     #[error("Invalid token")]
-    #[from(jsonwebtoken::errors::ErrorKind::InvalidToken)]
     InvalidToken,
     #[error("Invalid signature")]
-    #[from(jsonwebtoken::errors::ErrorKind::InvalidSignature)]
     InvalidSignature,
     #[error("Expired signature")]
-    #[from(jsonwebtoken::errors::ErrorKind::ExpiredSignature)]
     ExpiredSignature,
     #[error("{0}")]
-    Custom(String),
+    Unknown(String),
 }
 
-// This is used to convert the jsonwebtoken error kind to a [TokenError].
+/// This is used to convert a [jsonwebtoken::errors::ErrorKind] to a [TokenError].
 impl From<jsonwebtoken::errors::ErrorKind> for TokenError {
-    fn from(error: jsonwebtoken::errors::ErrorKind) -> Self {
-        match error {
+    fn from(error_kind: jsonwebtoken::errors::ErrorKind) -> Self {
+        match error_kind {
             jsonwebtoken::errors::ErrorKind::InvalidToken => TokenError::InvalidToken,
             jsonwebtoken::errors::ErrorKind::InvalidSignature => TokenError::InvalidSignature,
             jsonwebtoken::errors::ErrorKind::ExpiredSignature => TokenError::ExpiredSignature,
-            _ => TokenError::Custom("Failed to validate token".to_string()),
+            _ => TokenError::Unknown("Unknown token error".to_string()),
         }
     }
 }
 
-/// This is used to convert the jsonwebtoken error to a [TokenError].
+/// This is used to convert a [jsonwebtoken::errors::Error] to a [TokenError].
 impl From<jsonwebtoken::errors::Error> for TokenError {
     fn from(error: jsonwebtoken::errors::Error) -> Self {
         TokenError::from(error.kind().clone())
     }
 }
 
-/// This is used to convert the [TokenError] to a [Status].
+/// This is used to convert a [TokenError] to a [Status].
 impl From<TokenError> for Status {
     fn from(error: TokenError) -> Self {
         Status::unauthenticated(error.to_string())

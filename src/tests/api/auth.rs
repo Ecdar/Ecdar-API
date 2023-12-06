@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod auth {
-    use crate::api::auth::{RequestExt, Token, TokenType};
+    use crate::api::auth::{RequestExt, Token, TokenError, TokenType};
     use std::{env, str::FromStr};
     use tonic::{metadata::MetadataValue, Request};
 
@@ -73,7 +73,8 @@ mod auth {
         let result_access = Token::from_str(TokenType::AccessToken, "invalid_token").validate();
         let result_refresh = Token::from_str(TokenType::RefreshToken, "invalid_token").validate();
 
-        assert!(result_access.is_err() && result_refresh.is_err());
+        assert_eq!(result_access.unwrap_err(), TokenError::InvalidToken);
+        assert_eq!(result_refresh.unwrap_err(), TokenError::InvalidToken);
     }
 
     #[tokio::test]
