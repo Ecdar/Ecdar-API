@@ -7,7 +7,7 @@ use mockall::predicate;
 use sea_orm::DbErr;
 use std::str::FromStr;
 use std::sync::Arc;
-use tonic::{metadata, Code, Request, Status};
+use tonic::{metadata, Code, Request};
 
 #[tokio::test]
 async fn handle_session_updated_session_contains_correct_fields_returns_ok() {
