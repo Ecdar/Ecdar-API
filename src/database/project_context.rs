@@ -154,5 +154,5 @@ impl EntityContextTrait<project::Model> for ProjectContext {
 }
 
 #[cfg(test)]
-#[path = "../tests/database/project_context"]
-mod model_context_tests;
+#[path = "../tests/database/project_context.rs"]
+mod project_context_tests;
