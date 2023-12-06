@@ -1,3 +1,4 @@
+use crate::api::server::server::AccessInfo;
 use crate::database::database_context::DatabaseContextTrait;
 use crate::database::entity_context::EntityContextTrait;
 use crate::entities::access;
@@ -17,6 +18,8 @@ pub trait AccessContextTrait: EntityContextTrait<access::Model> {
         uid: i32,
         project_id: i32,
     ) -> Result<Option<access::Model>, DbErr>;
+
+    async fn get_access_by_project_id(&self, project_id: i32) -> Result<Vec<AccessInfo>, DbErr>;
 }
 
 #[async_trait]
@@ -33,6 +36,14 @@ impl AccessContextTrait for AccessContext {
                     .add(access::Column::ProjectId.eq(project_id)),
             )
             .one(&self.db_context.get_connection())
+            .await
+    }
+
+    async fn get_access_by_project_id(&self, project_id: i32) -> Result<Vec<AccessInfo>, DbErr> {
+        access::Entity::find()
+            .filter(access::Column::ProjectId.eq(project_id))
+            .into_model::<AccessInfo>()
+            .all(&self.db_context.get_connection())
             .await
     }
 }
@@ -52,7 +63,7 @@ impl EntityContextTrait<access::Model> for AccessContext {
     ///     id: Default::default(),
     ///     role: Role::Editor,
     ///     user_id: 1,
-    ///     model_id: 1
+    ///     project_id: 1
     /// };
     /// let context : AccessContext = AccessContext::new(...);
     /// context.create(model);
@@ -101,7 +112,7 @@ impl EntityContextTrait<access::Model> for AccessContext {
     ///     id: access.id,
     ///     role: Role::Reader,
     ///     user_id: access.user_id,
-    ///     model_id: access.model_id
+    ///     project_id: access.project_id
     /// }
     /// ```
     /// # Note

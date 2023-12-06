@@ -39,7 +39,7 @@ impl EntityContextTrait<query::Model> for QueryContext {
     /// let model : Model = {
     ///     id: Default::default(),
     ///     string: "query_string".into(),
-    ///     model_id: 1,
+    ///     project_id: 1,
     ///     result: "query_result".into(),
     ///     out_dated: true
     /// }
@@ -92,14 +92,14 @@ impl EntityContextTrait<query::Model> for QueryContext {
     /// let updated_query = Model {
     ///     id: query.id,
     ///     string: query.string,
-    ///     model_id: query.model_id,
+    ///     project_id: query.project_id,
     ///     result: query.result,
     ///     out_dated: false
     /// }
     /// assert_eq!(context.update(updated_query).unwrap(),Model {
     ///     id: 1,
     ///     string: "query_string".into(),
-    ///     model_id: 1,
+    ///     project_id: 1,
     ///     result: "query_result".into(),
     ///     out_dated: false
     /// }

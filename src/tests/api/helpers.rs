@@ -5,6 +5,7 @@ use crate::api::context_collection::ContextCollection;
 use crate::api::ecdar_api::ConcreteEcdarApi;
 use crate::api::hashing_context::HashingContextTrait;
 use crate::api::server::server::ecdar_backend_server::EcdarBackend;
+use crate::api::server::server::AccessInfo;
 use crate::api::server::server::ProjectInfo;
 use crate::api::server::server::{
     QueryRequest, QueryResponse, SimulationStartRequest, SimulationStepRequest,
@@ -78,7 +79,27 @@ mock! {
             &self,
             uid: i32,
             project_id: i32,
-        ) -> Result<Option<access::Model>, DbErr>;
+        ) -> Result<Option<access::Model>, DbErr> {
+            access::Entity::find()
+                .filter(
+                    Condition::all()
+                        .add(access::Column::UserId.eq(uid))
+                        .add(access::Column::ModelId.eq(project_id)),
+                )
+                .one(&self.db_context.get_connection())
+                .await
+        }
+
+        async fn get_access_by_project_id(
+            &self,
+            project_id: i32,
+        ) -> Result<Vec<AccessInfo>, DbErr> {
+            access::Entity::find()
+                .filter(access::Column::ModelId.eq(project_id))
+                .into_model::<AccessInfo>()
+                .all(&self.db_context.get_connection())
+                .await
+        }
     }
 }
 
