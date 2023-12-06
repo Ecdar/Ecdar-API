@@ -30,9 +30,11 @@ serde_json = "1.0.108"
 [build-dependencies]
 tonic-build = "0.10.2"
 
+
 [lints.clippy]
 complexity = "deny"
 correctness = "deny"
 perf = "deny"
 suspicious = "warn"
 enum_variant_names = "allow"
+unwrap_used = "warn"

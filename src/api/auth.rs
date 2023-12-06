@@ -18,7 +18,7 @@ pub fn validation_interceptor(mut req: Request<()>) -> Result<Request<()>, Statu
         Ok(token_data) => {
             req.metadata_mut().insert(
                 "uid",
-                metadata::MetadataValue::from_str(&token_data.claims.sub).unwrap(),
+                metadata::MetadataValue::from_str(&token_data.claims.sub).map_err(|err| Status::internal(err.to_string()))?,
             );
             Ok(req)
         }
@@ -260,7 +260,7 @@ impl<T> RequestExt for Request<T> {
         self.metadata().get("authorization").map(|token| {
             token
                 .to_str()
-                .unwrap()
+                .expect("failed to parse token string")//TODO better error handling
                 .trim_start_matches("Bearer ")
                 .to_string()
         })
@@ -268,19 +268,21 @@ impl<T> RequestExt for Request<T> {
     /// Returns the token string slice from the request metadata.
     fn token_str(&self) -> Option<&str> {
         match self.metadata().get("authorization") {
-            Some(token) => Some(token.to_str().unwrap().trim_start_matches("Bearer ")),
+            //TODO better error handling
+            Some(token) => Some(token.to_str().expect("failed to parse token string").trim_start_matches("Bearer ")),
             None => None,
         }
     }
 
     /// Returns the uid from the request metadata.
     fn uid(&self) -> Option<i32> {
-        let uid = match self.metadata().get("uid").unwrap().to_str() {
+        //TODO better error handling
+        let uid = match self.metadata().get("uid").expect("failed to parse user id").to_str() { 
             Ok(uid) => uid,
             Err(_) => return None,
         };
-
-        Some(uid.parse().unwrap())
+        //TODO better error handling
+        Some(uid.parse().expect("failed to parse user id"))
     }
 }
 

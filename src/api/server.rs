@@ -20,7 +20,7 @@ pub async fn start_grpc_server(
     let addr = env::var("API_ADDRESS")
         .expect("Expected API_ADDRESS to be set.")
         .parse()
-        .unwrap();
+        .expect("Failed to parse IP address");
 
     println!("Starting grpc server on '{}'", addr);
 

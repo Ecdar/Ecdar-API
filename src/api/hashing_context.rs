@@ -8,11 +8,12 @@ pub trait HashingContextTrait: Send + Sync {
 pub struct HashingContext;
 
 impl HashingContextTrait for HashingContext {
+    //! Methods should not panic, but propogate their result to the caller
     fn hash_password(&self, password: String) -> String {
-        hash(password, DEFAULT_COST).unwrap()
+        hash(password, DEFAULT_COST).expect("failed to hash password")
     }
 
     fn verify_password(&self, password: String, hash: &str) -> bool {
-        verify(password, hash).unwrap()
+        verify(password, hash).expect("failed to verify password")
     }
 }
