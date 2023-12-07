@@ -7,7 +7,7 @@ use crate::entities::{session, user};
 use crate::services::service_collection::ServiceCollection;
 use async_trait::async_trait;
 use sea_orm::DbErr;
-use tonic::{Request, Response, Status};
+use tonic::{Code, Request, Response, Status};
 
 pub struct SessionController {
     contexts: ContextCollection,
@@ -75,8 +75,23 @@ impl SessionController {
 
 #[async_trait]
 impl SessionControllerTrait for SessionController {
-    async fn delete_session(&self, _request: Request<()>) -> Result<Response<()>, Status> {
-        todo!()
+    /// Deletes the requester's session, found by their access token.
+    ///  
+    /// Returns the response that is received from Reveaal.
+    async fn delete_session(&self, request: Request<()>) -> Result<Response<()>, Status> {
+        let access_token = request
+            .token_string()
+            .ok_or(Status::unauthenticated("No access token provided"))?;
+
+        match self
+            .contexts
+            .session_context
+            .delete_by_token(TokenType::AccessToken, access_token)
+            .await
+        {
+            Ok(_) => Ok(Response::new(())),
+            Err(error) => Err(Status::new(Code::Internal, error.to_string())),
+        }
     }
 
     /// This method is used to get a new access and refresh token for a user.
