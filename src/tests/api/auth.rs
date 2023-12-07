@@ -14,13 +14,13 @@ mod auth {
 
         let result = request.token_str().unwrap();
 
-        assert_eq!(result, token.trim_start_matches("Bearer "));
+        assert_eq!(result.unwrap(), token.trim_start_matches("Bearer "));
     }
 
     #[tokio::test]
     async fn request_token_no_token_returns_none() {
         let request = Request::new(());
-        let result = request.token_str();
+        let result = request.token_str().unwrap();
 
         assert!(result.is_none());
     }

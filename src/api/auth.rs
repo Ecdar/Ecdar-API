@@ -5,11 +5,17 @@ use jsonwebtoken::{
 
 use serde::{Deserialize, Serialize};
 use std::{env, fmt::Display, str::FromStr};
-use tonic::{metadata, Request, Status};
+use tonic::{
+    metadata::{self, errors::ToStrError},
+    Request, Status,
+};
 
 /// This method is used to validate the access token (not refresh).
 pub fn validation_interceptor(mut req: Request<()>) -> Result<Request<()>, Status> {
-    let token = match req.token_string() {
+    let token = match req
+        .token_string()
+        .map_err(|err| Status::internal("failed to get token string"))?
+    {
         Some(token) => Token::from_str(TokenType::AccessToken, &token),
         None => return Err(Status::unauthenticated("Token not found")),
     };
@@ -252,36 +258,33 @@ impl From<TokenError> for Status {
 /// An extension trait for [Request]`s that provides a variety of convenient
 /// auth related methods.
 pub trait RequestExt {
-    fn token_string(&self) -> Option<String>;
-    fn token_str(&self) -> Option<&str>;
+    fn token_string(&self) -> Result<Option<String>, ToStrError>;
+    fn token_str(&self) -> Result<Option<&str>, ToStrError>;
 
     fn uid(&self) -> Option<i32>;
 }
 
 impl<T> RequestExt for Request<T> {
     /// Returns the token string from the request metadata.
-    //TODO should return result
-    fn token_string(&self) -> Option<String> {
-        self.metadata().get("authorization").map(|token| {
-            token
-                .to_str()
-                .expect("failed to parse token string")
-                .trim_start_matches("Bearer ")
-                .to_string()
-        })
+    fn token_string(&self) -> Result<Option<String>, ToStrError> {
+        let res = self.metadata().get("authorization");
+        match res {
+            Some(val) => Ok(Some(
+                val.to_str()?.trim_start_matches("Bearer ").to_string(),
+            )),
+            None => Ok(None),
+        }
     }
     /// Returns the token string slice from the request metadata.
-    //TODO should return result
-    fn token_str(&self) -> Option<&str> {
+    fn token_str(&self) -> Result<Option<&str>, ToStrError> {
         match self.metadata().get("authorization") {
-            //TODO better error handling
-            Some(token) => Some(
+            Some(token) => Ok(Some(
                 token
-                    .to_str()
-                    .expect("failed to parse token string")
+                    .to_str()?
+                    // .expect("failed to parse token string")
                     .trim_start_matches("Bearer "),
-            ),
-            None => None,
+            )),
+            None => Ok(None),
         }
     }
     //TODO should return result
@@ -290,8 +293,8 @@ impl<T> RequestExt for Request<T> {
         //TODO better error handling
         let uid = match self
             .metadata()
-            .get("uid")
-            .expect("failed to parse user id")
+            .get("uid")?
+            // .expect("failed to parse user id")
             .to_str()
         {
             Ok(uid) => uid,

@@ -94,9 +94,12 @@ pub async fn handle_session(
         let mut session = match session_context
             .get_by_token(
                 TokenType::RefreshToken,
-                request.token_string().ok_or(Status::internal(
-                    "failed to get token from request metadata",
-                ))?,
+                request
+                    .token_string()
+                    .map_err(|err| Status::internal("failed to get token from request metadata"))?
+                    .ok_or(Status::internal(
+                        "failed to get token from request metadata",
+                    ))?,
             )
             .await
         {
@@ -198,9 +201,16 @@ impl EcdarApi for ConcreteEcdarApi {
                             .session_context
                             .get_by_token(
                                 TokenType::AccessToken,
-                                request.token_string().ok_or(Status::internal(
-                                    "failed to get token from request metadata",
-                                ))?,
+                                request
+                                    .token_string()
+                                    .map_err(|err| {
+                                        Status::internal(
+                                            "failed to get token from request metadata",
+                                        )
+                                    })?
+                                    .ok_or(Status::internal(
+                                        "failed to get token from request metadata",
+                                    ))?,
                             )
                             .await
                             .map_err(|err| Status::new(Code::Internal, err.to_string()))?
@@ -319,9 +329,12 @@ impl EcdarApi for ConcreteEcdarApi {
             .session_context
             .get_by_token(
                 TokenType::AccessToken,
-                request.token_string().ok_or(Status::internal(
-                    "Failed to get token from request metadata",
-                ))?,
+                request
+                    .token_string()
+                    .map_err(|err| Status::internal("failed to get token from request metadata"))?
+                    .ok_or(Status::internal(
+                        "Failed to get token from request metadata",
+                    ))?,
             )
             .await
             .map_err(|_err| Status::internal("failed to query database"))? //TODO better error message
@@ -401,10 +414,13 @@ impl EcdarApi for ConcreteEcdarApi {
             .session_context
             .get_by_token(
                 TokenType::AccessToken,
-                request.token_string().ok_or(Status::new(
-                    Code::Internal,
-                    "Failed to get token from request metadata",
-                ))?,
+                request
+                    .token_string()
+                    .map_err(|err| Status::internal("failed to get token from request metadata"))?
+                    .ok_or(Status::new(
+                        Code::Internal,
+                        "Failed to get token from request metadata",
+                    ))?,
             ) //? better error message?
             .await
         {
@@ -848,6 +864,7 @@ impl EcdarApiAuth for ConcreteEcdarApi {
                 TokenType::RefreshToken,
                 request
                     .token_str()
+                    .map_err(|err| Status::internal("failed to get token from request metadata"))?
                     .ok_or(Status::unauthenticated("No refresh token provided"))?,
             );
             let token_data = refresh_token.validate()?;
