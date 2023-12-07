@@ -297,5 +297,5 @@ impl<T> RequestExt for Request<T> {
 }
 
 #[cfg(test)]
-#[path = "../tests/controllers/auth.rs"]
+#[path = "../tests/api/auth.rs"]
 mod tests;
