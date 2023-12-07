@@ -245,7 +245,8 @@ impl EcdarApi for ConcreteEcdarApi {
                 result: match query.result {
                     Some(result) => {
                         serde_json::from_value(result).expect("failed to parse message")
-                    } //TODO better error handling
+                        //TODO better error handling
+                    }
                     None => "".to_owned(),
                 },
                 outdated: query.outdated,

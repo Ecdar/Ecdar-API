@@ -14,11 +14,10 @@ pub struct ReveaalContext;
 
 impl ReveaalContext {
     //TODO should return a result for better error handling
-    async fn get_connection() -> EcdarBackendClient<Channel> {
+    async fn get_connection() -> Result<EcdarBackendClient<Channel>, tonic::transport::Error> {
         let url = env::var("REVEAAL_ADDRESS").expect("Expected REVEAAL_ADDRESS to be set.");
-        EcdarBackendClient::connect(url)
-            .await
-            .expect("failed to connect to Ecdar backend") //? Perhaps the error handling should be more graceful
+        EcdarBackendClient::connect(url).await
+        // .expect("failed to connect to Ecdar backend") //TODO Perhaps the error handling should be more graceful
     }
 }
 
@@ -30,6 +29,7 @@ impl EcdarBackend for ReveaalContext {
     ) -> Result<Response<UserTokenResponse>, Status> {
         ReveaalContext::get_connection()
             .await
+            .map_err(|err| Status::internal(format!("{err}")))?
             .get_user_token(request)
             .await
     }
@@ -40,6 +40,7 @@ impl EcdarBackend for ReveaalContext {
     ) -> Result<Response<QueryResponse>, Status> {
         ReveaalContext::get_connection()
             .await
+            .map_err(|err| Status::internal(format!("{err}")))?
             .send_query(request)
             .await
     }
@@ -50,6 +51,7 @@ impl EcdarBackend for ReveaalContext {
     ) -> Result<Response<SimulationStepResponse>, Status> {
         ReveaalContext::get_connection()
             .await
+            .map_err(|err| Status::internal(format!("{err}")))?
             .start_simulation(request)
             .await
     }
@@ -60,6 +62,7 @@ impl EcdarBackend for ReveaalContext {
     ) -> Result<Response<SimulationStepResponse>, Status> {
         ReveaalContext::get_connection()
             .await
+            .map_err(|err| Status::internal(format!("{err}")))?
             .take_simulation_step(request)
             .await
     }
