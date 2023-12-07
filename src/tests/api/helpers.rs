@@ -175,7 +175,7 @@ mock! {
 mock! {
     pub HashingContext {}
     impl HashingContextTrait for HashingContext {
-        fn hash_password(&self, password: String) -> String;
-        fn verify_password(&self, password: String, hash: &str) -> bool;
+        fn hash_password(&self, password: String) -> Result<String,bcrypt::BcryptError>;
+        fn verify_password(&self, password: String, hash: &str) -> Result<bool,bcrypt::BcryptError>;
     }
 }

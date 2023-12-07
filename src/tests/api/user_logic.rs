@@ -240,7 +240,7 @@ async fn update_user_returns_ok() {
         .hashing_context_mock
         .expect_hash_password()
         .with(predicate::eq("StrongPassword123".to_string()))
-        .returning(move |_| "g76df2gd7hd837g8hjd8723hd8gd823d82d3".to_string());
+        .returning(move |_| Ok("g76df2gd7hd837g8hjd8723hd8gd823d82d3".to_string()));
 
     mock_services
         .user_context_mock

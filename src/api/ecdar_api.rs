@@ -663,8 +663,13 @@ impl EcdarApi for ConcreteEcdarApi {
                 None => user.email,
             },
             password: match message.clone().password {
-                Some(password) => self.contexts.hashing_context.hash_password(password)
-                .map_err(|err|Status::internal(format!("Error hashing user password, message: {err}")))?,
+                Some(password) => self
+                    .contexts
+                    .hashing_context
+                    .hash_password(password)
+                    .map_err(|err| {
+                        Status::internal(format!("Error hashing user password, message: {err}"))
+                    })?,
                 None => user.password,
             },
         };
