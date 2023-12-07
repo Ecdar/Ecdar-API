@@ -17,10 +17,10 @@ pub async fn start_grpc_server(
     contexts: ContextCollection,
 ) -> Result<(), Box<dyn std::error::Error>> {
     // defining address for our service
-    let addr = env::var("API_ADDRESS")
-        .expect("Expected API_ADDRESS to be set.")
-        .parse()
-        .expect("Failed to parse IP address");
+    let addr = env::var("API_ADDRESS")?
+        // .expect("Expected API_ADDRESS to be set.")
+        .parse()?;
+        // .expect("Failed to parse IP address");
 
     println!("Starting grpc server on '{}'", addr);
 

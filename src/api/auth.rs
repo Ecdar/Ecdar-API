@@ -98,7 +98,8 @@ impl Token {
         let now = Utc::now();
         let expiration = now
             .checked_add_signed(token_type.duration())
-            .expect("valid timestamp")
+            .ok_or_else(|| TokenError::InvalidSignature)?
+            // .expect("valid timestamp")
             .timestamp();
 
         let claims = Claims {
@@ -281,7 +282,7 @@ impl<T> RequestExt for Request<T> {
             None => None,
         }
     }
-
+    //TODO should return result
     /// Returns the uid from the request metadata.
     fn uid(&self) -> Option<i32> {
         //TODO better error handling

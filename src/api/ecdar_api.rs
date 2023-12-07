@@ -120,13 +120,13 @@ pub async fn handle_session(
     }
     Ok(())
 }
-
+#[allow(clippy::expect_used)]
 fn is_valid_email(email: &str) -> bool {
     Regex::new(r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$")
         .expect("failed to compile regex")
         .is_match(email)
 }
-
+#[allow(clippy::expect_used)]
 fn is_valid_username(username: &str) -> bool {
     Regex::new(r"^[a-zA-Z0-9_]{3,32}$")
         .expect("failed to compile regex")
@@ -663,7 +663,8 @@ impl EcdarApi for ConcreteEcdarApi {
                 None => user.email,
             },
             password: match message.clone().password {
-                Some(password) => self.contexts.hashing_context.hash_password(password),
+                Some(password) => self.contexts.hashing_context.hash_password(password)
+                .map_err(|err|Status::internal(format!("Error hashing user password, message: {err}")))?,
                 None => user.password,
             },
         };

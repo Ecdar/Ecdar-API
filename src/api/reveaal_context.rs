@@ -13,6 +13,7 @@ use tonic::{Request, Response, Status};
 pub struct ReveaalContext;
 
 impl ReveaalContext {
+    //TODO should return a result for better error handling
     async fn get_connection() -> EcdarBackendClient<Channel> {
         let url = env::var("REVEAAL_ADDRESS").expect("Expected REVEAAL_ADDRESS to be set.");
         EcdarBackendClient::connect(url)
