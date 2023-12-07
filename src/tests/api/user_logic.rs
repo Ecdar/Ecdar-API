@@ -1,6 +1,6 @@
 use crate::api::server::server::ecdar_api_auth_server::EcdarApiAuth;
 use crate::api::server::server::ecdar_api_server::EcdarApi;
-use crate::api::server::server::{CreateUserRequest, UpdateUserRequest};
+use crate::api::server::server::{CreateUserRequest, GetUsersRequest, UpdateUserRequest};
 use crate::entities::user;
 use crate::tests::api::helpers::{get_mock_concrete_ecdar_api, get_mock_services};
 use mockall::predicate;
@@ -68,12 +68,25 @@ async fn delete_user_existing_user_returns_ok() {
 async fn create_user_nonexistent_user_returns_ok() {
     let mut mock_services = get_mock_services();
 
+    let password = "Password123".to_string();
+
     let user = user::Model {
         id: Default::default(),
         email: "anders21@student.aau.dk".to_string(),
         username: "anders".to_string(),
-        password: "123".to_string(),
+        password: password.clone(),
     };
+
+    let create_user_request = Request::new(CreateUserRequest {
+        email: "anders21@student.aau.dk".to_string(),
+        username: "anders".to_string(),
+        password: password.clone(),
+    });
+
+    mock_services
+        .hashing_context_mock
+        .expect_hash_password()
+        .returning(move |_| password.clone());
 
     mock_services
         .user_context_mock
@@ -83,12 +96,6 @@ async fn create_user_nonexistent_user_returns_ok() {
 
     let api = get_mock_concrete_ecdar_api(mock_services);
 
-    let create_user_request = Request::new(CreateUserRequest {
-        email: "anders21@student.aau.dk".to_string(),
-        username: "anders".to_string(),
-        password: "123".to_string(),
-    });
-
     let create_user_response = api.create_user(create_user_request).await;
     assert!(create_user_response.is_ok());
 }
@@ -97,12 +104,25 @@ async fn create_user_nonexistent_user_returns_ok() {
 async fn create_user_duplicate_email_returns_error() {
     let mut mock_services = get_mock_services();
 
+    let password = "Password123".to_string();
+
     let user = user::Model {
         id: Default::default(),
         email: "anders21@student.aau.dk".to_string(),
         username: "anders".to_string(),
-        password: "".to_string(),
+        password: password.clone(),
     };
+
+    let create_user_request = Request::new(CreateUserRequest {
+        email: "anders21@student.aau.dk".to_string(),
+        username: "anders".to_string(),
+        password: password.clone(),
+    });
+
+    mock_services
+        .hashing_context_mock
+        .expect_hash_password()
+        .returning(move |_| password.clone());
 
     mock_services
         .user_context_mock
@@ -111,12 +131,6 @@ async fn create_user_duplicate_email_returns_error() {
         .returning(move |_| Err(DbErr::RecordNotInserted)); //todo!("Needs to be a SqlError with UniqueConstraintViolation with 'email' in message)
 
     let api = get_mock_concrete_ecdar_api(mock_services);
-
-    let create_user_request = Request::new(CreateUserRequest {
-        email: "anders21@student.aau.dk".to_string(),
-        username: "anders".to_string(),
-        password: "".to_string(),
-    });
 
     let res = api.create_user(create_user_request).await;
     assert_eq!(res.unwrap_err().code(), Code::Internal); //todo!("Needs to be code AlreadyExists when mocked Error is corrected)
@@ -142,12 +156,25 @@ async fn create_user_invalid_email_returns_error() {
 async fn create_user_duplicate_username_returns_error() {
     let mut mock_services = get_mock_services();
 
+    let password = "Password123".to_string();
+
     let user = user::Model {
         id: Default::default(),
         email: "anders21@student.aau.dk".to_string(),
         username: "anders".to_string(),
-        password: "".to_string(),
+        password: password.clone(),
     };
+
+    let create_user_request = Request::new(CreateUserRequest {
+        email: "anders21@student.aau.dk".to_string(),
+        username: "anders".to_string(),
+        password: password.clone(),
+    });
+
+    mock_services
+        .hashing_context_mock
+        .expect_hash_password()
+        .returning(move |_| password.clone());
 
     mock_services
         .user_context_mock
@@ -156,12 +183,6 @@ async fn create_user_duplicate_username_returns_error() {
         .returning(move |_| Err(DbErr::RecordNotInserted)); //todo!("Needs to be a SqlError with UniqueConstraintViolation with 'username' in message)
 
     let api = get_mock_concrete_ecdar_api(mock_services);
-
-    let create_user_request = Request::new(CreateUserRequest {
-        email: "anders21@student.aau.dk".to_string(),
-        username: "anders".to_string(),
-        password: "".to_string(),
-    });
 
     let res = api.create_user(create_user_request).await;
     assert_eq!(res.unwrap_err().code(), Code::Internal); //todo!("Needs to be code AlreadyExists when mocked Error is corrected)
@@ -184,15 +205,28 @@ async fn create_user_invalid_username_returns_error() {
 }
 
 #[tokio::test]
-async fn test_create_user_valid_request_returns_ok() {
+async fn create_user_valid_request_returns_ok() {
     let mut mock_services = get_mock_services();
+
+    let password = "Password123".to_string();
 
     let user = user::Model {
         id: Default::default(),
         email: "newuser@example.com".to_string(),
         username: "newuser".to_string(),
-        password: "StrongPassword123".to_string(),
+        password: password.clone(),
     };
+
+    let create_user_request = Request::new(CreateUserRequest {
+        email: "newuser@example.com".to_string(),
+        username: "newuser".to_string(),
+        password: password.clone(),
+    });
+
+    mock_services
+        .hashing_context_mock
+        .expect_hash_password()
+        .returning(move |_| password.clone());
 
     mock_services
         .user_context_mock
@@ -201,12 +235,6 @@ async fn test_create_user_valid_request_returns_ok() {
         .returning(move |_| Ok(user.clone()));
 
     let api = get_mock_concrete_ecdar_api(mock_services);
-
-    let create_user_request = Request::new(CreateUserRequest {
-        email: "newuser@example.com".to_string(),
-        username: "newuser".to_string(),
-        password: "StrongPassword123".to_string(),
-    });
 
     let create_user_response = api.create_user(create_user_request).await;
     assert!(create_user_response.is_ok());
@@ -290,4 +318,57 @@ async fn update_user_non_existant_user_returns_err() {
     let res = api.update_user(update_user_request).await;
 
     assert_eq!(res.unwrap_err().code(), Code::Internal);
+}
+
+#[tokio::test]
+async fn get_users_returns_ok() {
+    let mut mock_services = get_mock_services();
+
+    let users = vec![
+        user::Model {
+            id: 1,
+            email: "".to_string(),
+            username: "".to_string(),
+            password: "".to_string(),
+        },
+        user::Model {
+            id: 2,
+            email: "".to_string(),
+            username: "".to_string(),
+            password: "".to_string(),
+        },
+    ];
+
+    mock_services
+        .user_context_mock
+        .expect_get_by_ids()
+        .returning(move |_| Ok(users.clone()));
+
+    let api = get_mock_concrete_ecdar_api(mock_services);
+
+    let get_users_request = Request::new(GetUsersRequest { ids: vec![1, 2] });
+
+    let get_users_response = api.get_users(get_users_request).await.unwrap();
+
+    assert_eq!(get_users_response.get_ref().users.len(), 2);
+}
+
+#[tokio::test]
+async fn get_users_returns_empty_array() {
+    let mut mock_services = get_mock_services();
+
+    let users: Vec<user::Model> = vec![];
+
+    mock_services
+        .user_context_mock
+        .expect_get_by_ids()
+        .returning(move |_| Ok(users.clone()));
+
+    let api = get_mock_concrete_ecdar_api(mock_services);
+
+    let get_users_request = Request::new(GetUsersRequest { ids: vec![1, 2] });
+
+    let get_users_response = api.get_users(get_users_request).await.unwrap();
+
+    assert_eq!(get_users_response.get_ref().users.len(), 0);
 }

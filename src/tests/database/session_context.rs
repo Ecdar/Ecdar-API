@@ -376,3 +376,47 @@ async fn get_by_token_access_test() {
 
     assert_eq!(fetched_session.unwrap().access_token, session.access_token);
 }
+
+#[tokio::test]
+async fn delete_by_token_refresh_test() {
+    let (session_context, session, _, _) = seed_db().await;
+
+    session::Entity::insert(session.clone().into_active_model())
+        .exec(&session_context.db_context.get_connection())
+        .await
+        .unwrap();
+
+    session_context
+        .delete_by_token(TokenType::RefreshToken, session.refresh_token.clone())
+        .await
+        .unwrap();
+
+    let fetched_session = session_context
+        .get_by_token(TokenType::RefreshToken, session.refresh_token.clone())
+        .await
+        .unwrap();
+
+    assert!(fetched_session.is_none());
+}
+
+#[tokio::test]
+async fn delete_by_token_access_test() {
+    let (session_context, session, _, _) = seed_db().await;
+
+    session::Entity::insert(session.clone().into_active_model())
+        .exec(&session_context.db_context.get_connection())
+        .await
+        .unwrap();
+
+    session_context
+        .delete_by_token(TokenType::AccessToken, session.access_token.clone())
+        .await
+        .unwrap();
+
+    let fetched_session = session_context
+        .get_by_token(TokenType::AccessToken, session.access_token.clone())
+        .await
+        .unwrap();
+
+    assert!(fetched_session.is_none());
+}

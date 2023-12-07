@@ -16,6 +16,8 @@ use super::{
         UserTokenResponse,
     },
 };
+use crate::api::auth::TokenError;
+use crate::api::server::server::get_users_response::UserInfo;
 use crate::database::{session_context::SessionContextTrait, user_context::UserContextTrait};
 use crate::entities::{access, in_use, project, query, session, user};
 use crate::{
@@ -27,7 +29,7 @@ use crate::{
 };
 use chrono::{Duration, Utc};
 use regex::Regex;
-use sea_orm::SqlErr;
+use sea_orm::{DbErr, SqlErr};
 use serde_json;
 use std::sync::Arc;
 use tonic::{Code, Request, Response, Status};
@@ -39,69 +41,6 @@ pub struct ConcreteEcdarApi {
     contexts: ContextCollection,
 }
 
-/// Updates or creates a session in the database for a given user.
-///
-///
-/// # Errors
-/// This function will return an error if the database context returns an error
-/// or if a session is not found when trying to update an existing one.
-pub async fn handle_session(
-    session_context: Arc<dyn SessionContextTrait>,
-    request: &Request<GetAuthTokenRequest>,
-    is_new_session: bool,
-    access_token: String,
-    refresh_token: String,
-    uid: String,
-) -> Result<(), Status> {
-    if is_new_session {
-        session_context
-            .create(session::Model {
-                id: Default::default(),
-                access_token: access_token.clone(),
-                refresh_token: refresh_token.clone(),
-                updated_at: Default::default(),
-                user_id: uid.parse().unwrap(),
-            })
-            .await
-            .map_err(|err| Status::new(Code::Internal, err.to_string()))?;
-    } else {
-        let mut session = match session_context
-            .get_by_token(TokenType::RefreshToken, request.token_string().unwrap())
-            .await
-        {
-            Ok(Some(session)) => session,
-            Ok(None) => {
-                return Err(Status::new(
-                    Code::Unauthenticated,
-                    "No session found with given refresh token",
-                ));
-            }
-            Err(err) => return Err(Status::new(Code::Internal, err.to_string())),
-        };
-
-        session.access_token = access_token.clone();
-        session.refresh_token = refresh_token.clone();
-
-        session_context
-            .update(session)
-            .await
-            .map_err(|err| Status::new(Code::Internal, err.to_string()))?;
-    }
-    Ok(())
-}
-
-fn is_valid_email(email: &str) -> bool {
-    Regex::new(r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$")
-        .unwrap()
-        .is_match(email)
-}
-
-fn is_valid_username(username: &str) -> bool {
-    Regex::new(r"^[a-zA-Z0-9_]{3,32}$")
-        .unwrap()
-        .is_match(username)
-}
-
 impl ConcreteEcdarApi {
     pub fn new(contexts: ContextCollection) -> Self {
         ConcreteEcdarApi { contexts }
@@ -110,13 +49,6 @@ impl ConcreteEcdarApi {
 
 #[tonic::async_trait]
 impl EcdarApi for ConcreteEcdarApi {
-    async fn get_users(
-        &self,
-        _request: Request<GetUsersRequest>,
-    ) -> Result<Response<GetUsersResponse>, Status> {
-        todo!()
-    }
-
     /// Gets a Model and its queries from the database.
     ///
     /// If the Model is not in use, it will now be in use by the requestees session,
@@ -228,53 +160,6 @@ impl EcdarApi for ConcreteEcdarApi {
             queries,
             in_use: in_use_bool,
         }))
-    }
-
-    async fn list_access_info(
-        &self,
-        request: Request<ListAccessInfoRequest>,
-    ) -> Result<Response<ListAccessInfoResponse>, Status> {
-        let message = request.get_ref().clone();
-
-        let uid = request
-            .uid()
-            .ok_or(Status::internal("Could not get uid from request metadata"))?;
-
-        match self
-            .contexts
-            .access_context
-            .get_access_by_uid_and_project_id(uid, message.project_id)
-            .await
-        {
-            Ok(access) => {
-                if access.is_none() {
-                    return Err(Status::new(
-                        Code::PermissionDenied,
-                        "User does not have access to model",
-                    ));
-                }
-            }
-            Err(error) => return Err(Status::new(Code::Internal, error.to_string())),
-        };
-
-        match self
-            .contexts
-            .access_context
-            .get_access_by_project_id(message.project_id)
-            .await
-        {
-            Ok(access_info_list) => {
-                if access_info_list.is_empty() {
-                    return Err(Status::new(
-                        Code::NotFound,
-                        "No access found for given user",
-                    ));
-                } else {
-                    Ok(Response::new(ListAccessInfoResponse { access_info_list }))
-                }
-            }
-            Err(error) => Err(Status::new(Code::Internal, error.to_string())),
-        }
     }
 
     async fn create_project(
@@ -408,7 +293,7 @@ impl EcdarApi for ConcreteEcdarApi {
             Ok(None) => {
                 return Err(Status::unauthenticated(
                     "No session found with given access token",
-                ))
+                ));
             }
             Err(error) => return Err(Status::internal(error.to_string())),
         };
@@ -491,7 +376,7 @@ impl EcdarApi for ConcreteEcdarApi {
                 return Err(Status::new(
                     Code::NotFound,
                     "No project found with given id",
-                ))
+                ));
             }
             Err(err) => return Err(Status::new(Code::Internal, err.to_string())),
         };
@@ -539,6 +424,53 @@ impl EcdarApi for ConcreteEcdarApi {
                     Ok(Response::new(ListProjectsInfoResponse {
                         project_info_list,
                     }))
+                }
+            }
+            Err(error) => Err(Status::new(Code::Internal, error.to_string())),
+        }
+    }
+
+    async fn list_access_info(
+        &self,
+        request: Request<ListAccessInfoRequest>,
+    ) -> Result<Response<ListAccessInfoResponse>, Status> {
+        let message = request.get_ref().clone();
+
+        let uid = request
+            .uid()
+            .ok_or(Status::internal("Could not get uid from request metadata"))?;
+
+        match self
+            .contexts
+            .access_context
+            .get_access_by_uid_and_project_id(uid, message.project_id)
+            .await
+        {
+            Ok(access) => {
+                if access.is_none() {
+                    return Err(Status::new(
+                        Code::PermissionDenied,
+                        "User does not have access to model",
+                    ));
+                }
+            }
+            Err(error) => return Err(Status::new(Code::Internal, error.to_string())),
+        };
+
+        match self
+            .contexts
+            .access_context
+            .get_access_by_project_id(message.project_id)
+            .await
+        {
+            Ok(access_info_list) => {
+                if access_info_list.is_empty() {
+                    return Err(Status::new(
+                        Code::NotFound,
+                        "No access found for given user",
+                    ));
+                } else {
+                    Ok(Response::new(ListAccessInfoResponse { access_info_list }))
                 }
             }
             Err(error) => Err(Status::new(Code::Internal, error.to_string())),
@@ -792,6 +724,31 @@ impl EcdarApi for ConcreteEcdarApi {
         }
     }
 
+    /// Gets users from the database.
+    /// If no users exits with the given ids, an empty list is returned.
+    async fn get_users(
+        &self,
+        request: Request<GetUsersRequest>,
+    ) -> Result<Response<GetUsersResponse>, Status> {
+        let ids = request.get_ref().ids.clone();
+
+        let users = self
+            .contexts
+            .user_context
+            .get_by_ids(ids)
+            .await
+            .map_err(|err| Status::internal(err.to_string()))?;
+
+        let users_info = users
+            .into_iter()
+            .map(|user| UserInfo {
+                id: user.id,
+                username: user.username,
+            })
+            .collect::<Vec<UserInfo>>();
+
+        Ok(Response::new(GetUsersResponse { users: users_info }))
+    }
     /// Creates a query in the database
     /// # Errors
     /// Returns an error if the database context fails to create the query or
@@ -1091,29 +1048,69 @@ async fn create_access_find_user_helper(
     }
 }
 
-async fn get_auth_find_user_helper(
+async fn user_from_user_credentials(
     user_context: Arc<dyn UserContextTrait>,
     user_credentials: UserCredentials,
-) -> Result<user::Model, Status> {
-    if let Some(user) = user_credentials.user {
-        match user {
-            user_credentials::User::Username(username) => Ok(user_context
-                .get_by_username(username)
-                .await
-                .map_err(|err| Status::new(Code::Internal, err.to_string()))?
-                .ok_or_else(|| Status::new(Code::NotFound, "No user found with given username"))?),
-
-            user_credentials::User::Email(email) => Ok(user_context
-                .get_by_email(email)
-                .await
-                .map_err(|err| Status::new(Code::Internal, err.to_string()))?
-                .ok_or_else(|| {
-                    Status::new(Code::NotFound, "No user found with the given email")
-                })?),
+) -> Result<Option<user::Model>, DbErr> {
+    match user_credentials.user {
+        Some(user_credentials::User::Username(username)) => {
+            Ok(user_context.get_by_username(username).await?)
         }
-    } else {
-        Err(Status::new(Code::InvalidArgument, "No user provided"))
+        Some(user_credentials::User::Email(email)) => Ok(user_context.get_by_email(email).await?),
+        None => Ok(None),
     }
+}
+
+/// Updates the session given by refresh token in the database.
+/// Returns the new access and refresh token i.e. a tuple `(Token, Token)` where the 0th element is the access token and the 1st element refresh token.
+pub async fn update_session(
+    session_context: Arc<dyn SessionContextTrait>,
+    refresh_token: String,
+) -> Result<(Token, Token), Status> {
+    let session = match session_context
+        .get_by_token(TokenType::RefreshToken, refresh_token)
+        .await
+    {
+        Ok(Some(session)) => session,
+        Ok(None) => {
+            return Err(Status::unauthenticated(
+                "No session found with given refresh token",
+            ));
+        }
+        Err(err) => return Err(Status::internal(err.to_string())),
+    };
+
+    let uid = session.user_id.to_string();
+
+    let access_token = Token::access(&uid)?;
+    let refresh_token = Token::refresh(&uid)?;
+
+    session_context
+        .update(session::Model {
+            id: session.id,
+            access_token: access_token.to_string(),
+            refresh_token: refresh_token.to_string(),
+            updated_at: Default::default(),
+            user_id: session.user_id,
+        })
+        .await
+        .unwrap();
+
+    Ok((access_token, refresh_token))
+}
+
+/// Returns true if the given email is a valid format.
+fn is_valid_email(email: &str) -> bool {
+    Regex::new(r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$")
+        .unwrap()
+        .is_match(email)
+}
+
+/// Returns true if the given username is a valid format, i.e. only contains letters and numbers and a length from 3 to 32.
+fn is_valid_username(username: &str) -> bool {
+    Regex::new(r"^[a-zA-Z0-9_]{3,32}$")
+        .unwrap()
+        .is_match(username)
 }
 
 #[tonic::async_trait]
@@ -1129,61 +1126,81 @@ impl EcdarApiAuth for ConcreteEcdarApi {
         request: Request<GetAuthTokenRequest>,
     ) -> Result<Response<GetAuthTokenResponse>, Status> {
         let message = request.get_ref().clone();
-        let uid: String;
-        let user_from_db: user::Model;
-        let is_new_session: bool;
 
-        // Get user from credentials
-        if let Some(user_credentials) = message.user_credentials {
-            let input_password = user_credentials.password.clone();
-            user_from_db = get_auth_find_user_helper(
-                Arc::clone(&self.contexts.user_context),
-                user_credentials,
-            )
-            .await?;
+        let (access_token, refresh_token) = match message.user_credentials {
+            None => {
+                let refresh_token = Token::from_str(
+                    TokenType::RefreshToken,
+                    request
+                        .token_str()
+                        .ok_or(Status::unauthenticated("No refresh token provided"))?,
+                );
 
-            // Check if password in request matches users password
-            if input_password != user_from_db.password {
-                return Err(Status::new(Code::Unauthenticated, "Wrong password"));
+                // Validate refresh token
+                match refresh_token.validate() {
+                    Ok(_) => (),
+                    Err(TokenError::ExpiredSignature) => {
+                        // Delete session if expired
+                        let _ = self
+                            .contexts
+                            .session_context
+                            .delete_by_token(TokenType::RefreshToken, refresh_token.to_string())
+                            .await;
+
+                        return Err(Status::from(TokenError::ExpiredSignature));
+                    }
+                    Err(err) => return Err(Status::from(err)),
+                }
+
+                update_session(
+                    self.contexts.session_context.clone(),
+                    refresh_token.to_string(),
+                )
+                .await?
             }
+            Some(user_credentials) => {
+                let input_password = user_credentials.password.clone();
+                let user = user_from_user_credentials(
+                    self.contexts.user_context.clone(),
+                    user_credentials,
+                )
+                .await
+                .map_err(|err| Status::internal(err.to_string()))?
+                .ok_or_else(|| Status::unauthenticated("Wrong username or password"))?;
 
-            uid = user_from_db.id.to_string();
+                // Check if password in request matches users password
+                if !self
+                    .contexts
+                    .hashing_context
+                    .verify_password(input_password, user.password.as_str())
+                {
+                    return Err(Status::unauthenticated("Wrong username or password"));
+                }
 
-            // Since the user does not have a refresh_token, a new session has to be made
-            is_new_session = true;
+                let uid = user.id.to_string();
 
-            // Get user from refresh_token
-        } else {
-            let refresh_token = Token::from_str(
-                TokenType::RefreshToken,
-                request
-                    .token_str()
-                    .ok_or(Status::unauthenticated("No refresh token provided"))?,
-            );
-            let token_data = refresh_token.validate()?;
-            uid = token_data.claims.sub;
+                let access_token = Token::access(&uid)?;
+                let refresh_token = Token::refresh(&uid)?;
 
-            // Since the user does have a refresh_token, a session already exists
-            is_new_session = false;
-        }
-        // Create new access and refresh token with user id
-        let access_token = Token::new(TokenType::AccessToken, &uid)?.to_string();
-        let refresh_token = Token::new(TokenType::RefreshToken, &uid)?.to_string();
+                self.contexts
+                    .session_context
+                    .create(session::Model {
+                        id: Default::default(),
+                        access_token: access_token.to_string(),
+                        refresh_token: refresh_token.to_string(),
+                        updated_at: Default::default(),
+                        user_id: uid.parse().unwrap(),
+                    })
+                    .await
+                    .map_err(|err| Status::internal(err.to_string()))?;
 
-        // Update or create session in database
-        handle_session(
-            self.contexts.session_context.clone(),
-            &request,
-            is_new_session,
-            access_token.clone(),
-            refresh_token.clone(),
-            uid,
-        )
-        .await?;
+                (access_token, refresh_token)
+            }
+        };
 
         Ok(Response::new(GetAuthTokenResponse {
-            access_token,
-            refresh_token,
+            access_token: access_token.to_string(),
+            refresh_token: refresh_token.to_string(),
         }))
     }
 
@@ -1201,10 +1218,15 @@ impl EcdarApiAuth for ConcreteEcdarApi {
             return Err(Status::new(Code::InvalidArgument, "Invalid email"));
         }
 
+        let hashed_password = self
+            .contexts
+            .hashing_context
+            .hash_password(message.clone().password);
+
         let user = user::Model {
             id: Default::default(),
             username: message.clone().username,
-            password: message.clone().password,
+            password: hashed_password,
             email: message.clone().email,
         };
 
@@ -1282,3 +1304,7 @@ mod user_logic_tests;
 #[cfg(test)]
 #[path = "../tests/api/session_logic.rs"]
 mod session_logic_tests;
+
+#[cfg(test)]
+#[path = "../tests/api/get_auth_logic.rs"]
+mod get_auth_logic_tests;

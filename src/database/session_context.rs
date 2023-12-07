@@ -2,7 +2,6 @@ use crate::api::auth::TokenType;
 use crate::database::database_context::DatabaseContextTrait;
 use crate::database::entity_context::EntityContextTrait;
 use crate::entities::session;
-use crate::entities::session::Model;
 use chrono::Local;
 use sea_orm::prelude::async_trait::async_trait;
 use sea_orm::ActiveValue::{Set, Unchanged};
@@ -51,7 +50,11 @@ impl SessionContextTrait for SessionContext {
         }
     }
 
-    async fn delete_by_token(&self, token_type: TokenType, token: String) -> Result<Model, DbErr> {
+    async fn delete_by_token(
+        &self,
+        token_type: TokenType,
+        token: String,
+    ) -> Result<session::Model, DbErr> {
         let session = self
             .get_by_token(token_type, token)
             .await?

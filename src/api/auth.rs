@@ -9,8 +9,8 @@ use tonic::{metadata, Request, Status};
 
 /// This method is used to validate the access token (not refresh).
 pub fn validation_interceptor(mut req: Request<()>) -> Result<Request<()>, Status> {
-    let token = match req.token_string() {
-        Some(token) => Token::from_str(TokenType::AccessToken, &token),
+    let token = match req.token_str() {
+        Some(token) => Token::from_str(TokenType::AccessToken, token),
         None => return Err(Status::unauthenticated("Token not found")),
     };
 
@@ -75,6 +75,7 @@ impl TokenType {
 /// assert_eq!(token.token_type(), TokenType::AccessToken);
 /// assert_eq!(token.to_string(), token.as_str());
 /// ```
+#[derive(Debug)]
 pub struct Token {
     token_type: TokenType,
     token: String,
@@ -115,6 +116,41 @@ impl Token {
 
         Ok(Token { token_type, token })
     }
+
+    /// Creates a new refresh token.
+    ///
+    /// # Arguments
+    /// * `uid` - The user id to create the token for.
+    ///
+    /// # Examples
+    /// ```
+    /// use ecdar_api::api::auth::{Token, TokenType};
+    ///
+    /// let refresh_token = Token::refresh("1").unwrap();
+    ///
+    /// assert_eq!(refresh_token.token_type(), TokenType::RefreshToken);
+    /// ```
+    pub fn refresh(uid: &str) -> Result<Token, TokenError> {
+        Token::new(TokenType::RefreshToken, uid)
+    }
+
+    /// Creates a new access token.
+    ///
+    /// # Arguments
+    /// * `uid` - The user id to create the token for.
+    ///
+    /// # Examples
+    /// ```
+    /// use ecdar_api::api::auth::{Token, TokenType};
+    ///
+    /// let access_token = Token::access("1").unwrap();
+    ///
+    /// assert_eq!(access_token.token_type(), TokenType::AccessToken);
+    /// ```
+    pub fn access(uid: &str) -> Result<Token, TokenError> {
+        Token::new(TokenType::AccessToken, uid)
+    }
+
     /// Create a token from a string.
     ///
     /// # Arguments
@@ -125,7 +161,7 @@ impl Token {
     /// ```
     /// use ecdar_api::api::auth::{Token, TokenType};
     ///
-    /// let token = Token::from_str(TokenType::AccessToken, "token").unwrap();
+    /// let token = Token::from_str(TokenType::AccessToken, "token")
     /// ```
     pub fn from_str(token_type: TokenType, token: &str) -> Token {
         Token {
@@ -158,19 +194,12 @@ impl Token {
             Err(err) => Err(err.into()),
         }
     }
-
-    /// Returns the token as a string.
-    // pub fn to_string(&self) -> String {
-    //     self.token.clone()
-    // }
-    /// Extracts the token as a string slice.
-    ///
     /// # Examples
     ///
     /// ```
     /// use ecdar_api::api::auth::{Token, TokenType};
     ///
-    /// let token = Token::new(TokenType::AccessToken, "1").unwrap();
+    /// let token = Token::from_str(TokenType::AccessToken, "token");
     ///
     /// assert_eq!(token.as_str(), "token");
     /// ```
@@ -199,46 +228,38 @@ impl Display for Token {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, thiserror::Error)]
 pub enum TokenError {
+    #[error("Invalid token")]
     InvalidToken,
+    #[error("Invalid signature")]
     InvalidSignature,
+    #[error("Expired signature")]
     ExpiredSignature,
-    Custom(String),
+    #[error("{0}")]
+    Unknown(String),
 }
 
-/// This is used to get the token error as a string.
-impl Display for TokenError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            TokenError::InvalidToken => write!(f, "Invalid token"),
-            TokenError::InvalidSignature => write!(f, "Invalid signature"),
-            TokenError::ExpiredSignature => write!(f, "Expired signature"),
-            TokenError::Custom(message) => write!(f, "{}", message),
-        }
-    }
-}
-
-/// This is used to convert the jsonwebtoken error kind to a [TokenError].
+/// This is used to convert a [jsonwebtoken::errors::ErrorKind] to a [TokenError].
 impl From<jsonwebtoken::errors::ErrorKind> for TokenError {
-    fn from(error: jsonwebtoken::errors::ErrorKind) -> Self {
-        match error {
+    fn from(error_kind: jsonwebtoken::errors::ErrorKind) -> Self {
+        match error_kind {
             jsonwebtoken::errors::ErrorKind::InvalidToken => TokenError::InvalidToken,
             jsonwebtoken::errors::ErrorKind::InvalidSignature => TokenError::InvalidSignature,
             jsonwebtoken::errors::ErrorKind::ExpiredSignature => TokenError::ExpiredSignature,
-            _ => TokenError::Custom("Failed to validate token".to_string()),
+            _ => TokenError::Unknown("Unknown token error".to_string()),
         }
     }
 }
 
-/// This is used to convert the jsonwebtoken error to a [TokenError].
+/// This is used to convert a [jsonwebtoken::errors::Error] to a [TokenError].
 impl From<jsonwebtoken::errors::Error> for TokenError {
     fn from(error: jsonwebtoken::errors::Error) -> Self {
         TokenError::from(error.kind().clone())
     }
 }
 
-/// This is used to convert the [TokenError] to a [Status].
+/// This is used to convert a [TokenError] to a [Status].
 impl From<TokenError> for Status {
     fn from(error: TokenError) -> Self {
         Status::unauthenticated(error.to_string())
@@ -248,39 +269,30 @@ impl From<TokenError> for Status {
 /// An extension trait for [Request]`s that provides a variety of convenient
 /// auth related methods.
 pub trait RequestExt {
-    fn token_string(&self) -> Option<String>;
     fn token_str(&self) -> Option<&str>;
-
+    fn token_string(&self) -> Option<String>;
     fn uid(&self) -> Option<i32>;
 }
 
 impl<T> RequestExt for Request<T> {
-    /// Returns the token string from the request metadata.
-    fn token_string(&self) -> Option<String> {
-        self.metadata().get("authorization").map(|token| {
-            token
-                .to_str()
-                .unwrap()
-                .trim_start_matches("Bearer ")
-                .to_string()
-        })
-    }
     /// Returns the token string slice from the request metadata.
     fn token_str(&self) -> Option<&str> {
-        match self.metadata().get("authorization") {
-            Some(token) => Some(token.to_str().unwrap().trim_start_matches("Bearer ")),
-            None => None,
-        }
+        self.metadata()
+            .get("authorization")
+            .and_then(|token| token.to_str().ok())
+            .map(|token_str| token_str.trim_start_matches("Bearer "))
     }
 
+    /// Returns the token string from the request metadata.
+    fn token_string(&self) -> Option<String> {
+        self.token_str().map(String::from)
+    }
     /// Returns the uid from the request metadata.
     fn uid(&self) -> Option<i32> {
-        let uid = match self.metadata().get("uid").unwrap().to_str() {
-            Ok(uid) => uid,
-            Err(_) => return None,
-        };
-
-        Some(uid.parse().unwrap())
+        self.metadata()
+            .get("uid")
+            .and_then(|uid| uid.to_str().ok())
+            .and_then(|uid_str| uid_str.parse().ok())
     }
 }
 
