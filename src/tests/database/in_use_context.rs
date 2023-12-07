@@ -1,9 +1,7 @@
 use crate::tests::database::helpers::*;
 use crate::{
-    database::{
-        entity_context::EntityContextTrait,
-        in_use_context::{DbErr, InUseContext},
-    },
+    database::context_impls::InUseContext,
+    database::context_traits::EntityContextTrait,
     entities::{in_use, project, session, user},
     to_active_models,
 };

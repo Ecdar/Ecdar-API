@@ -1,8 +1,7 @@
 #![cfg(test)]
 
-use crate::database::database_context::{
-    DatabaseContextTrait, PostgresDatabaseContext, SQLiteDatabaseContext,
-};
+use crate::database::context_impls::{PostgresDatabaseContext, SQLiteDatabaseContext};
+use crate::database::context_traits::DatabaseContextTrait;
 use crate::entities::{access, in_use, project, query, session, user};
 use dotenv::dotenv;
 use sea_orm::{ConnectionTrait, Database, DbBackend};

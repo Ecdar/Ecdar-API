@@ -1,10 +1,10 @@
 use crate::api::server::server::AccessInfo;
-use crate::database::access_context::AccessContextTrait;
+use crate::database::context_traits::{AccessContextTrait, EntityContextTrait};
 use crate::tests::database::helpers::{
     create_accesses, create_projects, create_users, get_reset_database_context,
 };
 use crate::{
-    database::{access_context::AccessContext, entity_context::EntityContextTrait},
+    database::context_impls::AccessContext,
     entities::{access, project, user},
     to_active_models,
 };

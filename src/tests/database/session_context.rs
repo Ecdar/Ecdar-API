@@ -3,12 +3,12 @@ use sea_orm::{entity::prelude::*, IntoActiveModel};
 use std::ops::Add;
 
 use crate::{
-    database::{entity_context::EntityContextTrait, session_context::SessionContext},
+    database::context_impls::SessionContext,
+    database::context_traits::{EntityContextTrait, SessionContextTrait},
     entities::{in_use, project, session, user},
     to_active_models,
 };
 
-use crate::database::session_context::SessionContextTrait;
 use chrono::{Duration, Utc};
 
 async fn seed_db() -> (SessionContext, session::Model, user::Model, project::Model) {

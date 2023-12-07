@@ -1,11 +1,6 @@
 use crate::api::hashing_context::HashingContextTrait;
 use crate::api::server::server::ecdar_backend_server::EcdarBackend;
-use crate::database::access_context::AccessContextTrait;
-use crate::database::in_use_context::InUseContextTrait;
-use crate::database::project_context::ProjectContextTrait;
-use crate::database::query_context::QueryContextTrait;
-use crate::database::session_context::SessionContextTrait;
-use crate::database::user_context::UserContextTrait;
+use crate::database::context_traits::*;
 use std::sync::Arc;
 
 #[derive(Clone)]

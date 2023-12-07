@@ -1,6 +1,7 @@
 use crate::api::auth::TokenType;
-use crate::database::database_context::DatabaseContextTrait;
-use crate::database::entity_context::EntityContextTrait;
+use crate::database::context_traits::{
+    DatabaseContextTrait, EntityContextTrait, SessionContextTrait,
+};
 use crate::entities::session;
 use chrono::Local;
 use sea_orm::prelude::async_trait::async_trait;
@@ -10,21 +11,6 @@ use std::sync::Arc;
 
 pub struct SessionContext {
     db_context: Arc<dyn DatabaseContextTrait>,
-}
-
-#[async_trait]
-pub trait SessionContextTrait: EntityContextTrait<session::Model> {
-    async fn get_by_token(
-        &self,
-        token_type: TokenType,
-        token: String,
-    ) -> Result<Option<session::Model>, DbErr>;
-
-    async fn delete_by_token(
-        &self,
-        token_type: TokenType,
-        token: String,
-    ) -> Result<session::Model, DbErr>;
 }
 
 #[async_trait]
@@ -192,5 +178,5 @@ impl EntityContextTrait<session::Model> for SessionContext {
 }
 
 #[cfg(test)]
-#[path = "../tests/database/session_context.rs"]
+#[path = "../../tests/database/session_context.rs"]
 mod session_context_tests;

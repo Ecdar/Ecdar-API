@@ -1,8 +1,9 @@
-use crate::database::database_context::DatabaseContextTrait;
+use crate::database::context_traits::{
+    DatabaseContextTrait, EntityContextTrait, ProjectContextTrait,
+};
 use crate::entities::{access, project, query};
 
 use crate::api::server::server::ProjectInfo;
-use crate::EntityContextTrait;
 use async_trait::async_trait;
 use sea_orm::{
     ActiveModelTrait, ColumnTrait, DbErr, EntityTrait, IntoActiveModel, JoinType, ModelTrait,
@@ -12,11 +13,6 @@ use std::sync::Arc;
 
 pub struct ProjectContext {
     db_context: Arc<dyn DatabaseContextTrait>,
-}
-
-#[async_trait]
-pub trait ProjectContextTrait: EntityContextTrait<project::Model> {
-    async fn get_project_info_by_uid(&self, uid: i32) -> Result<Vec<ProjectInfo>, DbErr>;
 }
 
 #[async_trait]
@@ -154,5 +150,5 @@ impl EntityContextTrait<project::Model> for ProjectContext {
 }
 
 #[cfg(test)]
-#[path = "../tests/database/project_context.rs"]
+#[path = "../../tests/database/project_context.rs"]
 mod project_context_tests;

@@ -16,15 +16,12 @@ use crate::api::auth::TokenError;
 use crate::api::context_collection::ContextCollection;
 use crate::api::server::server::create_access_request::User;
 use crate::api::server::server::get_users_response::UserInfo;
-use crate::database::{session_context::SessionContextTrait, user_context::UserContextTrait};
-use crate::entities::{access, in_use, project, query, session, user};
-use crate::{
-    api::{
-        auth::{RequestExt, Token, TokenType},
-        server::server::Project,
-    },
-    database::access_context::AccessContextTrait,
+use crate::api::{
+    auth::{RequestExt, Token, TokenType},
+    server::server::Project,
 };
+use crate::database::context_traits::{AccessContextTrait, SessionContextTrait, UserContextTrait};
+use crate::entities::{access, in_use, project, query, session, user};
 use chrono::{Duration, Utc};
 use regex::Regex;
 use sea_orm::{DbErr, SqlErr};

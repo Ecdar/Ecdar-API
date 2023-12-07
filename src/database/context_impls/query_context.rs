@@ -1,5 +1,6 @@
-use crate::database::database_context::DatabaseContextTrait;
-use crate::database::entity_context::EntityContextTrait;
+use crate::database::context_traits::{
+    DatabaseContextTrait, EntityContextTrait, QueryContextTrait,
+};
 use crate::entities::query;
 use sea_orm::prelude::async_trait::async_trait;
 use sea_orm::ActiveValue::{Set, Unchanged};
@@ -9,12 +10,6 @@ use std::sync::Arc;
 pub struct QueryContext {
     db_context: Arc<dyn DatabaseContextTrait>,
 }
-
-#[async_trait]
-pub trait QueryContextTrait: EntityContextTrait<query::Model> {
-    async fn get_all_by_project_id(&self, project_id: i32) -> Result<Vec<query::Model>, DbErr>;
-}
-
 #[async_trait]
 impl QueryContextTrait for QueryContext {
     async fn get_all_by_project_id(&self, project_id: i32) -> Result<Vec<query::Model>, DbErr> {
@@ -134,5 +129,5 @@ impl EntityContextTrait<query::Model> for QueryContext {
 }
 
 #[cfg(test)]
-#[path = "../tests/database/query_context.rs"]
+#[path = "../../tests/database/query_context.rs"]
 mod query_context_tests;

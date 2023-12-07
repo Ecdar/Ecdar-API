@@ -1,5 +1,4 @@
-use crate::database::database_context::DatabaseContextTrait;
-use crate::database::entity_context::EntityContextTrait;
+use crate::database::context_traits::{DatabaseContextTrait, EntityContextTrait, UserContextTrait};
 use crate::entities::user;
 use sea_orm::prelude::async_trait::async_trait;
 use sea_orm::ActiveValue::{Set, Unchanged};
@@ -8,20 +7,6 @@ use std::sync::Arc;
 
 pub struct UserContext {
     db_context: Arc<dyn DatabaseContextTrait>,
-}
-
-#[async_trait]
-pub trait UserContextTrait: EntityContextTrait<user::Model> {
-    async fn get_by_username(&self, username: String) -> Result<Option<user::Model>, DbErr>;
-    async fn get_by_email(&self, email: String) -> Result<Option<user::Model>, DbErr>;
-    /// Returns all the user entities with the given ids
-    /// # Example
-    /// ```
-    /// let context : UserContext = UserContext::new(...);
-    /// let model : vec<Model> = context.get_by_ids(vec![1,2]).unwrap();
-    /// assert_eq!(model.len(),2);
-    /// ```
-    async fn get_by_ids(&self, ids: Vec<i32>) -> Result<Vec<user::Model>, DbErr>;
 }
 
 #[async_trait]
@@ -162,5 +147,5 @@ impl EntityContextTrait<user::Model> for UserContext {
 }
 
 #[cfg(test)]
-#[path = "../tests/database/user_context.rs"]
+#[path = "../../tests/database/user_context.rs"]
 mod user_context_tests;

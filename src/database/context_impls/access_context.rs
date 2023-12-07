@@ -1,6 +1,7 @@
 use crate::api::server::server::AccessInfo;
-use crate::database::database_context::DatabaseContextTrait;
-use crate::database::entity_context::EntityContextTrait;
+use crate::database::context_traits::{
+    AccessContextTrait, DatabaseContextTrait, EntityContextTrait,
+};
 use crate::entities::access;
 use sea_orm::prelude::async_trait::async_trait;
 use sea_orm::ActiveValue::{Set, Unchanged};
@@ -9,17 +10,6 @@ use std::sync::Arc;
 
 pub struct AccessContext {
     db_context: Arc<dyn DatabaseContextTrait>,
-}
-
-#[async_trait]
-pub trait AccessContextTrait: EntityContextTrait<access::Model> {
-    async fn get_access_by_uid_and_project_id(
-        &self,
-        uid: i32,
-        project_id: i32,
-    ) -> Result<Option<access::Model>, DbErr>;
-
-    async fn get_access_by_project_id(&self, project_id: i32) -> Result<Vec<AccessInfo>, DbErr>;
 }
 
 #[async_trait]
@@ -143,5 +133,5 @@ impl EntityContextTrait<access::Model> for AccessContext {
     }
 }
 #[cfg(test)]
-#[path = "../tests/database/access_context.rs"]
+#[path = "../../tests/database/access_context.rs"]
 mod access_context_tests;

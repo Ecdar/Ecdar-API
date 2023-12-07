@@ -1,10 +1,7 @@
-use crate::database::user_context::UserContextTrait;
 use crate::tests::database::helpers::*;
 use crate::{
-    database::{
-        entity_context::EntityContextTrait,
-        user_context::{DbErr, UserContext},
-    },
+    database::context_impls::UserContext,
+    database::context_traits::{EntityContextTrait, UserContextTrait},
     entities::{access, project, session, user},
     to_active_models,
 };
