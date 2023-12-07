@@ -47,6 +47,9 @@ Ecdar-API offers implementations for both `postgreSQL` and `sqlite` databases.
 **Run tests:**
 - Execute `cargo test -- --test-threads=1`.
 
+**Generating documentation**
+- Execute `cargo doc --no-deps --open`
+
 **Simulating Frontend:**
 - Ecdar-API can be contacted via GRPC from [Postman](https://www.postman.com/).
 - Useful for integration testing.
