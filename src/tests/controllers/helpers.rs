@@ -8,15 +8,15 @@ use crate::api::server::server::{
     QueryRequest, QueryResponse, SimulationStartRequest, SimulationStepRequest,
     SimulationStepResponse, UserTokenResponse,
 };
+use crate::database::context_collection::ContextCollection;
 use crate::database::context_traits::*;
-use std::sync::Arc;
-
-use crate::api::collections::{ContextCollection, ServiceCollection};
 use crate::entities::{access, in_use, project, query, session, user};
+use crate::services::service_collection::ServiceCollection;
 use crate::services::service_traits::*;
 use async_trait::async_trait;
 use mockall::mock;
 use sea_orm::DbErr;
+use std::sync::Arc;
 use tonic::{Request, Response, Status};
 
 pub fn get_mock_contexts() -> MockContexts {

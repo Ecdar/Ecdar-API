@@ -5,10 +5,12 @@ mod entities;
 mod services;
 mod tests;
 
-use crate::api::collections::{ContextCollection, ControllerCollection, ServiceCollection};
+use crate::controllers::controller_collection::ControllerCollection;
 use crate::controllers::controller_impls::*;
+use crate::database::context_collection::ContextCollection;
 use crate::database::context_impls::*;
 use crate::database::context_traits::DatabaseContextTrait;
+use crate::services::service_collection::ServiceCollection;
 use crate::services::service_impls::{HashingService, ReveaalService};
 use api::server::start_grpc_server;
 use dotenv::dotenv;

@@ -3,11 +3,11 @@ use std::env;
 use tonic::transport::Server;
 
 use crate::api::auth;
-use crate::api::collections::ControllerCollection;
 use crate::api::ecdar_api::ConcreteEcdarApi;
 use crate::api::server::server::ecdar_api_auth_server::EcdarApiAuthServer;
 use crate::api::server::server::ecdar_api_server::EcdarApiServer;
 use crate::api::server::server::ecdar_backend_server::EcdarBackendServer;
+use crate::controllers::controller_collection::ControllerCollection;
 
 pub mod server {
     tonic::include_proto!("ecdar_proto_buf");

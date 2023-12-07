@@ -9,7 +9,7 @@ use super::server::server::{
     SimulationStepRequest, SimulationStepResponse, UpdateAccessRequest, UpdateProjectRequest,
     UpdateQueryRequest, UpdateUserRequest, UserTokenResponse,
 };
-use crate::api::collections::{ControllerCollection, ServiceCollection};
+use crate::controllers::controller_collection::ControllerCollection;
 use serde_json;
 use tonic::{Request, Response, Status};
 
