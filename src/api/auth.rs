@@ -260,16 +260,18 @@ pub trait RequestExt {
 
 impl<T> RequestExt for Request<T> {
     /// Returns the token string from the request metadata.
+    //TODO should return result
     fn token_string(&self) -> Option<String> {
         self.metadata().get("authorization").map(|token| {
             token
                 .to_str()
-                .expect("failed to parse token string") //TODO better error handling
+                .expect("failed to parse token string") 
                 .trim_start_matches("Bearer ")
                 .to_string()
         })
     }
     /// Returns the token string slice from the request metadata.
+    //TODO should return result
     fn token_str(&self) -> Option<&str> {
         match self.metadata().get("authorization") {
             //TODO better error handling

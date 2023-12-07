@@ -13,11 +13,10 @@ use tonic::{Request, Response, Status};
 pub struct ReveaalContext;
 
 impl ReveaalContext {
-    //TODO should return a result for better error handling
+    #[allow(clippy::expect_used)]
     async fn get_connection() -> Result<EcdarBackendClient<Channel>, tonic::transport::Error> {
         let url = env::var("REVEAAL_ADDRESS").expect("Expected REVEAAL_ADDRESS to be set.");
         EcdarBackendClient::connect(url).await
-        // .expect("failed to connect to Ecdar backend") //TODO Perhaps the error handling should be more graceful
     }
 }
 
