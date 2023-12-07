@@ -1,20 +1,22 @@
-use super::server::server::{
-    ecdar_api_auth_server::EcdarApiAuth,
-    ecdar_api_server::EcdarApi,
-    ecdar_backend_server::EcdarBackend,
-    get_auth_token_request::{user_credentials, UserCredentials},
-    CreateAccessRequest, CreateProjectRequest, CreateProjectResponse, CreateQueryRequest,
-    CreateUserRequest, DeleteAccessRequest, DeleteProjectRequest, DeleteQueryRequest,
-    GetAuthTokenRequest, GetAuthTokenResponse, GetProjectRequest, GetProjectResponse,
-    GetUsersRequest, GetUsersResponse, ListAccessInfoRequest, ListAccessInfoResponse,
-    ListProjectsInfoResponse, Query, QueryRequest, QueryResponse, SendQueryRequest,
-    SendQueryResponse, SimulationStartRequest, SimulationStepRequest, SimulationStepResponse,
-    UpdateAccessRequest, UpdateProjectRequest, UpdateQueryRequest, UpdateUserRequest,
-    UserTokenResponse,
+use super::{
+    context_collection::ContextCollection,
+    server::server::{
+        create_access_request::User,
+        ecdar_api_auth_server::EcdarApiAuth,
+        ecdar_api_server::EcdarApi,
+        ecdar_backend_server::EcdarBackend,
+        get_auth_token_request::{user_credentials, UserCredentials},
+        CreateAccessRequest, CreateProjectRequest, CreateProjectResponse, CreateQueryRequest,
+        CreateUserRequest, DeleteAccessRequest, DeleteProjectRequest, DeleteQueryRequest,
+        GetAuthTokenRequest, GetAuthTokenResponse, GetProjectRequest, GetProjectResponse,
+        GetUsersRequest, GetUsersResponse, ListAccessInfoRequest, ListAccessInfoResponse,
+        ListProjectsInfoResponse, Query, QueryRequest, QueryResponse, SendQueryRequest,
+        SendQueryResponse, SimulationStartRequest, SimulationStepRequest, SimulationStepResponse,
+        UpdateAccessRequest, UpdateProjectRequest, UpdateQueryRequest, UpdateUserRequest,
+        UserTokenResponse,
+    },
 };
 use crate::api::auth::TokenError;
-use crate::api::context_collection::ContextCollection;
-use crate::api::server::server::create_access_request::User;
 use crate::api::server::server::get_users_response::UserInfo;
 use crate::database::{session_context::SessionContextTrait, user_context::UserContextTrait};
 use crate::entities::{access, in_use, project, query, session, user};
@@ -974,8 +976,23 @@ impl EcdarApi for ConcreteEcdarApi {
         }))
     }
 
-    async fn delete_session(&self, _request: Request<()>) -> Result<Response<()>, Status> {
-        todo!()
+    /// Deletes the requester's session, found by their access token.
+    ///  
+    /// Returns the response that is received from Reveaal.
+    async fn delete_session(&self, request: Request<()>) -> Result<Response<()>, Status> {
+        let access_token = request
+            .token_string()
+            .ok_or(Status::unauthenticated("No access token provided"))?;
+
+        match self
+            .contexts
+            .session_context
+            .delete_by_token(TokenType::AccessToken, access_token)
+            .await
+        {
+            Ok(_) => Ok(Response::new(())),
+            Err(error) => Err(Status::new(Code::Internal, error.to_string())),
+        }
     }
 }
 
