@@ -19,7 +19,7 @@ use crate::database::{session_context::SessionContextTrait, user_context::UserCo
 use crate::entities::{access, in_use, model, query, session, user};
 use chrono::{Duration, Utc};
 use regex::Regex;
-use sea_orm::{DbErr, SqlErr};
+use sea_orm::SqlErr;
 use serde_json;
 use std::sync::Arc;
 use tonic::{Code, Request, Response, Status};
@@ -96,7 +96,7 @@ pub async fn handle_session(
                 TokenType::RefreshToken,
                 request
                     .token_string()
-                    .map_err(|err| Status::internal("failed to get token from request metadata"))?
+                    .map_err(|_err| Status::internal("failed to get token from request metadata"))?
                     .ok_or(Status::internal(
                         "failed to get token from request metadata",
                     ))?,
@@ -203,7 +203,7 @@ impl EcdarApi for ConcreteEcdarApi {
                                 TokenType::AccessToken,
                                 request
                                     .token_string()
-                                    .map_err(|err| {
+                                    .map_err(|_err| {
                                         Status::internal(
                                             "failed to get token from request metadata",
                                         )
@@ -248,20 +248,24 @@ impl EcdarApi for ConcreteEcdarApi {
 
         let queries = queries
             .into_iter()
-            .map(|query| Query {
-                id: query.id,
-                model_id: query.model_id,
-                query: query.string,
-                result: match query.result {
-                    Some(result) => {
-                        serde_json::from_value(result).expect("failed to parse message")
-                        //TODO better error handling
-                    }
-                    None => "".to_owned(),
-                },
-                outdated: query.outdated,
+            .map(|query| {
+                let result = serde_json::from_value(query.result.unwrap_or_else(|| "".into()))?;
+
+                Ok(Query {
+                    id: query.id,
+                    model_id: query.model_id,
+                    query: query.string,
+                    result: result,
+                    outdated: query.outdated,
+                })
             })
-            .collect::<Vec<Query>>();
+            .collect::<Result<Vec<Query>, serde_json::Error>>()
+            .map_err(|err| {
+                Status::internal(format!(
+                    "failed to parse json result, inner error:  {}",
+                    err.to_string()
+                ))
+            })?;
 
         Ok(Response::new(GetModelResponse {
             model: Some(model),
@@ -331,7 +335,7 @@ impl EcdarApi for ConcreteEcdarApi {
                 TokenType::AccessToken,
                 request
                     .token_string()
-                    .map_err(|err| Status::internal("failed to get token from request metadata"))?
+                    .map_err(|_err| Status::internal("failed to get token from request metadata"))?
                     .ok_or(Status::internal(
                         "Failed to get token from request metadata",
                     ))?,
@@ -416,7 +420,7 @@ impl EcdarApi for ConcreteEcdarApi {
                 TokenType::AccessToken,
                 request
                     .token_string()
-                    .map_err(|err| Status::internal("failed to get token from request metadata"))?
+                    .map_err(|_err| Status::internal("failed to get token from request metadata"))?
                     .ok_or(Status::new(
                         Code::Internal,
                         "Failed to get token from request metadata",
@@ -864,7 +868,7 @@ impl EcdarApiAuth for ConcreteEcdarApi {
                 TokenType::RefreshToken,
                 request
                     .token_str()
-                    .map_err(|err| Status::internal("failed to get token from request metadata"))?
+                    .map_err(|_err| Status::internal("failed to get token from request metadata"))?
                     .ok_or(Status::unauthenticated("No refresh token provided"))?,
             );
             let token_data = refresh_token.validate()?;

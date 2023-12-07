@@ -14,7 +14,7 @@ use tonic::{
 pub fn validation_interceptor(mut req: Request<()>) -> Result<Request<()>, Status> {
     let token = match req
         .token_string()
-        .map_err(|err| Status::internal("failed to get token string"))?
+        .map_err(|_err| Status::internal("failed to get token string"))?
     {
         Some(token) => Token::from_str(TokenType::AccessToken, &token),
         None => return Err(Status::unauthenticated("Token not found")),
@@ -57,6 +57,7 @@ impl TokenType {
     ///
     /// # Panics
     /// This method will panic if the token secret environment variable is not set.
+    #[allow(clippy::expect_used)]
     fn secret(&self) -> String {
         match self {
             TokenType::AccessToken => env::var("ACCESS_TOKEN_HS512_SECRET")
@@ -104,7 +105,7 @@ impl Token {
         let now = Utc::now();
         let expiration = now
             .checked_add_signed(token_type.duration())
-            .ok_or_else(|| TokenError::InvalidSignature)?
+            .ok_or(TokenError::InvalidSignature)?
             // .expect("valid timestamp")
             .timestamp();
 
@@ -301,7 +302,7 @@ impl<T> RequestExt for Request<T> {
             Err(_) => return None,
         };
         //TODO better error handling
-        Some(uid.parse().ok()?)
+        uid.parse().ok()
     }
 }
 
