@@ -1,4 +1,4 @@
-use crate::database::context_traits::{DatabaseContextTrait, EntityContextTrait, UserContextTrait};
+use crate::contexts::context_traits::{DatabaseContextTrait, EntityContextTrait, UserContextTrait};
 use crate::entities::user;
 use sea_orm::prelude::async_trait::async_trait;
 use sea_orm::ActiveValue::{Set, Unchanged};
@@ -147,5 +147,5 @@ impl EntityContextTrait<user::Model> for UserContext {
 }
 
 #[cfg(test)]
-#[path = "../../tests/database/user_context.rs"]
+#[path = "../../tests/contexts/user_context.rs"]
 mod user_context_tests;

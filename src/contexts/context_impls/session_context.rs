@@ -1,5 +1,5 @@
 use crate::api::auth::TokenType;
-use crate::database::context_traits::{
+use crate::contexts::context_traits::{
     DatabaseContextTrait, EntityContextTrait, SessionContextTrait,
 };
 use crate::entities::session;
@@ -64,7 +64,7 @@ impl SessionContext {
 
 #[async_trait]
 impl EntityContextTrait<session::Model> for SessionContext {
-    /// Creates a new session in the database based on the provided model.
+    /// Creates a new session in the contexts based on the provided model.
     /// # Example
     /// ```rust
     /// use crate::entities::session::{Entity, Model};
@@ -111,9 +111,9 @@ impl EntityContextTrait<session::Model> for SessionContext {
             .await
     }
 
-    /// Updates a model in the database based on the provided model.
+    /// Updates a model in the contexts based on the provided model.
     /// # **Example**
-    /// ## ***Model in database***
+    /// ## ***Model in contexts***
     /// ### Model table ###
     /// | id | token                                | created_at                | user_id |
     /// |----|--------------------------------------|---------------------------|---------|
@@ -147,9 +147,9 @@ impl EntityContextTrait<session::Model> for SessionContext {
         .await
     }
 
-    /// Deletes a model in the database with a specific id.
+    /// Deletes a model in the contexts with a specific id.
     /// # **Example**
-    /// ## ***Model in database***
+    /// ## ***Model in contexts***
     /// ### Model table ###
     /// | id | token                                | created_at                | user_id |
     /// |----|--------------------------------------|---------------------------|---------|
@@ -178,5 +178,5 @@ impl EntityContextTrait<session::Model> for SessionContext {
 }
 
 #[cfg(test)]
-#[path = "../../tests/database/session_context.rs"]
+#[path = "../../tests/contexts/session_context.rs"]
 mod session_context_tests;

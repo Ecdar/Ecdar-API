@@ -2,8 +2,8 @@ use crate::api::auth::{RequestExt, Token, TokenError, TokenType};
 use crate::api::collections::{ContextCollection, ServiceCollection};
 use crate::api::server::server::get_auth_token_request::{user_credentials, UserCredentials};
 use crate::api::server::server::{GetAuthTokenRequest, GetAuthTokenResponse};
+use crate::contexts::context_traits::{SessionContextTrait, UserContextTrait};
 use crate::controllers::controller_traits::SessionControllerTrait;
-use crate::database::context_traits::{SessionContextTrait, UserContextTrait};
 use crate::entities::{session, user};
 use sea_orm::DbErr;
 use std::sync::Arc;
@@ -19,7 +19,7 @@ impl SessionController {
         Self { contexts, services }
     }
 
-    /// Updates the session given by refresh token in the database.
+    /// Updates the session given by refresh token in the contexts.
     /// Returns the new access and refresh token i.e. a tuple `(Token, Token)` where the 0th element is the access token and the 1st element refresh token.
     pub async fn update_session(&self, refresh_token: String) -> Result<(Token, Token), Status> {
         let session = match self
@@ -66,7 +66,7 @@ impl SessionControllerTrait for SessionController {
     /// This method is used to get a new access and refresh token for a user.
     ///
     /// # Errors
-    /// This function will return an error if the user does not exist in the database,
+    /// This function will return an error if the user does not exist in the contexts,
     /// if the password in the request does not match the user's password,
     /// or if no user is provided in the request.
     async fn get_auth_token(

@@ -1,4 +1,4 @@
-use crate::database::context_traits::{
+use crate::contexts::context_traits::{
     DatabaseContextTrait, EntityContextTrait, InUseContextTrait,
 };
 use crate::entities::in_use;
@@ -68,5 +68,5 @@ impl EntityContextTrait<in_use::Model> for InUseContext {
 }
 
 #[cfg(test)]
-#[path = "../../tests/database/in_use_context.rs"]
+#[path = "../../tests/contexts/in_use_context.rs"]
 mod in_use_context_tests;

@@ -1,5 +1,5 @@
 use crate::api::server::server::AccessInfo;
-use crate::database::context_traits::{
+use crate::contexts::context_traits::{
     AccessContextTrait, DatabaseContextTrait, EntityContextTrait,
 };
 use crate::entities::access;
@@ -133,5 +133,5 @@ impl EntityContextTrait<access::Model> for AccessContext {
     }
 }
 #[cfg(test)]
-#[path = "../../tests/database/access_context.rs"]
+#[path = "../../tests/contexts/access_context.rs"]
 mod access_context_tests;

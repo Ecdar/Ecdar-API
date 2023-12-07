@@ -8,8 +8,8 @@ use crate::api::server::server::{
     QueryRequest, QueryResponse, SimulationStartRequest, SimulationStepRequest,
     SimulationStepResponse, UserTokenResponse,
 };
-use crate::database::context_collection::ContextCollection;
-use crate::database::context_traits::*;
+use crate::contexts::context_collection::ContextCollection;
+use crate::contexts::context_traits::*;
 use crate::entities::{access, in_use, project, query, session, user};
 use crate::services::service_collection::ServiceCollection;
 use crate::services::service_traits::*;

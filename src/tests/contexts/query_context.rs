@@ -2,8 +2,8 @@ use crate::tests::database::helpers::{
     create_projects, create_queries, create_users, get_reset_database_context,
 };
 use crate::{
-    database::context_impls::QueryContext,
-    database::context_traits::EntityContextTrait,
+    contexts::context_impls::QueryContext,
+    contexts::context_traits::EntityContextTrait,
     entities::{project, query, user},
     to_active_models,
 };

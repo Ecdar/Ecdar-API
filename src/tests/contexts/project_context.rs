@@ -1,7 +1,7 @@
 use crate::tests::database::helpers::*;
 use crate::{
-    database::context_impls::ProjectContext,
-    database::context_traits::EntityContextTrait,
+    contexts::context_impls::ProjectContext,
+    contexts::context_traits::EntityContextTrait,
     entities::{access, in_use, project, query, session, user},
     to_active_models,
 };
@@ -282,7 +282,7 @@ async fn update_non_existing_id_test() {
 
 #[tokio::test]
 async fn delete_test() {
-    // Setting up database and user context
+    // Setting up contexts and user context
     let (project_context, project, _) = seed_db().await;
 
     project::Entity::insert(project.clone().into_active_model())

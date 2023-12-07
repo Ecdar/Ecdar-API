@@ -20,9 +20,9 @@ impl QueryController {
 }
 
 impl QueryControllerTrait for QueryController {
-    /// Creates a query in the database
+    /// Creates a query in the contexts
     /// # Errors
-    /// Returns an error if the database context fails to create the query or
+    /// Returns an error if the contexts context fails to create the query or
     async fn create_query(
         &self,
         request: Request<CreateQueryRequest>,
@@ -120,9 +120,9 @@ impl QueryControllerTrait for QueryController {
         }
     }
 
-    /// Deletes a query record in the database.
+    /// Deletes a query record in the contexts.
     /// # Errors
-    /// Returns an error if the provided query_id is not found in the database.
+    /// Returns an error if the provided query_id is not found in the contexts.
     async fn delete_query(
         &self,
         request: Request<DeleteQueryRequest>,
@@ -169,7 +169,7 @@ impl QueryControllerTrait for QueryController {
     }
 
     /// Sends a query to be run on Reveaal.
-    /// After query is run the result is stored in the database.
+    /// After query is run the result is stored in the contexts.
     ///  
     /// Returns the response that is received from Reveaal.
     async fn send_query(
@@ -193,7 +193,7 @@ impl QueryControllerTrait for QueryController {
                 )
             })?;
 
-        // Get project from database
+        // Get project from contexts
         let project = self
             .contexts
             .project_context
@@ -202,7 +202,7 @@ impl QueryControllerTrait for QueryController {
             .map_err(|err| Status::new(Code::Internal, err.to_string()))?
             .ok_or_else(|| Status::new(Code::NotFound, "Model not found"))?;
 
-        // Get query from database
+        // Get query from contexts
         let query = self
             .contexts
             .query_context
@@ -227,7 +227,7 @@ impl QueryControllerTrait for QueryController {
             .send_query(query_request)
             .await?;
 
-        // Update query result in database
+        // Update query result in contexts
         self.contexts
             .query_context
             .update(query::Model {

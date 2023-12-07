@@ -1,15 +1,15 @@
 mod api;
+mod contexts;
 mod controllers;
-mod database;
 mod entities;
 mod services;
 mod tests;
 
+use crate::contexts::context_collection::ContextCollection;
+use crate::contexts::context_impls::*;
+use crate::contexts::context_traits::DatabaseContextTrait;
 use crate::controllers::controller_collection::ControllerCollection;
 use crate::controllers::controller_impls::*;
-use crate::database::context_collection::ContextCollection;
-use crate::database::context_impls::*;
-use crate::database::context_traits::DatabaseContextTrait;
 use crate::services::service_collection::ServiceCollection;
 use crate::services::service_impls::{HashingService, ReveaalService};
 use api::server::start_grpc_server;

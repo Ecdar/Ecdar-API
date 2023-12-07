@@ -1,5 +1,5 @@
 use crate::api::auth::TokenType;
-use crate::database::context_traits::EntityContextTrait;
+use crate::contexts::context_traits::EntityContextTrait;
 use crate::entities::session;
 use async_trait::async_trait;
 use sea_orm::DbErr;

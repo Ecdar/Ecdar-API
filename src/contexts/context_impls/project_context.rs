@@ -1,4 +1,4 @@
-use crate::database::context_traits::{
+use crate::contexts::context_traits::{
     DatabaseContextTrait, EntityContextTrait, ProjectContextTrait,
 };
 use crate::entities::{access, project, query};
@@ -150,5 +150,5 @@ impl EntityContextTrait<project::Model> for ProjectContext {
 }
 
 #[cfg(test)]
-#[path = "../../tests/database/project_context.rs"]
+#[path = "../../tests/contexts/project_context.rs"]
 mod project_context_tests;

@@ -3,8 +3,8 @@ use sea_orm::{entity::prelude::*, IntoActiveModel};
 use std::ops::Add;
 
 use crate::{
-    database::context_impls::SessionContext,
-    database::context_traits::{EntityContextTrait, SessionContextTrait},
+    contexts::context_impls::SessionContext,
+    contexts::context_traits::{EntityContextTrait, SessionContextTrait},
     entities::{in_use, project, session, user},
     to_active_models,
 };
@@ -34,7 +34,7 @@ async fn seed_db() -> (SessionContext, session::Model, user::Model, project::Mod
 
 #[tokio::test]
 async fn create_test() {
-    // Setting up a sqlite database in memory.
+    // Setting up a sqlite contexts in memory.
     let (session_context, mut session, _, _) = seed_db().await;
 
     let created_session = session_context.create(session.clone()).await.unwrap();
@@ -73,12 +73,12 @@ async fn create_default_created_at_test() {
 
 #[tokio::test]
 async fn create_auto_increment_test() {
-    // Setting up database and session context
+    // Setting up contexts and session context
     let (session_context, _, user, _) = seed_db().await;
 
     let sessions = create_sessions(2, user.id);
 
-    // Creates the sessions in the database using the 'create' function
+    // Creates the sessions in the contexts using the 'create' function
     let created_session1 = session_context.create(sessions[0].clone()).await.unwrap();
     let created_session2 = session_context.create(sessions[1].clone()).await.unwrap();
 

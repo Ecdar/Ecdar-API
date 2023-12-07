@@ -1,7 +1,7 @@
 use crate::tests::database::helpers::*;
 use crate::{
-    database::context_impls::UserContext,
-    database::context_traits::{EntityContextTrait, UserContextTrait},
+    contexts::context_impls::UserContext,
+    contexts::context_traits::{EntityContextTrait, UserContextTrait},
     entities::{access, project, session, user},
     to_active_models,
 };
@@ -18,13 +18,13 @@ async fn seed_db() -> (UserContext, user::Model) {
     (user_context, user)
 }
 
-// Test the functionality of the 'create' function, which creates a user in the database
+// Test the functionality of the 'create' function, which creates a user in the contexts
 #[tokio::test]
 async fn create_test() {
-    // Setting up database and user context
+    // Setting up contexts and user context
     let (user_context, user) = seed_db().await;
 
-    // Creates the user in the database using the 'create' function
+    // Creates the user in the contexts using the 'create' function
     let created_user = user_context.create(user.clone()).await.unwrap();
 
     let fetched_user = user::Entity::find_by_id(created_user.id)
@@ -40,7 +40,7 @@ async fn create_test() {
 
 #[tokio::test]
 async fn create_non_unique_username_test() {
-    // Setting up database and user context
+    // Setting up contexts and user context
     let (user_context, user) = seed_db().await;
 
     // Creates a model of the user which will be created
@@ -49,7 +49,7 @@ async fn create_non_unique_username_test() {
     users[0].username = user.clone().username;
     users[1].username = user.clone().username;
 
-    // Creates the user in the database using the 'create' function
+    // Creates the user in the contexts using the 'create' function
     let _created_user1 = user_context.create(users[0].clone()).await.unwrap();
     let created_user2 = user_context.create(users[1].clone()).await;
 
@@ -61,7 +61,7 @@ async fn create_non_unique_username_test() {
 
 #[tokio::test]
 async fn create_non_unique_email_test() {
-    // Setting up database and user context
+    // Setting up contexts and user context
     let (user_context, user) = seed_db().await;
 
     // Creates a model of the user which will be created
@@ -70,7 +70,7 @@ async fn create_non_unique_email_test() {
     users[0].email = user.clone().email;
     users[1].email = user.clone().email;
 
-    // Creates the user in the database using the 'create' function
+    // Creates the user in the contexts using the 'create' function
     let _created_user1 = user_context.create(users[0].clone()).await.unwrap();
     let created_user2 = user_context.create(users[1].clone()).await;
 
@@ -83,7 +83,7 @@ async fn create_non_unique_email_test() {
 
 #[tokio::test]
 async fn create_auto_increment_test() {
-    // Setting up database and user context
+    // Setting up contexts and user context
     let (user_context, user) = seed_db().await;
 
     let mut users = create_users(2);
@@ -91,7 +91,7 @@ async fn create_auto_increment_test() {
     users[0].id = user.clone().id;
     users[1].id = user.clone().id;
 
-    // Creates the user in the database using the 'create' function
+    // Creates the user in the contexts using the 'create' function
     let created_user1 = user_context.create(users[0].clone()).await.unwrap();
     let created_user2 = user_context.create(users[1].clone()).await.unwrap();
 
@@ -116,10 +116,10 @@ async fn create_auto_increment_test() {
 
 #[tokio::test]
 async fn get_by_id_test() {
-    // Setting up database and user context
+    // Setting up contexts and user context
     let (user_context, user) = seed_db().await;
 
-    // Creates the user in the database using the 'create' function
+    // Creates the user in the contexts using the 'create' function
     user::Entity::insert(user.clone().into_active_model())
         .exec(&user_context.db_context.get_connection())
         .await
@@ -134,7 +134,7 @@ async fn get_by_id_test() {
 
 #[tokio::test]
 async fn get_by_non_existing_id_test() {
-    // Setting up database and user context
+    // Setting up contexts and user context
     let (user_context, _) = seed_db().await;
 
     // Fetches the user created using the 'get_by_id' function
@@ -145,7 +145,7 @@ async fn get_by_non_existing_id_test() {
 
 #[tokio::test]
 async fn get_all_test() {
-    // Setting up database and user context
+    // Setting up contexts and user context
     let (user_context, _) = seed_db().await;
 
     let users = create_users(10);
@@ -168,7 +168,7 @@ async fn get_all_test() {
 
 #[tokio::test]
 async fn get_all_empty_test() {
-    // Setting up database and user context
+    // Setting up contexts and user context
     let (user_context, _) = seed_db().await;
 
     let result = user_context.get_all().await.unwrap();
@@ -179,7 +179,7 @@ async fn get_all_empty_test() {
 
 #[tokio::test]
 async fn update_test() {
-    // Setting up database and user context
+    // Setting up contexts and user context
     let (user_context, user) = seed_db().await;
 
     user::Entity::insert(user.clone().into_active_model())
@@ -297,7 +297,7 @@ async fn update_does_not_modify_id_test() {
 
 #[tokio::test]
 async fn update_non_unique_username_test() {
-    // Setting up database and user context
+    // Setting up contexts and user context
     let (user_context, _) = seed_db().await;
 
     let users = create_users(2);
@@ -323,7 +323,7 @@ async fn update_non_unique_username_test() {
 
 #[tokio::test]
 async fn update_non_unique_email_test() {
-    // Setting up database and user context
+    // Setting up contexts and user context
     let (user_context, _) = seed_db().await;
 
     // Creates a model of the user which will be created
@@ -350,7 +350,7 @@ async fn update_non_unique_email_test() {
 
 #[tokio::test]
 async fn update_non_existing_id_test() {
-    // Setting up database and user context
+    // Setting up contexts and user context
     let (user_context, user) = seed_db().await;
 
     let updated_user = user_context.update(user.clone()).await;
@@ -361,7 +361,7 @@ async fn update_non_existing_id_test() {
 
 #[tokio::test]
 async fn delete_test() {
-    // Setting up database and user context
+    // Setting up contexts and user context
     let (user_context, user) = seed_db().await;
 
     user::Entity::insert(user.clone().into_active_model())
@@ -382,7 +382,7 @@ async fn delete_test() {
 
 #[tokio::test]
 async fn delete_cascade_project_test() {
-    // Setting up database and user context
+    // Setting up contexts and user context
     let (user_context, user) = seed_db().await;
 
     let project = create_projects(1, user.clone().id)[0].clone();
@@ -413,7 +413,7 @@ async fn delete_cascade_project_test() {
 
 #[tokio::test]
 async fn delete_cascade_access_test() {
-    // Setting up database and user context
+    // Setting up contexts and user context
     let (user_context, user) = seed_db().await;
 
     let project = create_projects(1, user.clone().id)[0].clone();
@@ -454,7 +454,7 @@ async fn delete_cascade_access_test() {
 
 #[tokio::test]
 async fn delete_cascade_session_test() {
-    // Setting up database and user context
+    // Setting up contexts and user context
     let (user_context, user) = seed_db().await;
 
     let session = create_sessions(1, user.clone().id)[0].clone();
@@ -485,7 +485,7 @@ async fn delete_cascade_session_test() {
 
 #[tokio::test]
 async fn delete_non_existing_id_test() {
-    // Setting up database and user context
+    // Setting up contexts and user context
     let (user_context, _) = seed_db().await;
 
     let deleted_user = user_context.delete(1).await;

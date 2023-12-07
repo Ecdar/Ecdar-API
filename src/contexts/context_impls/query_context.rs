@@ -1,4 +1,4 @@
-use crate::database::context_traits::{
+use crate::contexts::context_traits::{
     DatabaseContextTrait, EntityContextTrait, QueryContextTrait,
 };
 use crate::entities::query;
@@ -129,5 +129,5 @@ impl EntityContextTrait<query::Model> for QueryContext {
 }
 
 #[cfg(test)]
-#[path = "../../tests/database/query_context.rs"]
+#[path = "../../tests/contexts/query_context.rs"]
 mod query_context_tests;

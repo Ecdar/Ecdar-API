@@ -64,9 +64,9 @@ impl UserControllerTrait for UserController {
         }
     }
 
-    /// Updates a user record in the database.
+    /// Updates a user record in the contexts.
     /// # Errors
-    /// Returns an error if the database context fails to update the user or
+    /// Returns an error if the contexts context fails to update the user or
     /// if the uid could not be parsed from the request metadata.
     async fn update_user(
         &self,
@@ -78,7 +78,7 @@ impl UserControllerTrait for UserController {
             .uid()
             .ok_or(Status::internal("Could not get uid from request metadata"))?;
 
-        // Get user from database
+        // Get user from contexts
         let user = self
             .contexts
             .user_context
@@ -87,7 +87,7 @@ impl UserControllerTrait for UserController {
             .map_err(|err| Status::new(Code::Internal, err.to_string()))?
             .ok_or_else(|| Status::new(Code::Internal, "No user found with given uid"))?;
 
-        // Record to be inserted in database
+        // Record to be inserted in contexts
         let new_user = user::Model {
             id: uid,
             username: match message.clone().username {
@@ -116,30 +116,30 @@ impl UserControllerTrait for UserController {
             },
         };
 
-        // Update user in database
+        // Update user in contexts
         match self.contexts.user_context.update(new_user).await {
             Ok(_) => Ok(Response::new(())),
             Err(error) => Err(Status::new(Code::Internal, error.to_string())),
         }
     }
 
-    /// Deletes a user from the database.
+    /// Deletes a user from the contexts.
     /// # Errors
-    /// Returns an error if the database context fails to delete the user or
+    /// Returns an error if the contexts context fails to delete the user or
     /// if the uid could not be parsed from the request metadata.
     async fn delete_user(&self, request: Request<()>) -> Result<Response<()>, Status> {
         let uid = request
             .uid()
             .ok_or(Status::internal("Could not get uid from request metadata"))?;
 
-        // Delete user from database
+        // Delete user from contexts
         match self.contexts.user_context.delete(uid).await {
             Ok(_) => Ok(Response::new(())),
             Err(error) => Err(Status::new(Code::Internal, error.to_string())),
         }
     }
 
-    /// Gets users from the database.
+    /// Gets users from the contexts.
     /// If no users exits with the given ids, an empty list is returned.
     async fn get_users(
         &self,

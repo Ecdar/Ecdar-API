@@ -1,4 +1,4 @@
-use crate::database::context_traits::*;
+use crate::contexts::context_traits::*;
 use std::sync::Arc;
 
 #[derive(Clone)]

@@ -1,10 +1,10 @@
 use crate::api::server::server::AccessInfo;
-use crate::database::context_traits::{AccessContextTrait, EntityContextTrait};
+use crate::contexts::context_traits::{AccessContextTrait, EntityContextTrait};
 use crate::tests::database::helpers::{
     create_accesses, create_projects, create_users, get_reset_database_context,
 };
 use crate::{
-    database::context_impls::AccessContext,
+    contexts::context_impls::AccessContext,
     entities::{access, project, user},
     to_active_models,
 };
@@ -31,7 +31,7 @@ async fn seed_db() -> (AccessContext, access::Model, user::Model, project::Model
     (access_context, access, user, project)
 }
 
-// Test the functionality of the 'create' function, which creates a access in the database
+// Test the functionality of the 'create' function, which creates a access in the contexts
 #[tokio::test]
 async fn create_test() {
     let (access_context, access, _, _) = seed_db().await;
@@ -156,7 +156,7 @@ async fn get_all_test() {
     // Creates a model of the access which will be created
     let new_accesses = create_accesses(1, user.id, project.id);
 
-    // Creates the access in the database using the 'create' function
+    // Creates the access in the contexts using the 'create' function
     access::Entity::insert_many(to_active_models!(new_accesses.clone()))
         .exec(&access_context.db_context.get_connection())
         .await

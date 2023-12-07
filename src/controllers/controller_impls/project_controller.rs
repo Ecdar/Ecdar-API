@@ -4,10 +4,10 @@ use crate::api::server::server::{
     CreateProjectRequest, CreateProjectResponse, DeleteProjectRequest, GetProjectRequest,
     GetProjectResponse, ListProjectsInfoResponse, Project, Query, UpdateProjectRequest,
 };
-use crate::controllers::controller_traits::ProjectControllerTrait;
-use crate::database::context_traits::{
+use crate::contexts::context_traits::{
     AccessContextTrait, ProjectContextTrait, SessionContextTrait,
 };
+use crate::controllers::controller_traits::ProjectControllerTrait;
 use crate::entities::{access, in_use, project};
 use chrono::{Duration, Utc};
 use sea_orm::SqlErr;
@@ -26,7 +26,7 @@ impl ProjectController {
 }
 
 impl ProjectControllerTrait for ProjectController {
-    /// Gets a Model and its queries from the database.
+    /// Gets a Model and its queries from the contexts.
     ///
     /// If the Model is not in use, it will now be in use by the requestees session,
     /// given that they are an Editor.
@@ -212,10 +212,10 @@ impl ProjectControllerTrait for ProjectController {
         Ok(Response::new(CreateProjectResponse { id: project.id }))
     }
 
-    /// Updates a Model in the database given its id.
+    /// Updates a Model in the contexts given its id.
     ///
     /// # Errors
-    /// This function will return an error if the project does not exist in the database
+    /// This function will return an error if the project does not exist in the contexts
     /// or if the user does not have access to the project with role 'Editor'.
     async fn update_project(
         &self,
@@ -333,10 +333,10 @@ impl ProjectControllerTrait for ProjectController {
         }
     }
 
-    /// Deletes a Model from the database.
+    /// Deletes a Model from the contexts.
     ///
     /// # Errors
-    /// This function will return an error if the project does not exist in the database
+    /// This function will return an error if the project does not exist in the contexts
     /// or if the user is not the project owner.
     async fn delete_project(
         &self,
