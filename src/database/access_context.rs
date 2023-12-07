@@ -12,6 +12,13 @@ pub struct AccessContext {
 
 #[async_trait]
 pub trait AccessContextTrait: EntityContextTrait<access::Model> {
+    /// Gets the access entity belonging to a user and project
+    /// # Example
+    /// ```
+    /// //TODO
+    /// ```
+    /// # Errors
+    /// Errors if query execution or connection failed
     async fn get_access_by_uid_and_model_id(
         &self,
         uid: i32,
@@ -54,7 +61,7 @@ impl EntityContextTrait<access::Model> for AccessContext {
     ///     user_id: 1,
     ///     model_id: 1
     /// };
-    /// let context : AccessContext = AccessContext::new(...);
+    /// let context: AccessContext = AccessContext::new(...);
     /// context.create(model);
     /// ```
     async fn create(&self, entity: access::Model) -> Result<access::Model, DbErr> {

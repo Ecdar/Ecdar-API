@@ -1,3 +1,4 @@
+//! The trait that allows various context objects to support basic CRUD operations as well as being shared across threads
 use sea_orm::prelude::async_trait::async_trait;
 use sea_orm::DbErr;
 
