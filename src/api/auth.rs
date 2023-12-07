@@ -265,7 +265,7 @@ impl<T> RequestExt for Request<T> {
         self.metadata().get("authorization").map(|token| {
             token
                 .to_str()
-                .expect("failed to parse token string") 
+                .expect("failed to parse token string")
                 .trim_start_matches("Bearer ")
                 .to_string()
         })
