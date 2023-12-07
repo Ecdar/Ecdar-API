@@ -301,7 +301,7 @@ impl<T> RequestExt for Request<T> {
             Err(_) => return None,
         };
         //TODO better error handling
-        Some(uid.parse().expect("failed to parse user id"))
+        Some(uid.parse().ok()?)
     }
 }
 
