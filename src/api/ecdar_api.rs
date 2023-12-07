@@ -1,3 +1,6 @@
+#![ecdar_api_macros::endpoints]
+#![feature(custom_inner_attributes)]
+
 use super::server::server::{
     ecdar_api_auth_server::EcdarApiAuth,
     ecdar_api_server::EcdarApi,
@@ -5,11 +8,11 @@ use super::server::server::{
     get_auth_token_request::{user_credentials, UserCredentials},
     CreateAccessRequest, CreateProjectRequest, CreateProjectResponse, CreateQueryRequest,
     CreateUserRequest, DeleteAccessRequest, DeleteProjectRequest, DeleteQueryRequest,
-    GetAuthTokenRequest, GetAuthTokenResponse, GetProjectRequest, GetProjectResponse,
-    ListProjectsInfoResponse, Query, QueryRequest, QueryResponse, SendQueryRequest,
-    SendQueryResponse, SimulationStartRequest, SimulationStepRequest, SimulationStepResponse,
-    UpdateAccessRequest, UpdateProjectRequest, UpdateQueryRequest, UpdateUserRequest,
-    UserTokenResponse,
+    EndpointsResponse, GetAuthTokenRequest, GetAuthTokenResponse, GetProjectRequest,
+    GetProjectResponse, ListProjectsInfoResponse, Query, QueryRequest, QueryResponse,
+    SendQueryRequest, SendQueryResponse, SimulationStartRequest, SimulationStepRequest,
+    SimulationStepResponse, UpdateAccessRequest, UpdateProjectRequest, UpdateQueryRequest,
+    UpdateUserRequest, UserTokenResponse,
 };
 use crate::api::context_collection::ContextCollection;
 use crate::api::{
@@ -1050,3 +1053,4 @@ mod user_logic_tests;
 #[cfg(test)]
 #[path = "../tests/api/session_logic.rs"]
 mod session_logic_tests;
+
