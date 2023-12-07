@@ -5,6 +5,7 @@ use crate::api::server::server::{
 };
 use crate::controllers::controller_impls::ReveaalController;
 use crate::services::service_traits::ReveaalServiceTrait;
+use async_trait::async_trait;
 use std::env;
 use tonic::transport::Channel;
 use tonic::{Request, Response, Status};
@@ -18,6 +19,7 @@ impl ReveaalController {
     }
 }
 
+#[async_trait]
 impl ReveaalServiceTrait for ReveaalService {
     async fn get_user_token(
         &self,

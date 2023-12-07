@@ -1,11 +1,13 @@
 use crate::api::auth::RequestExt;
-use crate::api::collections::{ContextCollection, ServiceCollection};
 use crate::api::server::server::get_users_response::UserInfo;
 use crate::api::server::server::{
     CreateUserRequest, GetUsersRequest, GetUsersResponse, UpdateUserRequest,
 };
+use crate::contexts::context_collection::ContextCollection;
 use crate::controllers::controller_traits::UserControllerTrait;
 use crate::entities::user;
+use crate::services::service_collection::ServiceCollection;
+use async_trait::async_trait;
 use regex::Regex;
 use sea_orm::SqlErr;
 use tonic::{Code, Request, Response, Status};
@@ -19,8 +21,23 @@ impl UserController {
     pub fn new(contexts: ContextCollection, services: ServiceCollection) -> Self {
         UserController { contexts, services }
     }
+
+    /// Returns true if the given email is a valid format.
+    fn is_valid_email(&self, email: &str) -> bool {
+        Regex::new(r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$")
+            .unwrap()
+            .is_match(email)
+    }
+
+    /// Returns true if the given username is a valid format, i.e. only contains letters and numbers and a length from 3 to 32.
+    fn is_valid_username(&self, username: &str) -> bool {
+        Regex::new(r"^[a-zA-Z0-9_]{3,32}$")
+            .unwrap()
+            .is_match(username)
+    }
 }
 
+#[async_trait]
 impl UserControllerTrait for UserController {
     async fn create_user(
         &self,
@@ -28,11 +45,11 @@ impl UserControllerTrait for UserController {
     ) -> Result<Response<()>, Status> {
         let message = request.into_inner().clone();
 
-        if is_valid_username(message.clone().username.as_str()) {
+        if !self.is_valid_username(message.clone().username.as_str()) {
             return Err(Status::new(Code::InvalidArgument, "Invalid username"));
         }
 
-        if is_valid_email(message.clone().email.as_str()) {
+        if !self.is_valid_email(message.clone().email.as_str()) {
             return Err(Status::new(Code::InvalidArgument, "Invalid email"));
         }
 
@@ -92,7 +109,7 @@ impl UserControllerTrait for UserController {
             id: uid,
             username: match message.clone().username {
                 Some(username) => {
-                    if is_valid_username(username.as_str()) {
+                    if self.is_valid_username(username.as_str()) {
                         username
                     } else {
                         return Err(Status::new(Code::InvalidArgument, "Invalid username"));
@@ -102,7 +119,7 @@ impl UserControllerTrait for UserController {
             },
             email: match message.clone().email {
                 Some(email) => {
-                    if is_valid_email(email.as_str()) {
+                    if self.is_valid_email(email.as_str()) {
                         email
                     } else {
                         return Err(Status::new(Code::InvalidArgument, "Invalid email"));
@@ -164,20 +181,6 @@ impl UserControllerTrait for UserController {
 
         Ok(Response::new(GetUsersResponse { users: users_info }))
     }
-}
-
-/// Returns true if the given email is a valid format.
-fn is_valid_email(email: &str) -> bool {
-    Regex::new(r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$")
-        .unwrap()
-        .is_match(email)
-}
-
-/// Returns true if the given username is a valid format, i.e. only contains letters and numbers and a length from 3 to 32.
-fn is_valid_username(username: &str) -> bool {
-    Regex::new(r"^[a-zA-Z0-9_]{3,32}$")
-        .unwrap()
-        .is_match(username)
 }
 
 #[cfg(test)]

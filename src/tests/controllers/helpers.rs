@@ -1,7 +1,6 @@
 #![cfg(test)]
 
 use crate::api::auth::TokenType;
-use crate::api::server::server::ecdar_backend_server::EcdarBackend;
 use crate::api::server::server::AccessInfo;
 use crate::api::server::server::ProjectInfo;
 use crate::api::server::server::{
@@ -178,7 +177,7 @@ mock! {
 mock! {
     pub ReveaalService{}
     #[async_trait]
-    impl EcdarBackend for ReveaalService {
+    impl ReveaalServiceTrait for ReveaalService {
         async fn get_user_token(&self,request: Request<()>) -> Result<Response<UserTokenResponse>, Status>;
         async fn send_query(&self,request: Request<QueryRequest>) -> Result<Response<QueryResponse>, Status>;
         async fn start_simulation(&self, request: Request<SimulationStartRequest>) -> Result<Response<SimulationStepResponse>, Status>;

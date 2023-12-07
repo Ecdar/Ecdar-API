@@ -5,7 +5,7 @@ use async_trait::async_trait;
 use tonic::{Request, Response, Status};
 
 #[async_trait]
-pub trait UserControllerTrait {
+pub trait UserControllerTrait: Send + Sync {
     async fn create_user(
         &self,
         request: Request<CreateUserRequest>,

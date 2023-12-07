@@ -1,11 +1,13 @@
 use crate::api::auth::RequestExt;
-use crate::api::collections::{ContextCollection, ServiceCollection};
 use crate::api::server::server::{
     CreateQueryRequest, DeleteQueryRequest, QueryRequest, SendQueryRequest, SendQueryResponse,
     UpdateQueryRequest,
 };
+use crate::contexts::context_collection::ContextCollection;
 use crate::controllers::controller_traits::QueryControllerTrait;
 use crate::entities::query;
+use crate::services::service_collection::ServiceCollection;
+use async_trait::async_trait;
 use tonic::{Code, Request, Response, Status};
 
 pub struct QueryController {
@@ -19,6 +21,7 @@ impl QueryController {
     }
 }
 
+#[async_trait]
 impl QueryControllerTrait for QueryController {
     /// Creates a query in the contexts
     /// # Errors

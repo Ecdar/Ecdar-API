@@ -1,4 +1,4 @@
-use crate::tests::database::helpers::{
+use crate::tests::contexts::helpers::{
     create_projects, create_queries, create_users, get_reset_database_context,
 };
 use crate::{

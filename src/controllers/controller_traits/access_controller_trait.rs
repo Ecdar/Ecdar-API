@@ -6,7 +6,7 @@ use async_trait::async_trait;
 use tonic::{Request, Response, Status};
 
 #[async_trait]
-pub trait AccessControllerTrait {
+pub trait AccessControllerTrait: Send + Sync {
     async fn list_access_info(
         &self,
         request: Request<ListAccessInfoRequest>,

@@ -6,7 +6,7 @@ use async_trait::async_trait;
 use tonic::{Request, Response, Status};
 
 #[async_trait]
-pub trait ProjectControllerTrait {
+pub trait ProjectControllerTrait: Send + Sync {
     async fn get_project(
         &self,
         request: Request<GetProjectRequest>,

@@ -1,4 +1,4 @@
-use crate::{api::auth::TokenType, tests::database::helpers::*};
+use crate::{api::auth::TokenType, tests::contexts::helpers::*};
 use sea_orm::{entity::prelude::*, IntoActiveModel};
 use std::ops::Add;
 

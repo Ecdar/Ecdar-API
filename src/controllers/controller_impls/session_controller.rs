@@ -1,12 +1,12 @@
 use crate::api::auth::{RequestExt, Token, TokenError, TokenType};
-use crate::api::collections::{ContextCollection, ServiceCollection};
 use crate::api::server::server::get_auth_token_request::{user_credentials, UserCredentials};
 use crate::api::server::server::{GetAuthTokenRequest, GetAuthTokenResponse};
-use crate::contexts::context_traits::{SessionContextTrait, UserContextTrait};
+use crate::contexts::context_collection::ContextCollection;
 use crate::controllers::controller_traits::SessionControllerTrait;
 use crate::entities::{session, user};
+use crate::services::service_collection::ServiceCollection;
+use async_trait::async_trait;
 use sea_orm::DbErr;
-use std::sync::Arc;
 use tonic::{Request, Response, Status};
 
 pub struct SessionController {
@@ -17,6 +17,21 @@ pub struct SessionController {
 impl SessionController {
     pub fn new(contexts: ContextCollection, services: ServiceCollection) -> Self {
         Self { contexts, services }
+    }
+
+    async fn user_from_user_credentials(
+        &self,
+        user_credentials: UserCredentials,
+    ) -> Result<Option<user::Model>, DbErr> {
+        match user_credentials.user {
+            Some(user_credentials::User::Username(username)) => {
+                Ok(self.contexts.user_context.get_by_username(username).await?)
+            }
+            Some(user_credentials::User::Email(email)) => {
+                Ok(self.contexts.user_context.get_by_email(email).await?)
+            }
+            None => Ok(None),
+        }
     }
 
     /// Updates the session given by refresh token in the contexts.
@@ -58,6 +73,7 @@ impl SessionController {
     }
 }
 
+#[async_trait]
 impl SessionControllerTrait for SessionController {
     async fn delete_session(&self, _request: Request<()>) -> Result<Response<()>, Status> {
         todo!()
@@ -104,13 +120,11 @@ impl SessionControllerTrait for SessionController {
             }
             Some(user_credentials) => {
                 let input_password = user_credentials.password.clone();
-                let user = user_from_user_credentials(
-                    self.contexts.user_context.clone(),
-                    user_credentials,
-                )
-                .await
-                .map_err(|err| Status::internal(err.to_string()))?
-                .ok_or_else(|| Status::unauthenticated("Wrong username or password"))?;
+                let user = self
+                    .user_from_user_credentials(user_credentials)
+                    .await
+                    .map_err(|err| Status::internal(err.to_string()))?
+                    .ok_or_else(|| Status::unauthenticated("Wrong username or password"))?;
 
                 // Check if password in request matches users password
                 if !self
@@ -146,19 +160,6 @@ impl SessionControllerTrait for SessionController {
             access_token: access_token.to_string(),
             refresh_token: refresh_token.to_string(),
         }))
-    }
-}
-
-async fn user_from_user_credentials(
-    user_context: Arc<dyn UserContextTrait>,
-    user_credentials: UserCredentials,
-) -> Result<Option<user::Model>, DbErr> {
-    match user_credentials.user {
-        Some(user_credentials::User::Username(username)) => {
-            Ok(user_context.get_by_username(username).await?)
-        }
-        Some(user_credentials::User::Email(email)) => Ok(user_context.get_by_email(email).await?),
-        None => Ok(None),
     }
 }
 

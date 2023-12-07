@@ -6,7 +6,7 @@ use async_trait::async_trait;
 use tonic::{Request, Response, Status};
 
 #[async_trait]
-pub trait ReveaalServiceTrait {
+pub trait ReveaalServiceTrait: Send + Sync {
     async fn get_user_token(
         &self,
         request: Request<()>,

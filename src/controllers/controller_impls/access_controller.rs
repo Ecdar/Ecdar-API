@@ -1,13 +1,14 @@
 use crate::api::auth::RequestExt;
-use crate::api::collections::ContextCollection;
 use crate::api::server::server::create_access_request::User;
 use crate::api::server::server::{
     CreateAccessRequest, DeleteAccessRequest, ListAccessInfoRequest, ListAccessInfoResponse,
     UpdateAccessRequest,
 };
+use crate::contexts::context_collection::ContextCollection;
 use crate::contexts::context_traits::{AccessContextTrait, UserContextTrait};
 use crate::controllers::controller_traits::AccessControllerTrait;
 use crate::entities::{access, user};
+use async_trait::async_trait;
 use std::sync::Arc;
 use tonic::{Code, Request, Response, Status};
 
@@ -20,7 +21,7 @@ impl AccessController {
         AccessController { contexts }
     }
 }
-
+#[async_trait]
 impl AccessControllerTrait for AccessController {
     async fn list_access_info(
         &self,

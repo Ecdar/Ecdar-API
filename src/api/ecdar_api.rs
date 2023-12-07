@@ -10,7 +10,6 @@ use super::server::server::{
     UpdateQueryRequest, UpdateUserRequest, UserTokenResponse,
 };
 use crate::controllers::controller_collection::ControllerCollection;
-use serde_json;
 use tonic::{Request, Response, Status};
 
 #[derive(Clone)]

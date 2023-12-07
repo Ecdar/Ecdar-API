@@ -1,14 +1,12 @@
 use crate::api::auth::{RequestExt, TokenType};
-use crate::api::collections::ContextCollection;
 use crate::api::server::server::{
     CreateProjectRequest, CreateProjectResponse, DeleteProjectRequest, GetProjectRequest,
     GetProjectResponse, ListProjectsInfoResponse, Project, Query, UpdateProjectRequest,
 };
-use crate::contexts::context_traits::{
-    AccessContextTrait, ProjectContextTrait, SessionContextTrait,
-};
+use crate::contexts::context_collection::ContextCollection;
 use crate::controllers::controller_traits::ProjectControllerTrait;
 use crate::entities::{access, in_use, project};
+use async_trait::async_trait;
 use chrono::{Duration, Utc};
 use sea_orm::SqlErr;
 use tonic::{Code, Request, Response, Status};
@@ -25,6 +23,7 @@ impl ProjectController {
     }
 }
 
+#[async_trait]
 impl ProjectControllerTrait for ProjectController {
     /// Gets a Model and its queries from the contexts.
     ///

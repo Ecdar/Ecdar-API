@@ -51,7 +51,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         query_controller: Arc::new(QueryController::new(contexts.clone(), services.clone())),
         session_controller: Arc::new(SessionController::new(contexts.clone(), services.clone())),
         user_controller: Arc::new(UserController::new(contexts.clone(), services.clone())),
-        reveaal_controller: Arc::new(()),
+        reveaal_controller: Arc::new(ReveaalController::new(services.clone())),
     };
 
     start_grpc_server(logics).await.unwrap();
