@@ -1,6 +1,5 @@
 use crate::api::auth::{RequestExt, TokenType};
-use crate::api::context_collection::ContextCollection;
-use crate::api::logic_traits::ProjectLogicTrait;
+use crate::api::collections::ContextCollection;
 use crate::api::server::server::{
     CreateProjectRequest, CreateProjectResponse, DeleteProjectRequest, GetProjectRequest,
     GetProjectResponse, ListProjectsInfoResponse, Project, Query, UpdateProjectRequest,
@@ -9,6 +8,7 @@ use crate::database::context_traits::{
     AccessContextTrait, ProjectContextTrait, SessionContextTrait,
 };
 use crate::entities::{access, in_use, project};
+use crate::logics::logic_traits::ProjectLogicTrait;
 use chrono::{Duration, Utc};
 use sea_orm::SqlErr;
 use tonic::{Code, Request, Response, Status};
@@ -409,5 +409,5 @@ impl ProjectLogicTrait for ProjectLogic {
 }
 
 #[cfg(test)]
-#[path = "../../tests/api/project_logic.rs"]
+#[path = "../../tests/logics/project_logic.rs"]
 mod project_logic_tests;

@@ -1,6 +1,6 @@
-use crate::api::logic_impls::ProjectLogic;
-use crate::api::logic_traits::ProjectLogicTrait;
-use crate::tests::api::helpers::disguise_mocks;
+use crate::logics::logic_impls::ProjectLogic;
+use crate::logics::logic_traits::ProjectLogicTrait;
+use crate::tests::logics::helpers::disguise_context_mocks;
 use crate::{
     api::{
         auth::TokenType,
@@ -10,7 +10,7 @@ use crate::{
         },
     },
     entities::{access, in_use, project, query, session},
-    tests::api::helpers::get_mock_contexts,
+    tests::logics::helpers::get_mock_contexts,
 };
 use chrono::Utc;
 use mockall::predicate;
@@ -98,7 +98,7 @@ async fn create_project_returns_ok() {
         metadata::MetadataValue::from_str("Bearer access_token").unwrap(),
     );
 
-    let contexts = disguise_mocks(mock_contexts);
+    let contexts = disguise_context_mocks(mock_contexts);
     let project_logic = ProjectLogic::new(contexts);
 
     let res = project_logic.create_project(request).await;
@@ -134,7 +134,7 @@ async fn create_project_existing_name_returns_err() {
         .metadata_mut()
         .insert("uid", uid.to_string().parse().unwrap());
 
-    let contexts = disguise_mocks(mock_contexts);
+    let contexts = disguise_context_mocks(mock_contexts);
     let project_logic = ProjectLogic::new(contexts);
 
     let res = project_logic.create_project(request).await;
@@ -196,7 +196,7 @@ async fn get_project_user_has_access_returns_ok() {
 
     request.metadata_mut().insert("uid", "0".parse().unwrap());
 
-    let contexts = disguise_mocks(mock_contexts);
+    let contexts = disguise_context_mocks(mock_contexts);
     let project_logic = ProjectLogic::new(contexts);
 
     let res = project_logic.get_project(request).await;
@@ -227,7 +227,7 @@ async fn delete_not_owner_returns_err() {
         .metadata_mut()
         .insert("uid", metadata::MetadataValue::from_str("1").unwrap());
 
-    let contexts = disguise_mocks(mock_contexts);
+    let contexts = disguise_context_mocks(mock_contexts);
     let project_logic = ProjectLogic::new(contexts);
 
     let res = project_logic.delete_project(request).await.unwrap_err();
@@ -251,7 +251,7 @@ async fn delete_invalid_project_returns_err() {
         .metadata_mut()
         .insert("uid", metadata::MetadataValue::from_str("1").unwrap());
 
-    let contexts = disguise_mocks(mock_contexts);
+    let contexts = disguise_context_mocks(mock_contexts);
     let project_logic = ProjectLogic::new(contexts);
 
     let res = project_logic.delete_project(request).await.unwrap_err();
@@ -295,7 +295,7 @@ async fn delete_project_returns_ok() {
         .metadata_mut()
         .insert("uid", metadata::MetadataValue::from_str("1").unwrap());
 
-    let contexts = disguise_mocks(mock_contexts);
+    let contexts = disguise_context_mocks(mock_contexts);
     let project_logic = ProjectLogic::new(contexts);
 
     let res = project_logic.delete_project(request).await;
@@ -350,7 +350,7 @@ async fn get_project_user_has_no_access_returns_err() {
 
     request.metadata_mut().insert("uid", "0".parse().unwrap());
 
-    let contexts = disguise_mocks(mock_contexts);
+    let contexts = disguise_context_mocks(mock_contexts);
     let project_logic = ProjectLogic::new(contexts);
 
     let res = project_logic.get_project(request).await.unwrap_err();
@@ -412,7 +412,7 @@ async fn get_project_is_in_use_is_true() {
 
     request.metadata_mut().insert("uid", "0".parse().unwrap());
 
-    let contexts = disguise_mocks(mock_contexts);
+    let contexts = disguise_context_mocks(mock_contexts);
     let project_logic = ProjectLogic::new(contexts);
 
     let res = project_logic.get_project(request).await;
@@ -505,7 +505,7 @@ async fn get_project_is_in_use_is_false() {
         .insert("authorization", "Bearer access_token".parse().unwrap());
     request.metadata_mut().insert("uid", "0".parse().unwrap());
 
-    let contexts = disguise_mocks(mock_contexts);
+    let contexts = disguise_context_mocks(mock_contexts);
     let project_logic = ProjectLogic::new(contexts);
 
     let res = project_logic.get_project(request).await;
@@ -567,7 +567,7 @@ async fn get_project_project_has_no_queries_queries_are_empty() {
 
     request.metadata_mut().insert("uid", "0".parse().unwrap());
 
-    let contexts = disguise_mocks(mock_contexts);
+    let contexts = disguise_context_mocks(mock_contexts);
     let project_logic = ProjectLogic::new(contexts);
 
     let res = project_logic.get_project(request).await;
@@ -637,7 +637,7 @@ async fn get_project_query_has_no_result_query_is_empty() {
 
     request.metadata_mut().insert("uid", "0".parse().unwrap());
 
-    let contexts = disguise_mocks(mock_contexts);
+    let contexts = disguise_context_mocks(mock_contexts);
     let project_logic = ProjectLogic::new(contexts);
 
     let res = project_logic.get_project(request).await;
@@ -668,7 +668,7 @@ async fn list_projects_info_returns_ok() {
         .metadata_mut()
         .insert("uid", metadata::MetadataValue::from_str("1").unwrap());
 
-    let contexts = disguise_mocks(mock_contexts);
+    let contexts = disguise_context_mocks(mock_contexts);
     let project_logic = ProjectLogic::new(contexts);
 
     let res = project_logic
@@ -694,7 +694,7 @@ async fn list_projects_info_returns_err() {
         .metadata_mut()
         .insert("uid", metadata::MetadataValue::from_str("1").unwrap());
 
-    let contexts = disguise_mocks(mock_contexts);
+    let contexts = disguise_context_mocks(mock_contexts);
     let project_logic = ProjectLogic::new(contexts);
 
     let res = project_logic
@@ -806,7 +806,7 @@ async fn update_name_returns_ok() {
             })
         });
 
-    let contexts = disguise_mocks(mock_contexts);
+    let contexts = disguise_context_mocks(mock_contexts);
     let project_logic = ProjectLogic::new(contexts);
 
     let res = project_logic.update_project(update_project_request).await;
@@ -922,7 +922,7 @@ async fn update_components_info_returns_ok() {
             })
         });
 
-    let contexts = disguise_mocks(mock_contexts);
+    let contexts = disguise_context_mocks(mock_contexts);
     let project_logic = ProjectLogic::new(contexts);
 
     let res = project_logic.update_project(update_project_request).await;
@@ -1032,7 +1032,7 @@ async fn update_owner_id_returns_ok() {
             })
         });
 
-    let contexts = disguise_mocks(mock_contexts);
+    let contexts = disguise_context_mocks(mock_contexts);
     let project_logic = ProjectLogic::new(contexts);
 
     let res = project_logic.update_project(update_project_request).await;
@@ -1150,7 +1150,7 @@ async fn update_returns_ok() {
             })
         });
 
-    let contexts = disguise_mocks(mock_contexts);
+    let contexts = disguise_context_mocks(mock_contexts);
     let project_logic = ProjectLogic::new(contexts);
 
     let res = project_logic.update_project(update_project_request).await;
@@ -1244,7 +1244,7 @@ async fn update_owner_not_owner_returns_err() {
         metadata::MetadataValue::from_str("access_token").unwrap(),
     );
 
-    let contexts = disguise_mocks(mock_contexts);
+    let contexts = disguise_context_mocks(mock_contexts);
     let project_logic = ProjectLogic::new(contexts);
 
     let res = project_logic.update_project(request).await.unwrap_err();
@@ -1327,7 +1327,7 @@ async fn update_no_in_use_returns_err() {
         metadata::MetadataValue::from_str("access_token").unwrap(),
     );
 
-    let contexts = disguise_mocks(mock_contexts);
+    let contexts = disguise_context_mocks(mock_contexts);
     let project_logic = ProjectLogic::new(contexts);
 
     let res = project_logic.update_project(request).await.unwrap_err();
@@ -1369,7 +1369,7 @@ async fn update_no_access_returns_err() {
         .metadata_mut()
         .insert("uid", metadata::MetadataValue::from_str("1").unwrap());
 
-    let contexts = disguise_mocks(mock_contexts);
+    let contexts = disguise_context_mocks(mock_contexts);
     let project_logic = ProjectLogic::new(contexts);
 
     let res = project_logic.update_project(request).await.unwrap_err();
@@ -1418,7 +1418,7 @@ async fn update_incorrect_role_returns_err() {
         .metadata_mut()
         .insert("uid", metadata::MetadataValue::from_str("1").unwrap());
 
-    let contexts = disguise_mocks(mock_contexts);
+    let contexts = disguise_context_mocks(mock_contexts);
     let project_logic = ProjectLogic::new(contexts);
 
     let res = project_logic.update_project(request).await.unwrap_err();
@@ -1481,7 +1481,7 @@ async fn update_no_session_returns_err() {
         metadata::MetadataValue::from_str("access_token").unwrap(),
     );
 
-    let contexts = disguise_mocks(mock_contexts);
+    let contexts = disguise_context_mocks(mock_contexts);
     let project_logic = ProjectLogic::new(contexts);
 
     let res = project_logic.update_project(request).await.unwrap_err();
@@ -1510,7 +1510,7 @@ async fn update_no_project_returns_err() {
         .metadata_mut()
         .insert("uid", metadata::MetadataValue::from_str("1").unwrap());
 
-    let contexts = disguise_mocks(mock_contexts);
+    let contexts = disguise_context_mocks(mock_contexts);
     let project_logic = ProjectLogic::new(contexts);
 
     let res = project_logic.update_project(request).await.unwrap_err();

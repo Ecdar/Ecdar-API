@@ -1,16 +1,13 @@
 pub mod access_context;
-pub mod hashing_context;
 pub mod in_use_context;
 pub mod postgres_database_context;
 pub mod project_context;
 pub mod query_context;
-pub mod reveaal_context;
 pub mod session_context;
 pub mod sqlite_database_context;
 pub mod user_context;
 
 pub use access_context::AccessContext;
-pub use hashing_context::HashingContext;
 pub use in_use_context::InUseContext;
 pub use postgres_database_context::PostgresDatabaseContext;
 pub use project_context::ProjectContext;

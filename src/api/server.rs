@@ -3,8 +3,8 @@ use std::env;
 use tonic::transport::Server;
 
 use crate::api::auth;
+use crate::api::collections::{LogicCollection, ServiceCollection};
 use crate::api::ecdar_api::ConcreteEcdarApi;
-use crate::api::logic_collection::LogicCollection;
 use crate::api::server::server::ecdar_api_auth_server::EcdarApiAuthServer;
 use crate::api::server::server::ecdar_api_server::EcdarApiServer;
 use crate::api::server::server::ecdar_backend_server::EcdarBackendServer;

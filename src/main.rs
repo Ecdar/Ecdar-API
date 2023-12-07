@@ -1,14 +1,15 @@
 mod api;
 mod database;
 mod entities;
+mod logics;
+mod services;
 mod tests;
 
-use crate::api::context_collection::ContextCollection;
-use crate::api::logic_collection::LogicCollection;
-use crate::api::logic_impls::*;
-use crate::database::context_impls::reveaal_context::ReveaalContext;
+use crate::api::collections::{ContextCollection, LogicCollection, ServiceCollection};
 use crate::database::context_impls::*;
 use crate::database::context_traits::DatabaseContextTrait;
+use crate::logics::logic_impls::*;
+use crate::services::service_impls::{HashingService, ReveaalService};
 use api::server::start_grpc_server;
 use dotenv::dotenv;
 use sea_orm::{ConnectionTrait, Database, DbBackend};
@@ -35,16 +36,20 @@ async fn main() -> Result<(), Box<dyn Error>> {
         query_context: Arc::new(QueryContext::new(db_context.clone())),
         session_context: Arc::new(SessionContext::new(db_context.clone())),
         user_context: Arc::new(UserContext::new(db_context.clone())),
-        hashing_context: Arc::new(HashingContext),
-        reveaal_context: Arc::new(ReveaalContext),
+    };
+
+    let services = ServiceCollection {
+        hashing_service: Arc::new(HashingService),
+        reveaal_service: Arc::new(ReveaalService),
     };
 
     let logics = LogicCollection {
         access_logic: Arc::new(AccessLogic::new(contexts.clone())),
         project_logic: Arc::new(ProjectLogic::new(contexts.clone())),
-        query_logic: Arc::new(QueryLogic::new(contexts.clone())),
-        session_logic: Arc::new(SessionLogic::new(contexts.clone())),
-        user_logic: Arc::new(UserLogic::new(contexts.clone())),
+        query_logic: Arc::new(QueryLogic::new(contexts.clone(), services.clone())),
+        session_logic: Arc::new(SessionLogic::new(contexts.clone(), services.clone())),
+        user_logic: Arc::new(UserLogic::new(contexts.clone(), services.clone())),
+        reveaal_logic: Arc::new(()),
     };
 
     start_grpc_server(logics).await.unwrap();

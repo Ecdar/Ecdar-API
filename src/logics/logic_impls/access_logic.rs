@@ -1,6 +1,5 @@
 use crate::api::auth::RequestExt;
-use crate::api::context_collection::ContextCollection;
-use crate::api::logic_traits::AccessLogicTrait;
+use crate::api::collections::ContextCollection;
 use crate::api::server::server::create_access_request::User;
 use crate::api::server::server::{
     CreateAccessRequest, DeleteAccessRequest, ListAccessInfoRequest, ListAccessInfoResponse,
@@ -8,6 +7,7 @@ use crate::api::server::server::{
 };
 use crate::database::context_traits::{AccessContextTrait, UserContextTrait};
 use crate::entities::{access, user};
+use crate::logics::logic_traits::AccessLogicTrait;
 use std::sync::Arc;
 use tonic::{Code, Request, Response, Status};
 
@@ -294,5 +294,5 @@ async fn create_access_find_user_helper(
 }
 
 #[cfg(test)]
-#[path = "../../tests/api/access_logic.rs"]
+#[path = "../../tests/logics/access_logic.rs"]
 mod access_logic_tests;

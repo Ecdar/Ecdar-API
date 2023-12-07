@@ -65,7 +65,7 @@ impl TokenType {
 /// # Examples
 ///
 /// ```
-/// use ecdar_api::api::auth::{Token, TokenType};
+/// use ecdar_api::logics::auth::{Token, TokenType};
 ///
 /// let token = Token::new(TokenType::AccessToken, "1").unwrap();
 ///
@@ -90,7 +90,7 @@ impl Token {
     ///
     /// # Examples
     /// ```
-    /// use ecdar_api::api::auth::{Token, TokenType};
+    /// use ecdar_api::logics::auth::{Token, TokenType};
     ///
     /// let token = Token::new(TokenType::AccessToken, "1").unwrap();
     /// ```
@@ -124,7 +124,7 @@ impl Token {
     ///
     /// # Examples
     /// ```
-    /// use ecdar_api::api::auth::{Token, TokenType};
+    /// use ecdar_api::logics::auth::{Token, TokenType};
     ///
     /// let refresh_token = Token::refresh("1").unwrap();
     ///
@@ -141,7 +141,7 @@ impl Token {
     ///
     /// # Examples
     /// ```
-    /// use ecdar_api::api::auth::{Token, TokenType};
+    /// use ecdar_api::logics::auth::{Token, TokenType};
     ///
     /// let access_token = Token::access("1").unwrap();
     ///
@@ -159,7 +159,7 @@ impl Token {
     ///
     /// # Examples
     /// ```
-    /// use ecdar_api::api::auth::{Token, TokenType};
+    /// use ecdar_api::logics::auth::{Token, TokenType};
     ///
     /// let token = Token::from_str(TokenType::AccessToken, "token")
     /// ```
@@ -173,7 +173,7 @@ impl Token {
     ///
     /// # Examples
     /// ```
-    /// use ecdar_api::api::auth::{Token, TokenType};
+    /// use ecdar_api::logics::auth::{Token, TokenType};
     ///
     /// let token = Token::new(TokenType::AccessToken, "1").unwrap();
     /// let token_data = token.validate().unwrap();
@@ -197,7 +197,7 @@ impl Token {
     /// # Examples
     ///
     /// ```
-    /// use ecdar_api::api::auth::{Token, TokenType};
+    /// use ecdar_api::logics::auth::{Token, TokenType};
     ///
     /// let token = Token::from_str(TokenType::AccessToken, "token");
     ///
@@ -211,7 +211,7 @@ impl Token {
     /// # Examples
     ///
     /// ```
-    /// use ecdar_api::api::auth::{Token, TokenType};
+    /// use ecdar_api::logics::auth::{Token, TokenType};
     ///
     /// let token = Token::new(TokenType::AccessToken, "1").unwrap();
     ///
@@ -297,5 +297,5 @@ impl<T> RequestExt for Request<T> {
 }
 
 #[cfg(test)]
-#[path = "../tests/api/auth.rs"]
+#[path = "../tests/logics/auth.rs"]
 mod tests;

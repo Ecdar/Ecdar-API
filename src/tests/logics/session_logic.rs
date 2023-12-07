@@ -2,19 +2,22 @@ use std::env;
 use std::str::FromStr;
 
 use crate::entities::{session, user};
-use crate::tests::api::helpers::{disguise_mocks, get_mock_contexts};
+use crate::tests::logics::helpers::{
+    disguise_context_mocks, disguise_service_mocks, get_mock_contexts, get_mock_services,
+};
 
 use crate::api::auth::{Token, TokenType};
-use crate::api::logic_impls::SessionLogic;
-use crate::api::logic_traits::SessionLogicTrait;
 use crate::api::server::server::get_auth_token_request::{user_credentials, UserCredentials};
 use crate::api::server::server::GetAuthTokenRequest;
+use crate::logics::logic_impls::SessionLogic;
+use crate::logics::logic_traits::SessionLogicTrait;
 use sea_orm::DbErr;
 use tonic::{metadata, Code, Request};
 
 #[tokio::test]
 async fn update_session_no_session_exists_creates_session_returns_err() {
     let mut mock_contexts = get_mock_contexts();
+    let mock_services = get_mock_services();
 
     mock_contexts
         .session_context_mock
@@ -26,8 +29,9 @@ async fn update_session_no_session_exists_creates_session_returns_err() {
         .expect_update()
         .returning(move |_| Err(DbErr::RecordNotInserted));
 
-    let contexts = disguise_mocks(mock_contexts);
-    let session_logic = SessionLogic::new(contexts);
+    let contexts = disguise_context_mocks(mock_contexts);
+    let services = disguise_service_mocks(mock_services);
+    let session_logic = SessionLogic::new(contexts, services);
 
     let res = session_logic
         .update_session("old_refresh_token".to_string())
@@ -39,6 +43,8 @@ async fn update_session_no_session_exists_creates_session_returns_err() {
 #[tokio::test]
 async fn update_session_returns_new_tokens_when_session_exists() {
     let mut mock_contexts = get_mock_contexts();
+    let mock_services = get_mock_services();
+
     let refresh_token = "refresh_token".to_string();
 
     mock_contexts
@@ -69,8 +75,9 @@ async fn update_session_returns_new_tokens_when_session_exists() {
             })
         });
 
-    let contexts = disguise_mocks(mock_contexts);
-    let session_logic = SessionLogic::new(contexts);
+    let contexts = disguise_context_mocks(mock_contexts);
+    let services = disguise_service_mocks(mock_services);
+    let session_logic = SessionLogic::new(contexts, services);
 
     let result = session_logic.update_session(refresh_token).await;
 
@@ -83,6 +90,8 @@ async fn update_session_returns_new_tokens_when_session_exists() {
 #[tokio::test]
 async fn update_session_returns_error_when_no_session_found() {
     let mut mock_contexts = get_mock_contexts();
+    let mock_services = get_mock_services();
+
     let refresh_token = "refresh_token".to_string();
 
     mock_contexts
@@ -91,8 +100,9 @@ async fn update_session_returns_error_when_no_session_found() {
         .times(1)
         .returning(|_, _| Ok(None));
 
-    let contexts = disguise_mocks(mock_contexts);
-    let session_logic = SessionLogic::new(contexts);
+    let contexts = disguise_context_mocks(mock_contexts);
+    let services = disguise_service_mocks(mock_services);
+    let session_logic = SessionLogic::new(contexts, services);
 
     let result = session_logic.update_session(refresh_token).await;
 
@@ -103,6 +113,8 @@ async fn update_session_returns_error_when_no_session_found() {
 #[tokio::test]
 async fn update_session_returns_error_when_database_error_occurs() {
     let mut mock_contexts = get_mock_contexts();
+    let mock_services = get_mock_services();
+
     let refresh_token = "refresh_token".to_string();
 
     mock_contexts
@@ -111,8 +123,9 @@ async fn update_session_returns_error_when_database_error_occurs() {
         .times(1)
         .returning(|_, _| Err(DbErr::RecordNotFound("".to_string())));
 
-    let contexts = disguise_mocks(mock_contexts);
-    let session_logic = SessionLogic::new(contexts);
+    let contexts = disguise_context_mocks(mock_contexts);
+    let services = disguise_service_mocks(mock_services);
+    let session_logic = SessionLogic::new(contexts, services);
 
     let result = session_logic.update_session(refresh_token).await;
 
@@ -123,6 +136,7 @@ async fn update_session_returns_error_when_database_error_occurs() {
 #[tokio::test]
 async fn get_auth_token_from_credentials_returns_ok() {
     let mut mock_contexts = get_mock_contexts();
+    let mut mock_services = get_mock_services();
 
     let request = GetAuthTokenRequest {
         user_credentials: Option::from(UserCredentials {
@@ -143,8 +157,8 @@ async fn get_auth_token_from_credentials_returns_ok() {
             }))
         });
 
-    mock_contexts
-        .hashing_context_mock
+    mock_services
+        .hashing_service_mock
         .expect_verify_password()
         .returning(move |_, _| true);
 
@@ -161,8 +175,9 @@ async fn get_auth_token_from_credentials_returns_ok() {
             })
         });
 
-    let contexts = disguise_mocks(mock_contexts);
-    let session_logic = SessionLogic::new(contexts);
+    let contexts = disguise_context_mocks(mock_contexts);
+    let services = disguise_service_mocks(mock_services);
+    let session_logic = SessionLogic::new(contexts, services);
 
     let response = session_logic
         .get_auth_token(Request::new(request))
@@ -178,6 +193,7 @@ async fn get_auth_token_from_token_returns_ok() {
     env::set_var("REFRESH_TOKEN_HS512_SECRET", "refresh_secret");
 
     let mut mock_contexts = get_mock_contexts();
+    let mock_services = get_mock_services();
 
     let mut request = Request::new(GetAuthTokenRequest {
         user_credentials: None,
@@ -216,8 +232,9 @@ async fn get_auth_token_from_token_returns_ok() {
             })
         });
 
-    let contexts = disguise_mocks(mock_contexts);
-    let session_logic = SessionLogic::new(contexts);
+    let contexts = disguise_context_mocks(mock_contexts);
+    let services = disguise_service_mocks(mock_services);
+    let session_logic = SessionLogic::new(contexts, services);
 
     let response = session_logic.get_auth_token(request).await.unwrap();
 
@@ -228,6 +245,7 @@ async fn get_auth_token_from_token_returns_ok() {
 #[tokio::test]
 async fn get_auth_token_from_invalid_token_returns_err() {
     let mock_contexts = get_mock_contexts();
+    let mock_services = get_mock_services();
 
     let mut request = Request::new(GetAuthTokenRequest {
         user_credentials: None,
@@ -238,8 +256,9 @@ async fn get_auth_token_from_invalid_token_returns_err() {
         metadata::MetadataValue::from_str("invalid token").unwrap(),
     );
 
-    let contexts = disguise_mocks(mock_contexts);
-    let session_logic = SessionLogic::new(contexts);
+    let contexts = disguise_context_mocks(mock_contexts);
+    let services = disguise_service_mocks(mock_services);
+    let session_logic = SessionLogic::new(contexts, services);
 
     let response = session_logic.get_auth_token(request).await;
 

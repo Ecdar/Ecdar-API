@@ -4,7 +4,6 @@ mod query_logic_trait;
 mod session_logic_trait;
 mod user_logic_trait;
 
-pub use crate::database::context_traits::hashing_context_trait::HashingContextTrait;
 pub use access_logic_trait::AccessLogicTrait;
 pub use project_logic_trait::ProjectLogicTrait;
 pub use query_logic_trait::QueryLogicTrait;

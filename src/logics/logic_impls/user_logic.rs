@@ -1,22 +1,23 @@
 use crate::api::auth::RequestExt;
-use crate::api::context_collection::ContextCollection;
-use crate::api::logic_traits::UserLogicTrait;
+use crate::api::collections::{ContextCollection, ServiceCollection};
 use crate::api::server::server::get_users_response::UserInfo;
 use crate::api::server::server::{
     CreateUserRequest, GetUsersRequest, GetUsersResponse, UpdateUserRequest,
 };
 use crate::entities::user;
+use crate::logics::logic_traits::UserLogicTrait;
 use regex::Regex;
 use sea_orm::SqlErr;
 use tonic::{Code, Request, Response, Status};
 
 pub struct UserLogic {
     contexts: ContextCollection,
+    services: ServiceCollection,
 }
 
 impl UserLogic {
-    pub fn new(contexts: ContextCollection) -> Self {
-        UserLogic { contexts }
+    pub fn new(contexts: ContextCollection, services: ServiceCollection) -> Self {
+        UserLogic { contexts, services }
     }
 }
 
@@ -36,8 +37,8 @@ impl UserLogicTrait for UserLogic {
         }
 
         let hashed_password = self
-            .contexts
-            .hashing_context
+            .services
+            .hashing_service
             .hash_password(message.clone().password);
 
         let user = user::Model {
@@ -110,7 +111,7 @@ impl UserLogicTrait for UserLogic {
                 None => user.email,
             },
             password: match message.clone().password {
-                Some(password) => self.contexts.hashing_context.hash_password(password),
+                Some(password) => self.services.hashing_service.hash_password(password),
                 None => user.password,
             },
         };
@@ -180,5 +181,5 @@ fn is_valid_username(username: &str) -> bool {
 }
 
 #[cfg(test)]
-#[path = "../../tests/api/user_logic.rs"]
+#[path = "../../tests/logics/user_logic.rs"]
 mod user_logic_tests;

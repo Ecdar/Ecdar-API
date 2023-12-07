@@ -1,9 +1,9 @@
-use crate::api::logic_traits::HashingContextTrait;
+use crate::services::service_traits::hashing_service_trait::HashingServiceTrait;
 use bcrypt::{hash, verify, DEFAULT_COST};
 
-pub struct HashingContext;
+pub struct HashingService;
 
-impl HashingContextTrait for HashingContext {
+impl HashingServiceTrait for HashingService {
     fn hash_password(&self, password: String) -> String {
         hash(password, DEFAULT_COST).unwrap()
     }

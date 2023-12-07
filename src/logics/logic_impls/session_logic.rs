@@ -1,21 +1,22 @@
 use crate::api::auth::{RequestExt, Token, TokenError, TokenType};
-use crate::api::context_collection::ContextCollection;
-use crate::api::logic_traits::SessionLogicTrait;
+use crate::api::collections::{ContextCollection, ServiceCollection};
 use crate::api::server::server::get_auth_token_request::{user_credentials, UserCredentials};
 use crate::api::server::server::{GetAuthTokenRequest, GetAuthTokenResponse};
 use crate::database::context_traits::{SessionContextTrait, UserContextTrait};
 use crate::entities::{session, user};
+use crate::logics::logic_traits::SessionLogicTrait;
 use sea_orm::DbErr;
 use std::sync::Arc;
 use tonic::{Request, Response, Status};
 
 pub struct SessionLogic {
     contexts: ContextCollection,
+    services: ServiceCollection,
 }
 
 impl SessionLogic {
-    pub fn new(contexts: ContextCollection) -> Self {
-        Self { contexts }
+    pub fn new(contexts: ContextCollection, services: ServiceCollection) -> Self {
+        Self { contexts, services }
     }
 
     /// Updates the session given by refresh token in the database.
@@ -113,8 +114,8 @@ impl SessionLogicTrait for SessionLogic {
 
                 // Check if password in request matches users password
                 if !self
-                    .contexts
-                    .hashing_context
+                    .services
+                    .hashing_service
                     .verify_password(input_password, user.password.as_str())
                 {
                     return Err(Status::unauthenticated("Wrong username or password"));
@@ -162,5 +163,5 @@ async fn user_from_user_credentials(
 }
 
 #[cfg(test)]
-#[path = "../../tests/api/session_logic.rs"]
+#[path = "../../tests/logics/session_logic.rs"]
 mod session_logic_tests;

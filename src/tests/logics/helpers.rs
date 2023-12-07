@@ -11,8 +11,9 @@ use crate::api::server::server::{
 use crate::database::context_traits::*;
 use std::sync::Arc;
 
-use crate::api::context_collection::ContextCollection;
+use crate::api::collections::{ContextCollection, ServiceCollection};
 use crate::entities::{access, in_use, project, query, session, user};
+use crate::services::service_traits::*;
 use async_trait::async_trait;
 use mockall::mock;
 use sea_orm::DbErr;
@@ -26,12 +27,17 @@ pub fn get_mock_contexts() -> MockContexts {
         query_context_mock: MockQueryContext::new(),
         session_context_mock: MockSessionContext::new(),
         user_context_mock: MockUserContext::new(),
-        reveaal_context_mock: MockReveaalContext::new(),
-        hashing_context_mock: MockHashingContext::new(),
     }
 }
 
-pub fn disguise_mocks(mock_services: MockContexts) -> ContextCollection {
+pub fn get_mock_services() -> MockServices {
+    MockServices {
+        hashing_service_mock: MockHashingService::new(),
+        reveaal_service_mock: MockReveaalService::new(),
+    }
+}
+
+pub fn disguise_context_mocks(mock_services: MockContexts) -> ContextCollection {
     ContextCollection {
         access_context: Arc::new(mock_services.access_context_mock),
         in_use_context: Arc::new(mock_services.in_use_context_mock),
@@ -39,8 +45,13 @@ pub fn disguise_mocks(mock_services: MockContexts) -> ContextCollection {
         query_context: Arc::new(mock_services.query_context_mock),
         session_context: Arc::new(mock_services.session_context_mock),
         user_context: Arc::new(mock_services.user_context_mock),
-        reveaal_context: Arc::new(mock_services.reveaal_context_mock),
-        hashing_context: Arc::new(mock_services.hashing_context_mock),
+    }
+}
+
+pub fn disguise_service_mocks(mock_services: MockServices) -> ServiceCollection {
+    ServiceCollection {
+        hashing_service: Arc::new(mock_services.hashing_service_mock),
+        reveaal_service: Arc::new(mock_services.reveaal_service_mock),
     }
 }
 
@@ -51,8 +62,11 @@ pub struct MockContexts {
     pub(crate) query_context_mock: MockQueryContext,
     pub(crate) session_context_mock: MockSessionContext,
     pub(crate) user_context_mock: MockUserContext,
-    pub(crate) reveaal_context_mock: MockReveaalContext,
-    pub(crate) hashing_context_mock: MockHashingContext,
+}
+
+pub struct MockServices {
+    pub(crate) hashing_service_mock: MockHashingService,
+    pub(crate) reveaal_service_mock: MockReveaalService,
 }
 
 mock! {
@@ -162,9 +176,9 @@ mock! {
 }
 
 mock! {
-    pub ReveaalContext {}
+    pub ReveaalService{}
     #[async_trait]
-    impl EcdarBackend for ReveaalContext {
+    impl EcdarBackend for ReveaalService {
         async fn get_user_token(&self,request: Request<()>) -> Result<Response<UserTokenResponse>, Status>;
         async fn send_query(&self,request: Request<QueryRequest>) -> Result<Response<QueryResponse>, Status>;
         async fn start_simulation(&self, request: Request<SimulationStartRequest>) -> Result<Response<SimulationStepResponse>, Status>;
@@ -173,8 +187,8 @@ mock! {
 }
 
 mock! {
-    pub HashingContext {}
-    impl HashingContextTrait for HashingContext {
+    pub HashingService {}
+    impl HashingServiceTrait for HashingService {
         fn hash_password(&self, password: String) -> String;
         fn verify_password(&self, password: String, hash: &str) -> bool;
     }

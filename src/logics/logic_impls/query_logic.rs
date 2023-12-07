@@ -1,20 +1,21 @@
 use crate::api::auth::RequestExt;
-use crate::api::context_collection::ContextCollection;
-use crate::api::logic_traits::QueryLogicTrait;
+use crate::api::collections::{ContextCollection, ServiceCollection};
 use crate::api::server::server::{
     CreateQueryRequest, DeleteQueryRequest, QueryRequest, SendQueryRequest, SendQueryResponse,
     UpdateQueryRequest,
 };
 use crate::entities::query;
+use crate::logics::logic_traits::QueryLogicTrait;
 use tonic::{Code, Request, Response, Status};
 
 pub struct QueryLogic {
     contexts: ContextCollection,
+    services: ServiceCollection,
 }
 
 impl QueryLogic {
-    pub fn new(contexts: ContextCollection) -> Self {
-        Self { contexts }
+    pub fn new(contexts: ContextCollection, services: ServiceCollection) -> Self {
+        Self { contexts, services }
     }
 }
 
@@ -221,8 +222,8 @@ impl QueryLogicTrait for QueryLogic {
 
         // Run query on Reveaal
         let query_result = self
-            .contexts
-            .reveaal_context
+            .services
+            .reveaal_service
             .send_query(query_request)
             .await?;
 
@@ -248,5 +249,5 @@ impl QueryLogicTrait for QueryLogic {
 }
 
 #[cfg(test)]
-#[path = "../../tests/api/query_logic.rs"]
+#[path = "../../tests/logics/query_logic.rs"]
 mod query_logic_tests;

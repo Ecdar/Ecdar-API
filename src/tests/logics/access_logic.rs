@@ -1,16 +1,15 @@
-use std::str::FromStr;
-
-use crate::api::logic_impls::AccessLogic;
-use crate::api::logic_traits::AccessLogicTrait;
 use crate::api::server::server::create_access_request::User;
 use crate::api::server::server::{
     AccessInfo, CreateAccessRequest, DeleteAccessRequest, ListAccessInfoRequest,
     UpdateAccessRequest,
 };
 use crate::entities::{access, project, user};
-use crate::tests::api::helpers::{disguise_mocks, get_mock_contexts};
+use crate::logics::logic_impls::AccessLogic;
+use crate::logics::logic_traits::AccessLogicTrait;
+use crate::tests::logics::helpers::{disguise_context_mocks, get_mock_contexts};
 use mockall::predicate;
 use sea_orm::DbErr;
+use std::str::FromStr;
 use tonic::{metadata, Code, Request};
 
 #[tokio::test]
@@ -67,7 +66,7 @@ async fn create_invalid_access_returns_err() {
         tonic::metadata::MetadataValue::from_str("1").unwrap(),
     );
 
-    let contexts = disguise_mocks(mock_contexts);
+    let contexts = disguise_context_mocks(mock_contexts);
     let access_logic = AccessLogic::new(contexts);
 
     let res = access_logic.create_access(request).await.unwrap_err();
@@ -129,7 +128,7 @@ async fn create_access_returns_ok() {
         tonic::metadata::MetadataValue::from_str("1").unwrap(),
     );
 
-    let contexts = disguise_mocks(mock_contexts);
+    let contexts = disguise_context_mocks(mock_contexts);
     let access_logic = AccessLogic::new(contexts);
 
     let res = access_logic.create_access(request).await;
@@ -203,7 +202,7 @@ async fn update_invalid_access_returns_err() {
         tonic::metadata::MetadataValue::from_str("1").unwrap(),
     );
 
-    let contexts = disguise_mocks(mock_contexts);
+    let contexts = disguise_context_mocks(mock_contexts);
     let access_logic = AccessLogic::new(contexts);
 
     let res = access_logic.update_access(request).await.unwrap_err();
@@ -277,7 +276,7 @@ async fn update_access_returns_ok() {
         tonic::metadata::MetadataValue::from_str("1").unwrap(),
     );
 
-    let contexts = disguise_mocks(mock_contexts);
+    let contexts = disguise_context_mocks(mock_contexts);
     let access_logic = AccessLogic::new(contexts);
 
     let res = access_logic.update_access(request).await;
@@ -343,7 +342,7 @@ async fn delete_invalid_access_returns_err() {
         tonic::metadata::MetadataValue::from_str("1").unwrap(),
     );
 
-    let contexts = disguise_mocks(mock_contexts);
+    let contexts = disguise_context_mocks(mock_contexts);
     let access_logic = AccessLogic::new(contexts);
 
     let res = access_logic.delete_access(request).await.unwrap_err();
@@ -414,7 +413,7 @@ async fn delete_access_returns_ok() {
         tonic::metadata::MetadataValue::from_str("1").unwrap(),
     );
 
-    let contexts = disguise_mocks(mock_contexts);
+    let contexts = disguise_context_mocks(mock_contexts);
     let access_logic = AccessLogic::new(contexts);
 
     let res = access_logic.delete_access(request).await;
@@ -457,7 +456,7 @@ async fn list_access_info_returns_ok() {
         .expect_get_access_by_project_id()
         .returning(move |_| Ok(vec![access.clone()]));
 
-    let contexts = disguise_mocks(mock_contexts);
+    let contexts = disguise_context_mocks(mock_contexts);
     let access_logic = AccessLogic::new(contexts);
 
     let res = access_logic.list_access_info(request).await;
@@ -492,7 +491,7 @@ async fn list_access_info_returns_not_found() {
         .expect_get_access_by_uid_and_project_id()
         .returning(move |_, _| Ok(Some(access.clone())));
 
-    let contexts = disguise_mocks(mock_contexts);
+    let contexts = disguise_context_mocks(mock_contexts);
     let access_logic = AccessLogic::new(contexts);
 
     let res = access_logic.list_access_info(request).await.unwrap_err();
@@ -515,7 +514,7 @@ async fn list_access_info_returns_no_permission() {
         .expect_get_access_by_uid_and_project_id()
         .returning(move |_, _| Ok(None));
 
-    let contexts = disguise_mocks(mock_contexts);
+    let contexts = disguise_context_mocks(mock_contexts);
     let access_logic = AccessLogic::new(contexts);
 
     let res = access_logic.list_access_info(request).await.unwrap_err();

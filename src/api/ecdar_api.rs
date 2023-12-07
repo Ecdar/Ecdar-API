@@ -9,7 +9,7 @@ use super::server::server::{
     SimulationStepRequest, SimulationStepResponse, UpdateAccessRequest, UpdateProjectRequest,
     UpdateQueryRequest, UpdateUserRequest, UserTokenResponse,
 };
-use crate::api::logic_collection::LogicCollection;
+use crate::api::collections::{LogicCollection, ServiceCollection};
 use serde_json;
 use tonic::{Request, Response, Status};
 
@@ -175,7 +175,6 @@ impl EcdarBackend for ConcreteEcdarApi {
     }
 }
 
-/// Implementation of the EcdarBackend trait, which is used to ensure backwards compatability with the Reveaal engine.
 #[tonic::async_trait]
 impl EcdarApiAuth for ConcreteEcdarApi {
     async fn get_auth_token(
