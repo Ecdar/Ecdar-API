@@ -8,12 +8,12 @@ use async_trait::async_trait;
 use tonic::{Request, Response, Status};
 
 #[derive(Debug)]
-pub struct ReveaalLogic {
+pub struct ReveaalController {
     services: ServiceCollection,
 }
 
 #[async_trait]
-impl EcdarBackend for ReveaalLogic {
+impl EcdarBackend for ReveaalController {
     async fn get_user_token(
         &self,
         request: Request<()>,

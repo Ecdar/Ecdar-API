@@ -2,19 +2,19 @@ use crate::api::auth::{RequestExt, Token, TokenError, TokenType};
 use crate::api::collections::{ContextCollection, ServiceCollection};
 use crate::api::server::server::get_auth_token_request::{user_credentials, UserCredentials};
 use crate::api::server::server::{GetAuthTokenRequest, GetAuthTokenResponse};
+use crate::controllers::controller_traits::SessionControllerTrait;
 use crate::database::context_traits::{SessionContextTrait, UserContextTrait};
 use crate::entities::{session, user};
-use crate::logics::logic_traits::SessionLogicTrait;
 use sea_orm::DbErr;
 use std::sync::Arc;
 use tonic::{Request, Response, Status};
 
-pub struct SessionLogic {
+pub struct SessionController {
     contexts: ContextCollection,
     services: ServiceCollection,
 }
 
-impl SessionLogic {
+impl SessionController {
     pub fn new(contexts: ContextCollection, services: ServiceCollection) -> Self {
         Self { contexts, services }
     }
@@ -58,7 +58,7 @@ impl SessionLogic {
     }
 }
 
-impl SessionLogicTrait for SessionLogic {
+impl SessionControllerTrait for SessionController {
     async fn delete_session(&self, _request: Request<()>) -> Result<Response<()>, Status> {
         todo!()
     }
@@ -163,5 +163,5 @@ async fn user_from_user_credentials(
 }
 
 #[cfg(test)]
-#[path = "../../tests/logics/session_logic.rs"]
-mod session_logic_tests;
+#[path = "../../tests/controllers/session_controller.rs"]
+mod session_controller_tests;

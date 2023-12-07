@@ -1,14 +1,14 @@
 mod api;
+mod controllers;
 mod database;
 mod entities;
-mod logics;
 mod services;
 mod tests;
 
-use crate::api::collections::{ContextCollection, LogicCollection, ServiceCollection};
+use crate::api::collections::{ContextCollection, ControllerCollection, ServiceCollection};
+use crate::controllers::controller_impls::*;
 use crate::database::context_impls::*;
 use crate::database::context_traits::DatabaseContextTrait;
-use crate::logics::logic_impls::*;
 use crate::services::service_impls::{HashingService, ReveaalService};
 use api::server::start_grpc_server;
 use dotenv::dotenv;
@@ -43,13 +43,13 @@ async fn main() -> Result<(), Box<dyn Error>> {
         reveaal_service: Arc::new(ReveaalService),
     };
 
-    let logics = LogicCollection {
-        access_logic: Arc::new(AccessLogic::new(contexts.clone())),
-        project_logic: Arc::new(ProjectLogic::new(contexts.clone())),
-        query_logic: Arc::new(QueryLogic::new(contexts.clone(), services.clone())),
-        session_logic: Arc::new(SessionLogic::new(contexts.clone(), services.clone())),
-        user_logic: Arc::new(UserLogic::new(contexts.clone(), services.clone())),
-        reveaal_logic: Arc::new(()),
+    let logics = ControllerCollection {
+        access_controller: Arc::new(AccessController::new(contexts.clone())),
+        project_controller: Arc::new(ProjectController::new(contexts.clone())),
+        query_controller: Arc::new(QueryController::new(contexts.clone(), services.clone())),
+        session_controller: Arc::new(SessionController::new(contexts.clone(), services.clone())),
+        user_controller: Arc::new(UserController::new(contexts.clone(), services.clone())),
+        reveaal_controller: Arc::new(()),
     };
 
     start_grpc_server(logics).await.unwrap();

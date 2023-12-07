@@ -5,23 +5,23 @@ use crate::api::server::server::{
     CreateAccessRequest, DeleteAccessRequest, ListAccessInfoRequest, ListAccessInfoResponse,
     UpdateAccessRequest,
 };
+use crate::controllers::controller_traits::AccessControllerTrait;
 use crate::database::context_traits::{AccessContextTrait, UserContextTrait};
 use crate::entities::{access, user};
-use crate::logics::logic_traits::AccessLogicTrait;
 use std::sync::Arc;
 use tonic::{Code, Request, Response, Status};
 
-pub struct AccessLogic {
+pub struct AccessController {
     contexts: ContextCollection,
 }
 
-impl AccessLogic {
+impl AccessController {
     pub fn new(contexts: ContextCollection) -> Self {
-        AccessLogic { contexts }
+        AccessController { contexts }
     }
 }
 
-impl AccessLogicTrait for AccessLogic {
+impl AccessControllerTrait for AccessController {
     async fn list_access_info(
         &self,
         request: Request<ListAccessInfoRequest>,
@@ -294,5 +294,5 @@ async fn create_access_find_user_helper(
 }
 
 #[cfg(test)]
-#[path = "../../tests/logics/access_logic.rs"]
-mod access_logic_tests;
+#[path = "../../tests/controllers/access_controller.rs"]
+mod access_controller_tests;

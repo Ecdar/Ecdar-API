@@ -9,18 +9,18 @@ use super::server::server::{
     SimulationStepRequest, SimulationStepResponse, UpdateAccessRequest, UpdateProjectRequest,
     UpdateQueryRequest, UpdateUserRequest, UserTokenResponse,
 };
-use crate::api::collections::{LogicCollection, ServiceCollection};
+use crate::api::collections::{ControllerCollection, ServiceCollection};
 use serde_json;
 use tonic::{Request, Response, Status};
 
 #[derive(Clone)]
 pub struct ConcreteEcdarApi {
-    logics: LogicCollection,
+    controllers: ControllerCollection,
 }
 
 impl ConcreteEcdarApi {
-    pub fn new(logics: LogicCollection) -> Self {
-        ConcreteEcdarApi { logics }
+    pub fn new(controllers: ControllerCollection) -> Self {
+        ConcreteEcdarApi { controllers }
     }
 }
 
@@ -30,113 +30,152 @@ impl EcdarApi for ConcreteEcdarApi {
         &self,
         request: Request<GetProjectRequest>,
     ) -> Result<Response<GetProjectResponse>, Status> {
-        self.logics.project_logic.get_project(request).await
+        self.controllers
+            .project_controller
+            .get_project(request)
+            .await
     }
 
     async fn create_project(
         &self,
         request: Request<CreateProjectRequest>,
     ) -> Result<Response<CreateProjectResponse>, Status> {
-        self.logics.project_logic.create_project(request).await
+        self.controllers
+            .project_controller
+            .create_project(request)
+            .await
     }
 
     async fn update_project(
         &self,
         request: Request<UpdateProjectRequest>,
     ) -> Result<Response<()>, Status> {
-        self.logics.project_logic.update_project(request).await
+        self.controllers
+            .project_controller
+            .update_project(request)
+            .await
     }
 
     async fn delete_project(
         &self,
         request: Request<DeleteProjectRequest>,
     ) -> Result<Response<()>, Status> {
-        self.logics.project_logic.delete_project(request).await
+        self.controllers
+            .project_controller
+            .delete_project(request)
+            .await
     }
 
     async fn list_projects_info(
         &self,
         request: Request<()>,
     ) -> Result<Response<ListProjectsInfoResponse>, Status> {
-        self.logics.project_logic.list_projects_info(request).await
+        self.controllers
+            .project_controller
+            .list_projects_info(request)
+            .await
     }
 
     async fn list_access_info(
         &self,
         request: Request<ListAccessInfoRequest>,
     ) -> Result<Response<ListAccessInfoResponse>, Status> {
-        self.logics.access_logic.list_access_info(request).await
+        self.controllers
+            .access_controller
+            .list_access_info(request)
+            .await
     }
 
     async fn create_access(
         &self,
         request: Request<CreateAccessRequest>,
     ) -> Result<Response<()>, Status> {
-        self.logics.access_logic.create_access(request).await
+        self.controllers
+            .access_controller
+            .create_access(request)
+            .await
     }
 
     async fn update_access(
         &self,
         request: Request<UpdateAccessRequest>,
     ) -> Result<Response<()>, Status> {
-        self.logics.access_logic.update_access(request).await
+        self.controllers
+            .access_controller
+            .update_access(request)
+            .await
     }
 
     async fn delete_access(
         &self,
         request: Request<DeleteAccessRequest>,
     ) -> Result<Response<()>, Status> {
-        self.logics.access_logic.delete_access(request).await
+        self.controllers
+            .access_controller
+            .delete_access(request)
+            .await
     }
 
     async fn update_user(
         &self,
         request: Request<UpdateUserRequest>,
     ) -> Result<Response<()>, Status> {
-        self.logics.user_logic.update_user(request).await
+        self.controllers.user_controller.update_user(request).await
     }
 
     async fn delete_user(&self, request: Request<()>) -> Result<Response<()>, Status> {
-        self.logics.user_logic.delete_user(request).await
+        self.controllers.user_controller.delete_user(request).await
     }
 
     async fn get_users(
         &self,
         request: Request<GetUsersRequest>,
     ) -> Result<Response<GetUsersResponse>, Status> {
-        self.logics.user_logic.get_users(request).await
+        self.controllers.user_controller.get_users(request).await
     }
 
     async fn create_query(
         &self,
         request: Request<CreateQueryRequest>,
     ) -> Result<Response<()>, Status> {
-        self.logics.query_logic.create_query(request).await
+        self.controllers
+            .query_controller
+            .create_query(request)
+            .await
     }
 
     async fn update_query(
         &self,
         request: Request<UpdateQueryRequest>,
     ) -> Result<Response<()>, Status> {
-        self.logics.query_logic.update_query(request).await
+        self.controllers
+            .query_controller
+            .update_query(request)
+            .await
     }
 
     async fn delete_query(
         &self,
         request: Request<DeleteQueryRequest>,
     ) -> Result<Response<()>, Status> {
-        self.logics.query_logic.delete_query(request).await
+        self.controllers
+            .query_controller
+            .delete_query(request)
+            .await
     }
 
     async fn send_query(
         &self,
         request: Request<SendQueryRequest>,
     ) -> Result<Response<SendQueryResponse>, Status> {
-        self.logics.query_logic.send_query(request).await
+        self.controllers.query_controller.send_query(request).await
     }
 
     async fn delete_session(&self, request: Request<()>) -> Result<Response<()>, Status> {
-        self.logics.session_logic.delete_session(request).await
+        self.controllers
+            .session_controller
+            .delete_session(request)
+            .await
     }
 }
 
@@ -147,29 +186,38 @@ impl EcdarBackend for ConcreteEcdarApi {
         &self,
         _request: Request<()>,
     ) -> Result<Response<UserTokenResponse>, Status> {
-        self.logics.reveaal_logic.get_user_token(_request).await
+        self.controllers
+            .reveaal_controller
+            .get_user_token(_request)
+            .await
     }
 
     async fn send_query(
         &self,
         request: Request<QueryRequest>,
     ) -> Result<Response<QueryResponse>, Status> {
-        self.logics.reveaal_logic.send_query(request).await
+        self.controllers
+            .reveaal_controller
+            .send_query(request)
+            .await
     }
 
     async fn start_simulation(
         &self,
         request: Request<SimulationStartRequest>,
     ) -> Result<Response<SimulationStepResponse>, Status> {
-        self.logics.reveaal_logic.start_simulation(request).await
+        self.controllers
+            .reveaal_controller
+            .start_simulation(request)
+            .await
     }
 
     async fn take_simulation_step(
         &self,
         request: Request<SimulationStepRequest>,
     ) -> Result<Response<SimulationStepResponse>, Status> {
-        self.logics
-            .reveaal_logic
+        self.controllers
+            .reveaal_controller
             .take_simulation_step(request)
             .await
     }
@@ -181,13 +229,16 @@ impl EcdarApiAuth for ConcreteEcdarApi {
         &self,
         request: Request<GetAuthTokenRequest>,
     ) -> Result<Response<GetAuthTokenResponse>, Status> {
-        self.logics.session_logic.get_auth_token(request).await
+        self.controllers
+            .session_controller
+            .get_auth_token(request)
+            .await
     }
 
     async fn create_user(
         &self,
         request: Request<CreateUserRequest>,
     ) -> Result<Response<()>, Status> {
-        self.logics.user_logic.create_user(request).await
+        self.controllers.user_controller.create_user(request).await
     }
 }

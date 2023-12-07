@@ -4,24 +4,24 @@ use crate::api::server::server::get_users_response::UserInfo;
 use crate::api::server::server::{
     CreateUserRequest, GetUsersRequest, GetUsersResponse, UpdateUserRequest,
 };
+use crate::controllers::controller_traits::UserControllerTrait;
 use crate::entities::user;
-use crate::logics::logic_traits::UserLogicTrait;
 use regex::Regex;
 use sea_orm::SqlErr;
 use tonic::{Code, Request, Response, Status};
 
-pub struct UserLogic {
+pub struct UserController {
     contexts: ContextCollection,
     services: ServiceCollection,
 }
 
-impl UserLogic {
+impl UserController {
     pub fn new(contexts: ContextCollection, services: ServiceCollection) -> Self {
-        UserLogic { contexts, services }
+        UserController { contexts, services }
     }
 }
 
-impl UserLogicTrait for UserLogic {
+impl UserControllerTrait for UserController {
     async fn create_user(
         &self,
         request: Request<CreateUserRequest>,
@@ -181,5 +181,5 @@ fn is_valid_username(username: &str) -> bool {
 }
 
 #[cfg(test)]
-#[path = "../../tests/logics/user_logic.rs"]
-mod user_logic_tests;
+#[path = "../../tests/controllers/user_controller.rs"]
+mod user_controller_tests;

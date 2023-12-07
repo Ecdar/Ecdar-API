@@ -4,28 +4,28 @@ use crate::api::server::server::{
     CreateProjectRequest, CreateProjectResponse, DeleteProjectRequest, GetProjectRequest,
     GetProjectResponse, ListProjectsInfoResponse, Project, Query, UpdateProjectRequest,
 };
+use crate::controllers::controller_traits::ProjectControllerTrait;
 use crate::database::context_traits::{
     AccessContextTrait, ProjectContextTrait, SessionContextTrait,
 };
 use crate::entities::{access, in_use, project};
-use crate::logics::logic_traits::ProjectLogicTrait;
 use chrono::{Duration, Utc};
 use sea_orm::SqlErr;
 use tonic::{Code, Request, Response, Status};
 
 const IN_USE_DURATION_MINUTES: i64 = 10;
 
-pub struct ProjectLogic {
+pub struct ProjectController {
     contexts: ContextCollection,
 }
 
-impl ProjectLogic {
+impl ProjectController {
     pub fn new(contexts: ContextCollection) -> Self {
-        ProjectLogic { contexts }
+        ProjectController { contexts }
     }
 }
 
-impl ProjectLogicTrait for ProjectLogic {
+impl ProjectControllerTrait for ProjectController {
     /// Gets a Model and its queries from the database.
     ///
     /// If the Model is not in use, it will now be in use by the requestees session,
@@ -409,5 +409,5 @@ impl ProjectLogicTrait for ProjectLogic {
 }
 
 #[cfg(test)]
-#[path = "../../tests/logics/project_logic.rs"]
-mod project_logic_tests;
+#[path = "../../tests/controllers/project_controller.rs"]
+mod project_controller_tests;

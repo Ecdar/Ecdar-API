@@ -5,7 +5,7 @@ use async_trait::async_trait;
 use tonic::{Request, Response, Status};
 
 #[async_trait]
-pub trait QueryLogicTrait {
+pub trait QueryControllerTrait {
     async fn create_query(
         &self,
         request: Request<CreateQueryRequest>,

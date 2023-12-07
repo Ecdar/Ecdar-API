@@ -3,7 +3,7 @@ use crate::api::server::server::{
     QueryRequest, QueryResponse, SimulationStartRequest, SimulationStepRequest,
     SimulationStepResponse, UserTokenResponse,
 };
-use crate::logics::logic_impls::ReveaalLogic;
+use crate::controllers::controller_impls::ReveaalController;
 use crate::services::service_traits::ReveaalServiceTrait;
 use std::env;
 use tonic::transport::Channel;
@@ -11,7 +11,7 @@ use tonic::{Request, Response, Status};
 
 pub struct ReveaalService;
 
-impl ReveaalLogic {
+impl ReveaalController {
     async fn get_connection() -> EcdarBackendClient<Channel> {
         let url = env::var("REVEAAL_ADDRESS").expect("Expected REVEAAL_ADDRESS to be set.");
         EcdarBackendClient::connect(url).await.unwrap()
@@ -23,7 +23,7 @@ impl ReveaalServiceTrait for ReveaalService {
         &self,
         request: Request<()>,
     ) -> Result<Response<UserTokenResponse>, Status> {
-        Ok(ReveaalLogic::get_connection()
+        Ok(ReveaalController::get_connection()
             .await
             .get_user_token(request)
             .await
@@ -34,7 +34,7 @@ impl ReveaalServiceTrait for ReveaalService {
         &self,
         request: Request<QueryRequest>,
     ) -> Result<Response<QueryResponse>, Status> {
-        Ok(ReveaalLogic::get_connection()
+        Ok(ReveaalController::get_connection()
             .await
             .send_query(request)
             .await
@@ -45,7 +45,7 @@ impl ReveaalServiceTrait for ReveaalService {
         &self,
         request: Request<SimulationStartRequest>,
     ) -> Result<Response<SimulationStepResponse>, Status> {
-        Ok(ReveaalLogic::get_connection()
+        Ok(ReveaalController::get_connection()
             .await
             .start_simulation(request)
             .await
@@ -56,7 +56,7 @@ impl ReveaalServiceTrait for ReveaalService {
         &self,
         request: Request<SimulationStepRequest>,
     ) -> Result<Response<SimulationStepResponse>, Status> {
-        Ok(ReveaalLogic::get_connection()
+        Ok(ReveaalController::get_connection()
             .await
             .take_simulation_step(request)
             .await

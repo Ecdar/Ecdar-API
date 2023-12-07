@@ -3,10 +3,10 @@ use crate::api::server::server::{
     AccessInfo, CreateAccessRequest, DeleteAccessRequest, ListAccessInfoRequest,
     UpdateAccessRequest,
 };
+use crate::controllers::controller_impls::AccessController;
+use crate::controllers::controller_traits::AccessControllerTrait;
 use crate::entities::{access, project, user};
-use crate::logics::logic_impls::AccessLogic;
-use crate::logics::logic_traits::AccessLogicTrait;
-use crate::tests::logics::helpers::{disguise_context_mocks, get_mock_contexts};
+use crate::tests::controllers::helpers::{disguise_context_mocks, get_mock_contexts};
 use mockall::predicate;
 use sea_orm::DbErr;
 use std::str::FromStr;
@@ -67,7 +67,7 @@ async fn create_invalid_access_returns_err() {
     );
 
     let contexts = disguise_context_mocks(mock_contexts);
-    let access_logic = AccessLogic::new(contexts);
+    let access_logic = AccessController::new(contexts);
 
     let res = access_logic.create_access(request).await.unwrap_err();
 
@@ -129,7 +129,7 @@ async fn create_access_returns_ok() {
     );
 
     let contexts = disguise_context_mocks(mock_contexts);
-    let access_logic = AccessLogic::new(contexts);
+    let access_logic = AccessController::new(contexts);
 
     let res = access_logic.create_access(request).await;
 
@@ -203,7 +203,7 @@ async fn update_invalid_access_returns_err() {
     );
 
     let contexts = disguise_context_mocks(mock_contexts);
-    let access_logic = AccessLogic::new(contexts);
+    let access_logic = AccessController::new(contexts);
 
     let res = access_logic.update_access(request).await.unwrap_err();
 
@@ -277,7 +277,7 @@ async fn update_access_returns_ok() {
     );
 
     let contexts = disguise_context_mocks(mock_contexts);
-    let access_logic = AccessLogic::new(contexts);
+    let access_logic = AccessController::new(contexts);
 
     let res = access_logic.update_access(request).await;
 
@@ -343,7 +343,7 @@ async fn delete_invalid_access_returns_err() {
     );
 
     let contexts = disguise_context_mocks(mock_contexts);
-    let access_logic = AccessLogic::new(contexts);
+    let access_logic = AccessController::new(contexts);
 
     let res = access_logic.delete_access(request).await.unwrap_err();
 
@@ -414,7 +414,7 @@ async fn delete_access_returns_ok() {
     );
 
     let contexts = disguise_context_mocks(mock_contexts);
-    let access_logic = AccessLogic::new(contexts);
+    let access_logic = AccessController::new(contexts);
 
     let res = access_logic.delete_access(request).await;
 
@@ -457,7 +457,7 @@ async fn list_access_info_returns_ok() {
         .returning(move |_| Ok(vec![access.clone()]));
 
     let contexts = disguise_context_mocks(mock_contexts);
-    let access_logic = AccessLogic::new(contexts);
+    let access_logic = AccessController::new(contexts);
 
     let res = access_logic.list_access_info(request).await;
 
@@ -492,7 +492,7 @@ async fn list_access_info_returns_not_found() {
         .returning(move |_, _| Ok(Some(access.clone())));
 
     let contexts = disguise_context_mocks(mock_contexts);
-    let access_logic = AccessLogic::new(contexts);
+    let access_logic = AccessController::new(contexts);
 
     let res = access_logic.list_access_info(request).await.unwrap_err();
 
@@ -515,7 +515,7 @@ async fn list_access_info_returns_no_permission() {
         .returning(move |_, _| Ok(None));
 
     let contexts = disguise_context_mocks(mock_contexts);
-    let access_logic = AccessLogic::new(contexts);
+    let access_logic = AccessController::new(contexts);
 
     let res = access_logic.list_access_info(request).await.unwrap_err();
 

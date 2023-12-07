@@ -2,10 +2,10 @@ use crate::api::server::server::query_response::{self, Result};
 use crate::api::server::server::{
     CreateQueryRequest, DeleteQueryRequest, QueryResponse, SendQueryRequest, UpdateQueryRequest,
 };
+use crate::controllers::controller_impls::QueryController;
+use crate::controllers::controller_traits::QueryControllerTrait;
 use crate::entities::{access, project, query};
-use crate::logics::logic_impls::QueryLogic;
-use crate::logics::logic_traits::QueryLogicTrait;
-use crate::tests::logics::helpers::{
+use crate::tests::controllers::helpers::{
     disguise_context_mocks, disguise_service_mocks, get_mock_contexts, get_mock_services,
 };
 use mockall::predicate;
@@ -56,7 +56,7 @@ async fn create_invalid_query_returns_err() {
 
     let contexts = disguise_context_mocks(mock_contexts);
     let services = disguise_service_mocks(mock_services);
-    let query_logic = QueryLogic::new(contexts, services);
+    let query_logic = QueryController::new(contexts, services);
 
     let res = query_logic.create_query(request).await.unwrap_err();
 
@@ -106,7 +106,7 @@ async fn create_query_returns_ok() {
 
     let contexts = disguise_context_mocks(mock_contexts);
     let services = disguise_service_mocks(mock_services);
-    let query_logic = QueryLogic::new(contexts, services);
+    let query_logic = QueryController::new(contexts, services);
 
     let res = query_logic.create_query(request).await;
 
@@ -167,7 +167,7 @@ async fn update_invalid_query_returns_err() {
 
     let contexts = disguise_context_mocks(mock_contexts);
     let services = disguise_service_mocks(mock_services);
-    let query_logic = QueryLogic::new(contexts, services);
+    let query_logic = QueryController::new(contexts, services);
 
     let res = query_logic.update_query(request).await.unwrap_err();
 
@@ -228,7 +228,7 @@ async fn update_query_returns_ok() {
 
     let contexts = disguise_context_mocks(mock_contexts);
     let services = disguise_service_mocks(mock_services);
-    let query_logic = QueryLogic::new(contexts, services);
+    let query_logic = QueryController::new(contexts, services);
 
     let res = query_logic.update_query(request).await;
 
@@ -281,7 +281,7 @@ async fn delete_invalid_query_returns_err() {
 
     let contexts = disguise_context_mocks(mock_contexts);
     let services = disguise_service_mocks(mock_services);
-    let query_logic = QueryLogic::new(contexts, services);
+    let query_logic = QueryController::new(contexts, services);
 
     let res = query_logic.delete_query(request).await.unwrap_err();
 
@@ -336,7 +336,7 @@ async fn delete_query_returns_ok() {
 
     let contexts = disguise_context_mocks(mock_contexts);
     let services = disguise_service_mocks(mock_services);
-    let query_logic = QueryLogic::new(contexts, services);
+    let query_logic = QueryController::new(contexts, services);
 
     let res = query_logic.delete_query(request).await;
 
@@ -386,7 +386,7 @@ async fn create_query_invalid_role_returns_err() {
 
     let contexts = disguise_context_mocks(mock_contexts);
     let services = disguise_service_mocks(mock_services);
-    let query_logic = QueryLogic::new(contexts, services);
+    let query_logic = QueryController::new(contexts, services);
 
     let res = query_logic.create_query(request).await.unwrap_err();
 
@@ -441,7 +441,7 @@ async fn delete_query_invalid_role_returns_err() {
 
     let contexts = disguise_context_mocks(mock_contexts);
     let services = disguise_service_mocks(mock_services);
-    let query_logic = QueryLogic::new(contexts, services);
+    let query_logic = QueryController::new(contexts, services);
 
     let res = query_logic.delete_query(request).await.unwrap_err();
 
@@ -502,7 +502,7 @@ async fn update_query_invalid_role_returns_err() {
 
     let contexts = disguise_context_mocks(mock_contexts);
     let services = disguise_service_mocks(mock_services);
-    let query_logic = QueryLogic::new(contexts, services);
+    let query_logic = QueryController::new(contexts, services);
 
     let res = query_logic.update_query(request).await.unwrap_err();
 
@@ -587,7 +587,7 @@ async fn send_query_returns_ok() {
 
     let contexts = disguise_context_mocks(mock_contexts);
     let services = disguise_service_mocks(mock_services);
-    let query_logic = QueryLogic::new(contexts, services);
+    let query_logic = QueryController::new(contexts, services);
 
     let res = query_logic.send_query(request).await;
 

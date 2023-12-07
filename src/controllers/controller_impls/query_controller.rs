@@ -4,22 +4,22 @@ use crate::api::server::server::{
     CreateQueryRequest, DeleteQueryRequest, QueryRequest, SendQueryRequest, SendQueryResponse,
     UpdateQueryRequest,
 };
+use crate::controllers::controller_traits::QueryControllerTrait;
 use crate::entities::query;
-use crate::logics::logic_traits::QueryLogicTrait;
 use tonic::{Code, Request, Response, Status};
 
-pub struct QueryLogic {
+pub struct QueryController {
     contexts: ContextCollection,
     services: ServiceCollection,
 }
 
-impl QueryLogic {
+impl QueryController {
     pub fn new(contexts: ContextCollection, services: ServiceCollection) -> Self {
         Self { contexts, services }
     }
 }
 
-impl QueryLogicTrait for QueryLogic {
+impl QueryControllerTrait for QueryController {
     /// Creates a query in the database
     /// # Errors
     /// Returns an error if the database context fails to create the query or
@@ -249,5 +249,5 @@ impl QueryLogicTrait for QueryLogic {
 }
 
 #[cfg(test)]
-#[path = "../../tests/logics/query_logic.rs"]
-mod query_logic_tests;
+#[path = "../../tests/controllers/query_controller.rs"]
+mod query_controller_tests;
