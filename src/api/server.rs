@@ -3,8 +3,8 @@ use std::env;
 use tonic::transport::Server;
 
 use crate::api::auth;
-use crate::api::context_collection::ContextCollection;
 use crate::api::ecdar_api::ConcreteEcdarApi;
+use crate::api::logic_collection::LogicCollection;
 use crate::api::server::server::ecdar_api_auth_server::EcdarApiAuthServer;
 use crate::api::server::server::ecdar_api_server::EcdarApiServer;
 use crate::api::server::server::ecdar_backend_server::EcdarBackendServer;
@@ -13,9 +13,7 @@ pub mod server {
     tonic::include_proto!("ecdar_proto_buf");
 }
 
-pub async fn start_grpc_server(
-    contexts: ContextCollection,
-) -> Result<(), Box<dyn std::error::Error>> {
+pub async fn start_grpc_server(logics: LogicCollection) -> Result<(), Box<dyn std::error::Error>> {
     // defining address for our service
     let addr = env::var("API_ADDRESS")
         .expect("Expected API_ADDRESS to be set.")
@@ -24,7 +22,7 @@ pub async fn start_grpc_server(
 
     println!("Starting grpc server on '{}'", addr);
 
-    let svc = ConcreteEcdarApi::new(contexts);
+    let svc = ConcreteEcdarApi::new(logics);
 
     // adding services to our server.
     Server::builder()

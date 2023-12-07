@@ -1,20 +1,21 @@
 use std::str::FromStr;
 
+use crate::api::logic_impls::AccessLogic;
+use crate::api::logic_traits::AccessLogicTrait;
 use crate::api::server::server::create_access_request::User;
-use crate::api::server::server::ecdar_api_server::EcdarApi;
 use crate::api::server::server::{
     AccessInfo, CreateAccessRequest, DeleteAccessRequest, ListAccessInfoRequest,
     UpdateAccessRequest,
 };
 use crate::entities::{access, project, user};
-use crate::tests::api::helpers::{get_mock_concrete_ecdar_api, get_mock_services};
+use crate::tests::api::helpers::{disguise_mocks, get_mock_contexts};
 use mockall::predicate;
 use sea_orm::DbErr;
 use tonic::{metadata, Code, Request};
 
 #[tokio::test]
 async fn create_invalid_access_returns_err() {
-    let mut mock_services = get_mock_services();
+    let mut mock_contexts = get_mock_contexts();
 
     let access = access::Model {
         id: Default::default(),
@@ -23,13 +24,13 @@ async fn create_invalid_access_returns_err() {
         user_id: 1,
     };
 
-    mock_services
+    mock_contexts
         .access_context_mock
         .expect_create()
         .with(predicate::eq(access.clone()))
         .returning(move |_| Err(DbErr::RecordNotInserted));
 
-    mock_services
+    mock_contexts
         .access_context_mock
         .expect_get_access_by_uid_and_project_id()
         .with(predicate::eq(1), predicate::eq(1))
@@ -42,7 +43,7 @@ async fn create_invalid_access_returns_err() {
             }))
         });
 
-    mock_services
+    mock_contexts
         .user_context_mock
         .expect_get_by_id()
         .with(predicate::eq(1))
@@ -66,16 +67,17 @@ async fn create_invalid_access_returns_err() {
         tonic::metadata::MetadataValue::from_str("1").unwrap(),
     );
 
-    let api = get_mock_concrete_ecdar_api(mock_services);
+    let contexts = disguise_mocks(mock_contexts);
+    let access_logic = AccessLogic::new(contexts);
 
-    let res = api.create_access(request).await.unwrap_err();
+    let res = access_logic.create_access(request).await.unwrap_err();
 
     assert_eq!(res.code(), Code::Internal);
 }
 
 #[tokio::test]
 async fn create_access_returns_ok() {
-    let mut mock_services = get_mock_services();
+    let mut mock_contexts = get_mock_contexts();
 
     let access = access::Model {
         id: Default::default(),
@@ -84,7 +86,7 @@ async fn create_access_returns_ok() {
         user_id: 1,
     };
 
-    mock_services
+    mock_contexts
         .access_context_mock
         .expect_get_access_by_uid_and_project_id()
         .with(predicate::eq(1), predicate::eq(1))
@@ -97,13 +99,13 @@ async fn create_access_returns_ok() {
             }))
         });
 
-    mock_services
+    mock_contexts
         .access_context_mock
         .expect_create()
         .with(predicate::eq(access.clone()))
         .returning(move |_| Ok(access.clone()));
 
-    mock_services
+    mock_contexts
         .user_context_mock
         .expect_get_by_id()
         .with(predicate::eq(1))
@@ -127,16 +129,17 @@ async fn create_access_returns_ok() {
         tonic::metadata::MetadataValue::from_str("1").unwrap(),
     );
 
-    let api = get_mock_concrete_ecdar_api(mock_services);
+    let contexts = disguise_mocks(mock_contexts);
+    let access_logic = AccessLogic::new(contexts);
 
-    let res = api.create_access(request).await;
+    let res = access_logic.create_access(request).await;
 
     assert!(res.is_ok());
 }
 
 #[tokio::test]
 async fn update_invalid_access_returns_err() {
-    let mut mock_services = get_mock_services();
+    let mut mock_contexts = get_mock_contexts();
 
     let access = access::Model {
         id: 2,
@@ -145,13 +148,13 @@ async fn update_invalid_access_returns_err() {
         user_id: Default::default(),
     };
 
-    mock_services
+    mock_contexts
         .access_context_mock
         .expect_update()
         .with(predicate::eq(access.clone()))
         .returning(move |_| Err(DbErr::RecordNotUpdated));
 
-    mock_services
+    mock_contexts
         .access_context_mock
         .expect_get_by_id()
         .with(predicate::eq(2))
@@ -164,7 +167,7 @@ async fn update_invalid_access_returns_err() {
             }))
         });
 
-    mock_services
+    mock_contexts
         .access_context_mock
         .expect_get_access_by_uid_and_project_id()
         .with(predicate::eq(1), predicate::eq(1))
@@ -177,7 +180,7 @@ async fn update_invalid_access_returns_err() {
             }))
         });
 
-    mock_services
+    mock_contexts
         .project_context_mock
         .expect_get_by_id()
         .with(predicate::eq(1))
@@ -200,16 +203,17 @@ async fn update_invalid_access_returns_err() {
         tonic::metadata::MetadataValue::from_str("1").unwrap(),
     );
 
-    let api = get_mock_concrete_ecdar_api(mock_services);
+    let contexts = disguise_mocks(mock_contexts);
+    let access_logic = AccessLogic::new(contexts);
 
-    let res = api.update_access(request).await.unwrap_err();
+    let res = access_logic.update_access(request).await.unwrap_err();
 
     assert_eq!(res.code(), Code::Internal);
 }
 
 #[tokio::test]
 async fn update_access_returns_ok() {
-    let mut mock_services = get_mock_services();
+    let mut mock_contexts = get_mock_contexts();
 
     let access = access::Model {
         id: 2,
@@ -218,13 +222,13 @@ async fn update_access_returns_ok() {
         user_id: Default::default(),
     };
 
-    mock_services
+    mock_contexts
         .access_context_mock
         .expect_update()
         .with(predicate::eq(access.clone()))
         .returning(move |_| Ok(access.clone()));
 
-    mock_services
+    mock_contexts
         .access_context_mock
         .expect_get_by_id()
         .with(predicate::eq(2))
@@ -237,7 +241,7 @@ async fn update_access_returns_ok() {
             }))
         });
 
-    mock_services
+    mock_contexts
         .access_context_mock
         .expect_get_access_by_uid_and_project_id()
         .with(predicate::eq(1), predicate::eq(1))
@@ -250,7 +254,7 @@ async fn update_access_returns_ok() {
             }))
         });
 
-    mock_services
+    mock_contexts
         .project_context_mock
         .expect_get_by_id()
         .with(predicate::eq(1))
@@ -273,9 +277,10 @@ async fn update_access_returns_ok() {
         tonic::metadata::MetadataValue::from_str("1").unwrap(),
     );
 
-    let api = get_mock_concrete_ecdar_api(mock_services);
+    let contexts = disguise_mocks(mock_contexts);
+    let access_logic = AccessLogic::new(contexts);
 
-    let res = api.update_access(request).await;
+    let res = access_logic.update_access(request).await;
 
     print!("{:?}", res);
 
@@ -284,15 +289,15 @@ async fn update_access_returns_ok() {
 
 #[tokio::test]
 async fn delete_invalid_access_returns_err() {
-    let mut mock_services = get_mock_services();
+    let mut mock_contexts = get_mock_contexts();
 
-    mock_services
+    mock_contexts
         .access_context_mock
         .expect_delete()
         .with(predicate::eq(2))
         .returning(move |_| Err(DbErr::RecordNotFound("".to_string())));
 
-    mock_services
+    mock_contexts
         .access_context_mock
         .expect_get_by_id()
         .with(predicate::eq(2))
@@ -305,7 +310,7 @@ async fn delete_invalid_access_returns_err() {
             }))
         });
 
-    mock_services
+    mock_contexts
         .access_context_mock
         .expect_get_access_by_uid_and_project_id()
         .with(predicate::eq(1), predicate::eq(1))
@@ -318,7 +323,7 @@ async fn delete_invalid_access_returns_err() {
             }))
         });
 
-    mock_services
+    mock_contexts
         .project_context_mock
         .expect_get_by_id()
         .with(predicate::eq(1))
@@ -338,16 +343,17 @@ async fn delete_invalid_access_returns_err() {
         tonic::metadata::MetadataValue::from_str("1").unwrap(),
     );
 
-    let api = get_mock_concrete_ecdar_api(mock_services);
+    let contexts = disguise_mocks(mock_contexts);
+    let access_logic = AccessLogic::new(contexts);
 
-    let res = api.delete_access(request).await.unwrap_err();
+    let res = access_logic.delete_access(request).await.unwrap_err();
 
     assert_eq!(res.code(), Code::NotFound);
 }
 
 #[tokio::test]
 async fn delete_access_returns_ok() {
-    let mut mock_services = get_mock_services();
+    let mut mock_contexts = get_mock_contexts();
 
     let access = access::Model {
         id: 2,
@@ -356,13 +362,13 @@ async fn delete_access_returns_ok() {
         user_id: Default::default(),
     };
 
-    mock_services
+    mock_contexts
         .access_context_mock
         .expect_delete()
         .with(predicate::eq(2))
         .returning(move |_| Ok(access.clone()));
 
-    mock_services
+    mock_contexts
         .access_context_mock
         .expect_get_by_id()
         .with(predicate::eq(2))
@@ -375,7 +381,7 @@ async fn delete_access_returns_ok() {
             }))
         });
 
-    mock_services
+    mock_contexts
         .access_context_mock
         .expect_get_access_by_uid_and_project_id()
         .with(predicate::eq(1), predicate::eq(1))
@@ -388,7 +394,7 @@ async fn delete_access_returns_ok() {
             }))
         });
 
-    mock_services
+    mock_contexts
         .project_context_mock
         .expect_get_by_id()
         .with(predicate::eq(1))
@@ -408,16 +414,17 @@ async fn delete_access_returns_ok() {
         tonic::metadata::MetadataValue::from_str("1").unwrap(),
     );
 
-    let api = get_mock_concrete_ecdar_api(mock_services);
+    let contexts = disguise_mocks(mock_contexts);
+    let access_logic = AccessLogic::new(contexts);
 
-    let res = api.delete_access(request).await;
+    let res = access_logic.delete_access(request).await;
 
     assert!(res.is_ok());
 }
 
 #[tokio::test]
 async fn list_access_info_returns_ok() {
-    let mut mock_services = get_mock_services();
+    let mut mock_contexts = get_mock_contexts();
 
     let mut request: Request<ListAccessInfoRequest> =
         Request::new(ListAccessInfoRequest { project_id: 1 });
@@ -433,7 +440,7 @@ async fn list_access_info_returns_ok() {
         user_id: 1,
     };
 
-    mock_services
+    mock_contexts
         .access_context_mock
         .expect_get_access_by_uid_and_project_id()
         .returning(move |_, _| {
@@ -445,21 +452,22 @@ async fn list_access_info_returns_ok() {
             }))
         });
 
-    mock_services
+    mock_contexts
         .access_context_mock
         .expect_get_access_by_project_id()
         .returning(move |_| Ok(vec![access.clone()]));
 
-    let api = get_mock_concrete_ecdar_api(mock_services);
+    let contexts = disguise_mocks(mock_contexts);
+    let access_logic = AccessLogic::new(contexts);
 
-    let res = api.list_access_info(request).await;
+    let res = access_logic.list_access_info(request).await;
 
     assert!(res.is_ok());
 }
 
 #[tokio::test]
 async fn list_access_info_returns_not_found() {
-    let mut mock_services = get_mock_services();
+    let mut mock_contexts = get_mock_contexts();
 
     let mut request = Request::new(ListAccessInfoRequest { project_id: 1 });
 
@@ -474,19 +482,20 @@ async fn list_access_info_returns_not_found() {
         user_id: 1,
     };
 
-    mock_services
+    mock_contexts
         .access_context_mock
         .expect_get_access_by_project_id()
         .returning(move |_| Ok(vec![]));
 
-    mock_services
+    mock_contexts
         .access_context_mock
         .expect_get_access_by_uid_and_project_id()
         .returning(move |_, _| Ok(Some(access.clone())));
 
-    let api = get_mock_concrete_ecdar_api(mock_services);
+    let contexts = disguise_mocks(mock_contexts);
+    let access_logic = AccessLogic::new(contexts);
 
-    let res = api.list_access_info(request).await.unwrap_err();
+    let res = access_logic.list_access_info(request).await.unwrap_err();
 
     assert_eq!(res.code(), Code::NotFound);
 }
@@ -499,16 +508,17 @@ async fn list_access_info_returns_no_permission() {
         .metadata_mut()
         .insert("uid", metadata::MetadataValue::from_str("1").unwrap());
 
-    let mut mock_services = get_mock_services();
+    let mut mock_contexts = get_mock_contexts();
 
-    mock_services
+    mock_contexts
         .access_context_mock
         .expect_get_access_by_uid_and_project_id()
         .returning(move |_, _| Ok(None));
 
-    let api = get_mock_concrete_ecdar_api(mock_services);
+    let contexts = disguise_mocks(mock_contexts);
+    let access_logic = AccessLogic::new(contexts);
 
-    let res = api.list_access_info(request).await.unwrap_err();
+    let res = access_logic.list_access_info(request).await.unwrap_err();
 
     assert_eq!(res.code(), Code::PermissionDenied);
 }

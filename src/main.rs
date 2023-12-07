@@ -4,8 +4,9 @@ mod entities;
 mod tests;
 
 use crate::api::context_collection::ContextCollection;
-use crate::api::hashing_context::HashingContext;
-use crate::api::reveaal_context::ReveaalContext;
+use crate::api::logic_collection::LogicCollection;
+use crate::api::logic_impls::*;
+use crate::database::context_impls::reveaal_context::ReveaalContext;
 use crate::database::context_impls::*;
 use crate::database::context_traits::DatabaseContextTrait;
 use api::server::start_grpc_server;
@@ -34,11 +35,19 @@ async fn main() -> Result<(), Box<dyn Error>> {
         query_context: Arc::new(QueryContext::new(db_context.clone())),
         session_context: Arc::new(SessionContext::new(db_context.clone())),
         user_context: Arc::new(UserContext::new(db_context.clone())),
-        reveaal_context: Arc::new(ReveaalContext),
         hashing_context: Arc::new(HashingContext),
+        reveaal_context: Arc::new(ReveaalContext),
     };
 
-    start_grpc_server(contexts).await.unwrap();
+    let logics = LogicCollection {
+        access_logic: Arc::new(AccessLogic::new(contexts.clone())),
+        project_logic: Arc::new(ProjectLogic::new(contexts.clone())),
+        query_logic: Arc::new(QueryLogic::new(contexts.clone())),
+        session_logic: Arc::new(SessionLogic::new(contexts.clone())),
+        user_logic: Arc::new(UserLogic::new(contexts.clone())),
+    };
+
+    start_grpc_server(logics).await.unwrap();
 
     Ok(())
 }

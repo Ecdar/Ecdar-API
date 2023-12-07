@@ -1,4 +1,3 @@
-use crate::api::hashing_context::HashingContextTrait;
 use crate::api::server::server::ecdar_backend_server::EcdarBackend;
 use crate::database::context_traits::*;
 use std::sync::Arc;
@@ -11,6 +10,6 @@ pub struct ContextCollection {
     pub(crate) query_context: Arc<dyn QueryContextTrait>,
     pub(crate) session_context: Arc<dyn SessionContextTrait>,
     pub(crate) user_context: Arc<dyn UserContextTrait>,
-    pub(crate) reveaal_context: Arc<dyn EcdarBackend>,
     pub(crate) hashing_context: Arc<dyn HashingContextTrait>,
+    pub(crate) reveaal_context: Arc<dyn EcdarBackend>,
 }

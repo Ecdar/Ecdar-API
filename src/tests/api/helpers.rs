@@ -1,9 +1,6 @@
 #![cfg(test)]
 
 use crate::api::auth::TokenType;
-use crate::api::context_collection::ContextCollection;
-use crate::api::ecdar_api::ConcreteEcdarApi;
-use crate::api::hashing_context::HashingContextTrait;
 use crate::api::server::server::ecdar_backend_server::EcdarBackend;
 use crate::api::server::server::AccessInfo;
 use crate::api::server::server::ProjectInfo;
@@ -12,30 +9,17 @@ use crate::api::server::server::{
     SimulationStepResponse, UserTokenResponse,
 };
 use crate::database::context_traits::*;
+use std::sync::Arc;
 
+use crate::api::context_collection::ContextCollection;
 use crate::entities::{access, in_use, project, query, session, user};
 use async_trait::async_trait;
 use mockall::mock;
 use sea_orm::DbErr;
-use std::sync::Arc;
 use tonic::{Request, Response, Status};
 
-pub fn get_mock_concrete_ecdar_api(mock_services: MockServices) -> ConcreteEcdarApi {
-    let contexts = ContextCollection {
-        access_context: Arc::new(mock_services.access_context_mock),
-        in_use_context: Arc::new(mock_services.in_use_context_mock),
-        project_context: Arc::new(mock_services.project_context_mock),
-        query_context: Arc::new(mock_services.query_context_mock),
-        session_context: Arc::new(mock_services.session_context_mock),
-        user_context: Arc::new(mock_services.user_context_mock),
-        reveaal_context: Arc::new(mock_services.reveaal_context_mock),
-        hashing_context: Arc::new(mock_services.hashing_context_mock),
-    };
-    ConcreteEcdarApi::new(contexts)
-}
-
-pub fn get_mock_services() -> MockServices {
-    MockServices {
+pub fn get_mock_contexts() -> MockContexts {
+    MockContexts {
         access_context_mock: MockAccessContext::new(),
         in_use_context_mock: MockInUseContext::new(),
         project_context_mock: MockProjectContext::new(),
@@ -47,7 +31,20 @@ pub fn get_mock_services() -> MockServices {
     }
 }
 
-pub struct MockServices {
+pub fn disguise_mocks(mock_services: MockContexts) -> ContextCollection {
+    ContextCollection {
+        access_context: Arc::new(mock_services.access_context_mock),
+        in_use_context: Arc::new(mock_services.in_use_context_mock),
+        project_context: Arc::new(mock_services.project_context_mock),
+        query_context: Arc::new(mock_services.query_context_mock),
+        session_context: Arc::new(mock_services.session_context_mock),
+        user_context: Arc::new(mock_services.user_context_mock),
+        reveaal_context: Arc::new(mock_services.reveaal_context_mock),
+        hashing_context: Arc::new(mock_services.hashing_context_mock),
+    }
+}
+
+pub struct MockContexts {
     pub(crate) access_context_mock: MockAccessContext,
     pub(crate) in_use_context_mock: MockInUseContext,
     pub(crate) project_context_mock: MockProjectContext,
@@ -74,27 +71,12 @@ mock! {
             &self,
             uid: i32,
             project_id: i32,
-        ) -> Result<Option<access::Model>, DbErr> {
-            access::Entity::find()
-                .filter(
-                    Condition::all()
-                        .add(access::Column::UserId.eq(uid))
-                        .add(access::Column::ModelId.eq(project_id)),
-                )
-                .one(&self.db_context.get_connection())
-                .await
-        }
+        ) -> Result<Option<access::Model>, DbErr>;
 
         async fn get_access_by_project_id(
             &self,
             project_id: i32,
-        ) -> Result<Vec<AccessInfo>, DbErr> {
-            access::Entity::find()
-                .filter(access::Column::ModelId.eq(project_id))
-                .into_model::<AccessInfo>()
-                .all(&self.db_context.get_connection())
-                .await
-        }
+        ) -> Result<Vec<AccessInfo>, DbErr>;
     }
 }
 

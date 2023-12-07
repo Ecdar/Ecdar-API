@@ -1,14 +1,16 @@
+use crate::api::logic_impls::ProjectLogic;
+use crate::api::logic_traits::ProjectLogicTrait;
+use crate::tests::api::helpers::disguise_mocks;
 use crate::{
     api::{
         auth::TokenType,
         server::server::{
-            component::Rep, ecdar_api_server::EcdarApi, Component, ComponentsInfo,
-            CreateProjectRequest, DeleteProjectRequest, GetProjectRequest, ProjectInfo,
-            UpdateProjectRequest,
+            component::Rep, Component, ComponentsInfo, CreateProjectRequest, DeleteProjectRequest,
+            GetProjectRequest, ProjectInfo, UpdateProjectRequest,
         },
     },
     entities::{access, in_use, project, query, session},
-    tests::api::helpers::{get_mock_concrete_ecdar_api, get_mock_services},
+    tests::api::helpers::get_mock_contexts,
 };
 use chrono::Utc;
 use mockall::predicate;
@@ -18,7 +20,7 @@ use tonic::{metadata, Code, Request};
 
 #[tokio::test]
 async fn create_project_returns_ok() {
-    let mut mock_services = get_mock_services();
+    let mut mock_contexts = get_mock_contexts();
 
     let uid = 0;
 
@@ -55,19 +57,19 @@ async fn create_project_returns_ok() {
         latest_activity: Default::default(),
     };
 
-    mock_services
+    mock_contexts
         .project_context_mock
         .expect_create()
         .with(predicate::eq(project.clone()))
         .returning(move |_| Ok(project.clone()));
 
-    mock_services
+    mock_contexts
         .access_context_mock
         .expect_create()
         .with(predicate::eq(access.clone()))
         .returning(move |_| Ok(access.clone()));
 
-    mock_services
+    mock_contexts
         .session_context_mock
         .expect_get_by_token()
         .with(
@@ -76,7 +78,7 @@ async fn create_project_returns_ok() {
         )
         .returning(move |_, _| Ok(Some(session.clone())));
 
-    mock_services
+    mock_contexts
         .in_use_context_mock
         .expect_create()
         .with(predicate::eq(in_use.clone()))
@@ -96,16 +98,17 @@ async fn create_project_returns_ok() {
         metadata::MetadataValue::from_str("Bearer access_token").unwrap(),
     );
 
-    let api = get_mock_concrete_ecdar_api(mock_services);
+    let contexts = disguise_mocks(mock_contexts);
+    let project_logic = ProjectLogic::new(contexts);
 
-    let res = api.create_project(request).await;
+    let res = project_logic.create_project(request).await;
 
     assert!(res.is_ok());
 }
 
 #[tokio::test]
 async fn create_project_existing_name_returns_err() {
-    let mut mock_services = get_mock_services();
+    let mut mock_contexts = get_mock_contexts();
 
     let uid = 0;
 
@@ -116,7 +119,7 @@ async fn create_project_existing_name_returns_err() {
         owner_id: uid,
     };
 
-    mock_services
+    mock_contexts
         .project_context_mock
         .expect_create()
         .with(predicate::eq(project.clone()))
@@ -131,16 +134,17 @@ async fn create_project_existing_name_returns_err() {
         .metadata_mut()
         .insert("uid", uid.to_string().parse().unwrap());
 
-    let api = get_mock_concrete_ecdar_api(mock_services);
+    let contexts = disguise_mocks(mock_contexts);
+    let project_logic = ProjectLogic::new(contexts);
 
-    let res = api.create_project(request).await;
+    let res = project_logic.create_project(request).await;
 
     assert_eq!(res.unwrap_err().code(), Code::InvalidArgument); //todo!("Needs to be code AlreadyExists when mocked Error is corrected)
 }
 
 #[tokio::test]
 async fn get_project_user_has_access_returns_ok() {
-    let mut mock_services = get_mock_services();
+    let mut mock_contexts = get_mock_contexts();
 
     let project = project::Model {
         id: Default::default(),
@@ -164,25 +168,25 @@ async fn get_project_user_has_access_returns_ok() {
 
     let queries: Vec<query::Model> = vec![];
 
-    mock_services
+    mock_contexts
         .access_context_mock
         .expect_get_access_by_uid_and_project_id()
         .with(predicate::eq(0), predicate::eq(0))
         .returning(move |_, _| Ok(Some(access.clone())));
 
-    mock_services
+    mock_contexts
         .project_context_mock
         .expect_get_by_id()
         .with(predicate::eq(0))
         .returning(move |_| Ok(Some(project.clone())));
 
-    mock_services
+    mock_contexts
         .in_use_context_mock
         .expect_get_by_id()
         .with(predicate::eq(0))
         .returning(move |_| Ok(Some(in_use.clone())));
 
-    mock_services
+    mock_contexts
         .query_context_mock
         .expect_get_all_by_project_id()
         .with(predicate::eq(0))
@@ -192,18 +196,19 @@ async fn get_project_user_has_access_returns_ok() {
 
     request.metadata_mut().insert("uid", "0".parse().unwrap());
 
-    let api = get_mock_concrete_ecdar_api(mock_services);
+    let contexts = disguise_mocks(mock_contexts);
+    let project_logic = ProjectLogic::new(contexts);
 
-    let res = api.get_project(request).await;
+    let res = project_logic.get_project(request).await;
 
     assert!(res.is_ok());
 }
 
 #[tokio::test]
 async fn delete_not_owner_returns_err() {
-    let mut mock_services = get_mock_services();
+    let mut mock_contexts = get_mock_contexts();
 
-    mock_services
+    mock_contexts
         .project_context_mock
         .expect_get_by_id()
         .with(predicate::eq(1))
@@ -222,18 +227,19 @@ async fn delete_not_owner_returns_err() {
         .metadata_mut()
         .insert("uid", metadata::MetadataValue::from_str("1").unwrap());
 
-    let api = get_mock_concrete_ecdar_api(mock_services);
+    let contexts = disguise_mocks(mock_contexts);
+    let project_logic = ProjectLogic::new(contexts);
 
-    let res = api.delete_project(request).await.unwrap_err();
+    let res = project_logic.delete_project(request).await.unwrap_err();
 
     assert_eq!(res.code(), Code::PermissionDenied);
 }
 
 #[tokio::test]
 async fn delete_invalid_project_returns_err() {
-    let mut mock_services = get_mock_services();
+    let mut mock_contexts = get_mock_contexts();
 
-    mock_services
+    mock_contexts
         .project_context_mock
         .expect_get_by_id()
         .with(predicate::eq(2))
@@ -245,18 +251,19 @@ async fn delete_invalid_project_returns_err() {
         .metadata_mut()
         .insert("uid", metadata::MetadataValue::from_str("1").unwrap());
 
-    let api = get_mock_concrete_ecdar_api(mock_services);
+    let contexts = disguise_mocks(mock_contexts);
+    let project_logic = ProjectLogic::new(contexts);
 
-    let res = api.delete_project(request).await.unwrap_err();
+    let res = project_logic.delete_project(request).await.unwrap_err();
 
     assert_eq!(res.code(), Code::NotFound);
 }
 
 #[tokio::test]
 async fn delete_project_returns_ok() {
-    let mut mock_services = get_mock_services();
+    let mut mock_contexts = get_mock_contexts();
 
-    mock_services
+    mock_contexts
         .project_context_mock
         .expect_get_by_id()
         .with(predicate::eq(1))
@@ -269,7 +276,7 @@ async fn delete_project_returns_ok() {
             }))
         });
 
-    mock_services
+    mock_contexts
         .project_context_mock
         .expect_delete()
         .with(predicate::eq(1))
@@ -288,16 +295,17 @@ async fn delete_project_returns_ok() {
         .metadata_mut()
         .insert("uid", metadata::MetadataValue::from_str("1").unwrap());
 
-    let api = get_mock_concrete_ecdar_api(mock_services);
+    let contexts = disguise_mocks(mock_contexts);
+    let project_logic = ProjectLogic::new(contexts);
 
-    let res = api.delete_project(request).await;
+    let res = project_logic.delete_project(request).await;
 
     assert!(res.is_ok());
 }
 
 #[tokio::test]
 async fn get_project_user_has_no_access_returns_err() {
-    let mut mock_services = get_mock_services();
+    let mut mock_contexts = get_mock_contexts();
 
     let project = project::Model {
         id: Default::default(),
@@ -314,25 +322,25 @@ async fn get_project_user_has_no_access_returns_err() {
 
     let queries: Vec<query::Model> = vec![];
 
-    mock_services
+    mock_contexts
         .access_context_mock
         .expect_get_access_by_uid_and_project_id()
         .with(predicate::eq(0), predicate::eq(0))
         .returning(move |_, _| Ok(None));
 
-    mock_services
+    mock_contexts
         .project_context_mock
         .expect_get_by_id()
         .with(predicate::eq(0))
         .returning(move |_| Ok(Some(project.clone())));
 
-    mock_services
+    mock_contexts
         .in_use_context_mock
         .expect_get_by_id()
         .with(predicate::eq(0))
         .returning(move |_| Ok(Some(in_use.clone())));
 
-    mock_services
+    mock_contexts
         .query_context_mock
         .expect_get_all_by_project_id()
         .with(predicate::eq(0))
@@ -342,16 +350,17 @@ async fn get_project_user_has_no_access_returns_err() {
 
     request.metadata_mut().insert("uid", "0".parse().unwrap());
 
-    let api = get_mock_concrete_ecdar_api(mock_services);
+    let contexts = disguise_mocks(mock_contexts);
+    let project_logic = ProjectLogic::new(contexts);
 
-    let res = api.get_project(request).await.unwrap_err();
+    let res = project_logic.get_project(request).await.unwrap_err();
 
     assert!(res.code() == Code::PermissionDenied);
 }
 
 #[tokio::test]
 async fn get_project_is_in_use_is_true() {
-    let mut mock_services = get_mock_services();
+    let mut mock_contexts = get_mock_contexts();
 
     let project = project::Model {
         id: Default::default(),
@@ -375,25 +384,25 @@ async fn get_project_is_in_use_is_true() {
 
     let queries: Vec<query::Model> = vec![];
 
-    mock_services
+    mock_contexts
         .access_context_mock
         .expect_get_access_by_uid_and_project_id()
         .with(predicate::eq(0), predicate::eq(0))
         .returning(move |_, _| Ok(Some(access.clone())));
 
-    mock_services
+    mock_contexts
         .project_context_mock
         .expect_get_by_id()
         .with(predicate::eq(0))
         .returning(move |_| Ok(Some(project.clone())));
 
-    mock_services
+    mock_contexts
         .in_use_context_mock
         .expect_get_by_id()
         .with(predicate::eq(0))
         .returning(move |_| Ok(Some(in_use.clone())));
 
-    mock_services
+    mock_contexts
         .query_context_mock
         .expect_get_all_by_project_id()
         .with(predicate::eq(0))
@@ -403,16 +412,17 @@ async fn get_project_is_in_use_is_true() {
 
     request.metadata_mut().insert("uid", "0".parse().unwrap());
 
-    let api = get_mock_concrete_ecdar_api(mock_services);
+    let contexts = disguise_mocks(mock_contexts);
+    let project_logic = ProjectLogic::new(contexts);
 
-    let res = api.get_project(request).await;
+    let res = project_logic.get_project(request).await;
 
     assert!(res.unwrap().get_ref().in_use);
 }
 
 #[tokio::test]
 async fn get_project_is_in_use_is_false() {
-    let mut mock_services = get_mock_services();
+    let mut mock_contexts = get_mock_contexts();
 
     let project = project::Model {
         id: Default::default(),
@@ -450,25 +460,25 @@ async fn get_project_is_in_use_is_false() {
 
     let queries: Vec<query::Model> = vec![];
 
-    mock_services
+    mock_contexts
         .access_context_mock
         .expect_get_access_by_uid_and_project_id()
         .with(predicate::eq(0), predicate::eq(0))
         .returning(move |_, _| Ok(Some(access.clone())));
 
-    mock_services
+    mock_contexts
         .project_context_mock
         .expect_get_by_id()
         .with(predicate::eq(0))
         .returning(move |_| Ok(Some(project.clone())));
 
-    mock_services
+    mock_contexts
         .in_use_context_mock
         .expect_get_by_id()
         .with(predicate::eq(0))
         .returning(move |_| Ok(Some(in_use.clone())));
 
-    mock_services
+    mock_contexts
         .session_context_mock
         .expect_get_by_token()
         .with(
@@ -477,13 +487,13 @@ async fn get_project_is_in_use_is_false() {
         )
         .returning(move |_, _| Ok(Some(session.clone())));
 
-    mock_services
+    mock_contexts
         .query_context_mock
         .expect_get_all_by_project_id()
         .with(predicate::eq(0))
         .returning(move |_| Ok(queries.clone()));
 
-    mock_services
+    mock_contexts
         .in_use_context_mock
         .expect_update()
         .returning(move |_| Ok(updated_in_use.clone()));
@@ -495,16 +505,17 @@ async fn get_project_is_in_use_is_false() {
         .insert("authorization", "Bearer access_token".parse().unwrap());
     request.metadata_mut().insert("uid", "0".parse().unwrap());
 
-    let api = get_mock_concrete_ecdar_api(mock_services);
+    let contexts = disguise_mocks(mock_contexts);
+    let project_logic = ProjectLogic::new(contexts);
 
-    let res = api.get_project(request).await;
+    let res = project_logic.get_project(request).await;
 
     assert!(!res.unwrap().get_ref().in_use);
 }
 
 #[tokio::test]
 async fn get_project_project_has_no_queries_queries_are_empty() {
-    let mut mock_services = get_mock_services();
+    let mut mock_contexts = get_mock_contexts();
 
     let project = project::Model {
         id: Default::default(),
@@ -528,25 +539,25 @@ async fn get_project_project_has_no_queries_queries_are_empty() {
 
     let queries: Vec<query::Model> = vec![];
 
-    mock_services
+    mock_contexts
         .access_context_mock
         .expect_get_access_by_uid_and_project_id()
         .with(predicate::eq(0), predicate::eq(0))
         .returning(move |_, _| Ok(Some(access.clone())));
 
-    mock_services
+    mock_contexts
         .project_context_mock
         .expect_get_by_id()
         .with(predicate::eq(0))
         .returning(move |_| Ok(Some(project.clone())));
 
-    mock_services
+    mock_contexts
         .in_use_context_mock
         .expect_get_by_id()
         .with(predicate::eq(0))
         .returning(move |_| Ok(Some(in_use.clone())));
 
-    mock_services
+    mock_contexts
         .query_context_mock
         .expect_get_all_by_project_id()
         .with(predicate::eq(0))
@@ -556,16 +567,17 @@ async fn get_project_project_has_no_queries_queries_are_empty() {
 
     request.metadata_mut().insert("uid", "0".parse().unwrap());
 
-    let api = get_mock_concrete_ecdar_api(mock_services);
+    let contexts = disguise_mocks(mock_contexts);
+    let project_logic = ProjectLogic::new(contexts);
 
-    let res = api.get_project(request).await;
+    let res = project_logic.get_project(request).await;
 
     assert!(res.unwrap().get_ref().queries.is_empty());
 }
 
 #[tokio::test]
 async fn get_project_query_has_no_result_query_is_empty() {
-    let mut mock_services = get_mock_services();
+    let mut mock_contexts = get_mock_contexts();
 
     let project = project::Model {
         id: Default::default(),
@@ -597,25 +609,25 @@ async fn get_project_query_has_no_result_query_is_empty() {
 
     let queries: Vec<query::Model> = vec![query];
 
-    mock_services
+    mock_contexts
         .access_context_mock
         .expect_get_access_by_uid_and_project_id()
         .with(predicate::eq(0), predicate::eq(0))
         .returning(move |_, _| Ok(Some(access.clone())));
 
-    mock_services
+    mock_contexts
         .project_context_mock
         .expect_get_by_id()
         .with(predicate::eq(0))
         .returning(move |_| Ok(Some(project.clone())));
 
-    mock_services
+    mock_contexts
         .in_use_context_mock
         .expect_get_by_id()
         .with(predicate::eq(0))
         .returning(move |_| Ok(Some(in_use.clone())));
 
-    mock_services
+    mock_contexts
         .query_context_mock
         .expect_get_all_by_project_id()
         .with(predicate::eq(0))
@@ -625,16 +637,17 @@ async fn get_project_query_has_no_result_query_is_empty() {
 
     request.metadata_mut().insert("uid", "0".parse().unwrap());
 
-    let api = get_mock_concrete_ecdar_api(mock_services);
+    let contexts = disguise_mocks(mock_contexts);
+    let project_logic = ProjectLogic::new(contexts);
 
-    let res = api.get_project(request).await;
+    let res = project_logic.get_project(request).await;
 
     assert!(res.unwrap().get_ref().queries[0].result.is_empty());
 }
 
 #[tokio::test]
 async fn list_projects_info_returns_ok() {
-    let mut mock_services = get_mock_services();
+    let mut mock_contexts = get_mock_contexts();
 
     let project_info = ProjectInfo {
         project_id: 1,
@@ -643,7 +656,7 @@ async fn list_projects_info_returns_ok() {
         user_role_on_project: "Editor".to_owned(),
     };
 
-    mock_services
+    mock_contexts
         .project_context_mock
         .expect_get_project_info_by_uid()
         .with(predicate::eq(1))
@@ -655,18 +668,21 @@ async fn list_projects_info_returns_ok() {
         .metadata_mut()
         .insert("uid", metadata::MetadataValue::from_str("1").unwrap());
 
-    let api = get_mock_concrete_ecdar_api(mock_services);
+    let contexts = disguise_mocks(mock_contexts);
+    let project_logic = ProjectLogic::new(contexts);
 
-    let res = api.list_projects_info(list_projects_info_request).await;
+    let res = project_logic
+        .list_projects_info(list_projects_info_request)
+        .await;
 
     assert!(res.is_ok());
 }
 
 #[tokio::test]
 async fn list_projects_info_returns_err() {
-    let mut mock_services = get_mock_services();
+    let mut mock_contexts = get_mock_contexts();
 
-    mock_services
+    mock_contexts
         .project_context_mock
         .expect_get_project_info_by_uid()
         .with(predicate::eq(1))
@@ -678,16 +694,19 @@ async fn list_projects_info_returns_err() {
         .metadata_mut()
         .insert("uid", metadata::MetadataValue::from_str("1").unwrap());
 
-    let api = get_mock_concrete_ecdar_api(mock_services);
+    let contexts = disguise_mocks(mock_contexts);
+    let project_logic = ProjectLogic::new(contexts);
 
-    let res = api.list_projects_info(list_projects_info_request).await;
+    let res = project_logic
+        .list_projects_info(list_projects_info_request)
+        .await;
 
     assert!(res.is_err());
 }
 
 #[tokio::test]
 async fn update_name_returns_ok() {
-    let mut mock_services = get_mock_services();
+    let mut mock_contexts = get_mock_contexts();
 
     let user_id = 1;
     let project_id = 1;
@@ -710,7 +729,7 @@ async fn update_name_returns_ok() {
         metadata::MetadataValue::from_str(user_id.to_string().as_str()).unwrap(),
     );
 
-    mock_services
+    mock_contexts
         .project_context_mock
         .expect_get_by_id()
         .with(predicate::eq(project_id))
@@ -723,7 +742,7 @@ async fn update_name_returns_ok() {
             }))
         });
 
-    mock_services
+    mock_contexts
         .access_context_mock
         .expect_get_access_by_uid_and_project_id()
         .with(predicate::eq(1), predicate::eq(project_id))
@@ -736,7 +755,7 @@ async fn update_name_returns_ok() {
             }))
         });
 
-    mock_services
+    mock_contexts
         .session_context_mock
         .expect_get_by_token()
         .with(
@@ -753,7 +772,7 @@ async fn update_name_returns_ok() {
             }))
         });
 
-    mock_services
+    mock_contexts
         .project_context_mock
         .expect_update()
         .returning(move |_| {
@@ -765,7 +784,7 @@ async fn update_name_returns_ok() {
             })
         });
 
-    mock_services
+    mock_contexts
         .in_use_context_mock
         .expect_get_by_id()
         .returning(move |_| {
@@ -776,7 +795,7 @@ async fn update_name_returns_ok() {
             }))
         });
 
-    mock_services
+    mock_contexts
         .in_use_context_mock
         .expect_update()
         .returning(move |_| {
@@ -787,16 +806,17 @@ async fn update_name_returns_ok() {
             })
         });
 
-    let api = get_mock_concrete_ecdar_api(mock_services);
+    let contexts = disguise_mocks(mock_contexts);
+    let project_logic = ProjectLogic::new(contexts);
 
-    let res = api.update_project(update_project_request).await;
+    let res = project_logic.update_project(update_project_request).await;
 
     assert!(res.is_ok());
 }
 
 #[tokio::test]
 async fn update_components_info_returns_ok() {
-    let mut mock_services = get_mock_services();
+    let mut mock_contexts = get_mock_contexts();
 
     let user_id = 1;
     let project_id = 1;
@@ -825,7 +845,7 @@ async fn update_components_info_returns_ok() {
         metadata::MetadataValue::from_str(user_id.to_string().as_str()).unwrap(),
     );
 
-    mock_services
+    mock_contexts
         .project_context_mock
         .expect_get_by_id()
         .with(predicate::eq(project_id))
@@ -838,7 +858,7 @@ async fn update_components_info_returns_ok() {
             }))
         });
 
-    mock_services
+    mock_contexts
         .access_context_mock
         .expect_get_access_by_uid_and_project_id()
         .with(predicate::eq(1), predicate::eq(project_id))
@@ -851,7 +871,7 @@ async fn update_components_info_returns_ok() {
             }))
         });
 
-    mock_services
+    mock_contexts
         .session_context_mock
         .expect_get_by_token()
         .with(
@@ -868,7 +888,7 @@ async fn update_components_info_returns_ok() {
             }))
         });
 
-    mock_services
+    mock_contexts
         .project_context_mock
         .expect_update()
         .returning(move |_| {
@@ -880,7 +900,7 @@ async fn update_components_info_returns_ok() {
             })
         });
 
-    mock_services
+    mock_contexts
         .in_use_context_mock
         .expect_get_by_id()
         .returning(move |_| {
@@ -891,7 +911,7 @@ async fn update_components_info_returns_ok() {
             }))
         });
 
-    mock_services
+    mock_contexts
         .in_use_context_mock
         .expect_update()
         .returning(move |_| {
@@ -902,16 +922,17 @@ async fn update_components_info_returns_ok() {
             })
         });
 
-    let api = get_mock_concrete_ecdar_api(mock_services);
+    let contexts = disguise_mocks(mock_contexts);
+    let project_logic = ProjectLogic::new(contexts);
 
-    let res = api.update_project(update_project_request).await;
+    let res = project_logic.update_project(update_project_request).await;
 
     assert!(res.is_ok());
 }
 
 #[tokio::test]
 async fn update_owner_id_returns_ok() {
-    let mut mock_services = get_mock_services();
+    let mut mock_contexts = get_mock_contexts();
 
     let user_id = 1;
     let project_id = 1;
@@ -934,7 +955,7 @@ async fn update_owner_id_returns_ok() {
         metadata::MetadataValue::from_str(user_id.to_string().as_str()).unwrap(),
     );
 
-    mock_services
+    mock_contexts
         .project_context_mock
         .expect_get_by_id()
         .with(predicate::eq(project_id))
@@ -947,7 +968,7 @@ async fn update_owner_id_returns_ok() {
             }))
         });
 
-    mock_services
+    mock_contexts
         .access_context_mock
         .expect_get_access_by_uid_and_project_id()
         .with(predicate::eq(1), predicate::eq(project_id))
@@ -960,7 +981,7 @@ async fn update_owner_id_returns_ok() {
             }))
         });
 
-    mock_services
+    mock_contexts
         .session_context_mock
         .expect_get_by_token()
         .with(
@@ -977,7 +998,7 @@ async fn update_owner_id_returns_ok() {
             }))
         });
 
-    mock_services
+    mock_contexts
         .project_context_mock
         .expect_update()
         .returning(move |_| {
@@ -989,7 +1010,7 @@ async fn update_owner_id_returns_ok() {
             })
         });
 
-    mock_services
+    mock_contexts
         .in_use_context_mock
         .expect_get_by_id()
         .returning(move |_| {
@@ -1000,7 +1021,7 @@ async fn update_owner_id_returns_ok() {
             }))
         });
 
-    mock_services
+    mock_contexts
         .in_use_context_mock
         .expect_update()
         .returning(move |_| {
@@ -1011,16 +1032,17 @@ async fn update_owner_id_returns_ok() {
             })
         });
 
-    let api = get_mock_concrete_ecdar_api(mock_services);
+    let contexts = disguise_mocks(mock_contexts);
+    let project_logic = ProjectLogic::new(contexts);
 
-    let res = api.update_project(update_project_request).await;
+    let res = project_logic.update_project(update_project_request).await;
 
     assert!(res.is_ok());
 }
 
 #[tokio::test]
 async fn update_returns_ok() {
-    let mut mock_services = get_mock_services();
+    let mut mock_contexts = get_mock_contexts();
 
     let user_id = 1;
     let project_id = 1;
@@ -1051,7 +1073,7 @@ async fn update_returns_ok() {
         metadata::MetadataValue::from_str(user_id.to_string().as_str()).unwrap(),
     );
 
-    mock_services
+    mock_contexts
         .project_context_mock
         .expect_get_by_id()
         .with(predicate::eq(project_id))
@@ -1064,7 +1086,7 @@ async fn update_returns_ok() {
             }))
         });
 
-    mock_services
+    mock_contexts
         .access_context_mock
         .expect_get_access_by_uid_and_project_id()
         .with(predicate::eq(1), predicate::eq(project_id))
@@ -1077,7 +1099,7 @@ async fn update_returns_ok() {
             }))
         });
 
-    mock_services
+    mock_contexts
         .session_context_mock
         .expect_get_by_token()
         .with(
@@ -1094,7 +1116,7 @@ async fn update_returns_ok() {
             }))
         });
 
-    mock_services
+    mock_contexts
         .project_context_mock
         .expect_update()
         .returning(move |_| {
@@ -1106,7 +1128,7 @@ async fn update_returns_ok() {
             })
         });
 
-    mock_services
+    mock_contexts
         .in_use_context_mock
         .expect_get_by_id()
         .returning(move |_| {
@@ -1117,7 +1139,7 @@ async fn update_returns_ok() {
             }))
         });
 
-    mock_services
+    mock_contexts
         .in_use_context_mock
         .expect_update()
         .returning(move |_| {
@@ -1128,18 +1150,19 @@ async fn update_returns_ok() {
             })
         });
 
-    let api = get_mock_concrete_ecdar_api(mock_services);
+    let contexts = disguise_mocks(mock_contexts);
+    let project_logic = ProjectLogic::new(contexts);
 
-    let res = api.update_project(update_project_request).await;
+    let res = project_logic.update_project(update_project_request).await;
 
     assert!(res.is_ok());
 }
 
 #[tokio::test]
 async fn update_owner_not_owner_returns_err() {
-    let mut mock_services = get_mock_services();
+    let mut mock_contexts = get_mock_contexts();
 
-    mock_services
+    mock_contexts
         .project_context_mock
         .expect_get_by_id()
         .with(predicate::eq(1))
@@ -1152,7 +1175,7 @@ async fn update_owner_not_owner_returns_err() {
             }))
         });
 
-    mock_services
+    mock_contexts
         .access_context_mock
         .expect_get_access_by_uid_and_project_id()
         .with(predicate::eq(1), predicate::eq(1))
@@ -1165,7 +1188,7 @@ async fn update_owner_not_owner_returns_err() {
             }))
         });
 
-    mock_services
+    mock_contexts
         .session_context_mock
         .expect_get_by_token()
         .with(
@@ -1182,7 +1205,7 @@ async fn update_owner_not_owner_returns_err() {
             }))
         });
 
-    mock_services
+    mock_contexts
         .in_use_context_mock
         .expect_get_by_id()
         .with(predicate::eq(1))
@@ -1194,7 +1217,7 @@ async fn update_owner_not_owner_returns_err() {
             }))
         });
 
-    mock_services
+    mock_contexts
         .in_use_context_mock
         .expect_update()
         .returning(move |_| {
@@ -1221,18 +1244,19 @@ async fn update_owner_not_owner_returns_err() {
         metadata::MetadataValue::from_str("access_token").unwrap(),
     );
 
-    let api = get_mock_concrete_ecdar_api(mock_services);
+    let contexts = disguise_mocks(mock_contexts);
+    let project_logic = ProjectLogic::new(contexts);
 
-    let res = api.update_project(request).await.unwrap_err();
+    let res = project_logic.update_project(request).await.unwrap_err();
 
     assert_eq!(res.code(), Code::PermissionDenied);
 }
 
 #[tokio::test]
 async fn update_no_in_use_returns_err() {
-    let mut mock_services = get_mock_services();
+    let mut mock_contexts = get_mock_contexts();
 
-    mock_services
+    mock_contexts
         .project_context_mock
         .expect_get_by_id()
         .with(predicate::eq(1))
@@ -1245,7 +1269,7 @@ async fn update_no_in_use_returns_err() {
             }))
         });
 
-    mock_services
+    mock_contexts
         .access_context_mock
         .expect_get_access_by_uid_and_project_id()
         .with(predicate::eq(1), predicate::eq(1))
@@ -1258,7 +1282,7 @@ async fn update_no_in_use_returns_err() {
             }))
         });
 
-    mock_services
+    mock_contexts
         .session_context_mock
         .expect_get_by_token()
         .with(
@@ -1275,7 +1299,7 @@ async fn update_no_in_use_returns_err() {
             }))
         });
 
-    mock_services
+    mock_contexts
         .in_use_context_mock
         .expect_get_by_id()
         .with(predicate::eq(1))
@@ -1303,18 +1327,19 @@ async fn update_no_in_use_returns_err() {
         metadata::MetadataValue::from_str("access_token").unwrap(),
     );
 
-    let api = get_mock_concrete_ecdar_api(mock_services);
+    let contexts = disguise_mocks(mock_contexts);
+    let project_logic = ProjectLogic::new(contexts);
 
-    let res = api.update_project(request).await.unwrap_err();
+    let res = project_logic.update_project(request).await.unwrap_err();
 
     assert_eq!(res.code(), Code::FailedPrecondition);
 }
 
 #[tokio::test]
 async fn update_no_access_returns_err() {
-    let mut mock_services = get_mock_services();
+    let mut mock_contexts = get_mock_contexts();
 
-    mock_services
+    mock_contexts
         .project_context_mock
         .expect_get_by_id()
         .with(predicate::eq(1))
@@ -1327,7 +1352,7 @@ async fn update_no_access_returns_err() {
             }))
         });
 
-    mock_services
+    mock_contexts
         .access_context_mock
         .expect_get_access_by_uid_and_project_id()
         .with(predicate::eq(1), predicate::eq(1))
@@ -1344,18 +1369,19 @@ async fn update_no_access_returns_err() {
         .metadata_mut()
         .insert("uid", metadata::MetadataValue::from_str("1").unwrap());
 
-    let api = get_mock_concrete_ecdar_api(mock_services);
+    let contexts = disguise_mocks(mock_contexts);
+    let project_logic = ProjectLogic::new(contexts);
 
-    let res = api.update_project(request).await.unwrap_err();
+    let res = project_logic.update_project(request).await.unwrap_err();
 
     assert_eq!(res.code(), Code::PermissionDenied);
 }
 
 #[tokio::test]
 async fn update_incorrect_role_returns_err() {
-    let mut mock_services = get_mock_services();
+    let mut mock_contexts = get_mock_contexts();
 
-    mock_services
+    mock_contexts
         .project_context_mock
         .expect_get_by_id()
         .with(predicate::eq(1))
@@ -1368,7 +1394,7 @@ async fn update_incorrect_role_returns_err() {
             }))
         });
 
-    mock_services
+    mock_contexts
         .access_context_mock
         .expect_get_access_by_uid_and_project_id()
         .with(predicate::eq(1), predicate::eq(1))
@@ -1392,18 +1418,19 @@ async fn update_incorrect_role_returns_err() {
         .metadata_mut()
         .insert("uid", metadata::MetadataValue::from_str("1").unwrap());
 
-    let api = get_mock_concrete_ecdar_api(mock_services);
+    let contexts = disguise_mocks(mock_contexts);
+    let project_logic = ProjectLogic::new(contexts);
 
-    let res = api.update_project(request).await.unwrap_err();
+    let res = project_logic.update_project(request).await.unwrap_err();
 
     assert_eq!(res.code(), Code::PermissionDenied);
 }
 
 #[tokio::test]
 async fn update_no_session_returns_err() {
-    let mut mock_services = get_mock_services();
+    let mut mock_contexts = get_mock_contexts();
 
-    mock_services
+    mock_contexts
         .project_context_mock
         .expect_get_by_id()
         .with(predicate::eq(1))
@@ -1416,7 +1443,7 @@ async fn update_no_session_returns_err() {
             }))
         });
 
-    mock_services
+    mock_contexts
         .access_context_mock
         .expect_get_access_by_uid_and_project_id()
         .with(predicate::eq(1), predicate::eq(1))
@@ -1429,7 +1456,7 @@ async fn update_no_session_returns_err() {
             }))
         });
 
-    mock_services
+    mock_contexts
         .session_context_mock
         .expect_get_by_token()
         .with(
@@ -1454,18 +1481,19 @@ async fn update_no_session_returns_err() {
         metadata::MetadataValue::from_str("access_token").unwrap(),
     );
 
-    let api = get_mock_concrete_ecdar_api(mock_services);
+    let contexts = disguise_mocks(mock_contexts);
+    let project_logic = ProjectLogic::new(contexts);
 
-    let res = api.update_project(request).await.unwrap_err();
+    let res = project_logic.update_project(request).await.unwrap_err();
 
     assert_eq!(res.code(), Code::Unauthenticated);
 }
 
 #[tokio::test]
 async fn update_no_project_returns_err() {
-    let mut mock_services = get_mock_services();
+    let mut mock_contexts = get_mock_contexts();
 
-    mock_services
+    mock_contexts
         .project_context_mock
         .expect_get_by_id()
         .with(predicate::eq(2))
@@ -1482,9 +1510,10 @@ async fn update_no_project_returns_err() {
         .metadata_mut()
         .insert("uid", metadata::MetadataValue::from_str("1").unwrap());
 
-    let api = get_mock_concrete_ecdar_api(mock_services);
+    let contexts = disguise_mocks(mock_contexts);
+    let project_logic = ProjectLogic::new(contexts);
 
-    let res = api.update_project(request).await.unwrap_err();
+    let res = project_logic.update_project(request).await.unwrap_err();
 
     assert_eq!(res.code(), Code::NotFound);
 }

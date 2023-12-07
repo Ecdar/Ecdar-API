@@ -1,19 +1,20 @@
 use std::str::FromStr;
 
-use crate::api::server::server::ecdar_api_server::EcdarApi;
+use crate::api::logic_impls::{ProjectLogic, QueryLogic};
+use crate::api::logic_traits::QueryLogicTrait;
 use crate::api::server::server::query_response::{self, Result};
 use crate::api::server::server::{
     CreateQueryRequest, DeleteQueryRequest, QueryResponse, SendQueryRequest, UpdateQueryRequest,
 };
 use crate::entities::{access, project, query};
-use crate::tests::api::helpers::{get_mock_concrete_ecdar_api, get_mock_services};
+use crate::tests::api::helpers::{disguise_mocks, get_mock_contexts};
 use mockall::predicate;
 use sea_orm::DbErr;
 use tonic::{metadata, Code, Request, Response};
 
 #[tokio::test]
 async fn create_invalid_query_returns_err() {
-    let mut mock_services = get_mock_services();
+    let mut mock_contexts = get_mock_contexts();
 
     let query = query::Model {
         id: Default::default(),
@@ -30,13 +31,13 @@ async fn create_invalid_query_returns_err() {
         user_id: 1,
     };
 
-    mock_services
+    mock_contexts
         .access_context_mock
         .expect_get_access_by_uid_and_project_id()
         .with(predicate::eq(1), predicate::eq(1))
         .returning(move |_, _| Ok(Some(access.clone())));
 
-    mock_services
+    mock_contexts
         .query_context_mock
         .expect_create()
         .with(predicate::eq(query.clone()))
@@ -51,16 +52,17 @@ async fn create_invalid_query_returns_err() {
         .metadata_mut()
         .insert("uid", metadata::MetadataValue::from_str("1").unwrap());
 
-    let api = get_mock_concrete_ecdar_api(mock_services);
+    let contexts = disguise_mocks(mock_contexts);
+    let query_logic = QueryLogic::new(contexts);
 
-    let res = api.create_query(request).await.unwrap_err();
+    let res = query_logic.create_query(request).await.unwrap_err();
 
     assert_eq!(res.code(), Code::Internal);
 }
 
 #[tokio::test]
 async fn create_query_returns_ok() {
-    let mut mock_services = get_mock_services();
+    let mut mock_contexts = get_mock_contexts();
 
     let query = query::Model {
         id: Default::default(),
@@ -77,13 +79,13 @@ async fn create_query_returns_ok() {
         user_id: 1,
     };
 
-    mock_services
+    mock_contexts
         .access_context_mock
         .expect_get_access_by_uid_and_project_id()
         .with(predicate::eq(1), predicate::eq(1))
         .returning(move |_, _| Ok(Some(access.clone())));
 
-    mock_services
+    mock_contexts
         .query_context_mock
         .expect_create()
         .with(predicate::eq(query.clone()))
@@ -98,16 +100,17 @@ async fn create_query_returns_ok() {
         .metadata_mut()
         .insert("uid", metadata::MetadataValue::from_str("1").unwrap());
 
-    let api = get_mock_concrete_ecdar_api(mock_services);
+    let contexts = disguise_mocks(mock_contexts);
+    let query_logic = QueryLogic::new(contexts);
 
-    let res = api.create_query(request).await;
+    let res = query_logic.create_query(request).await;
 
     assert!(res.is_ok());
 }
 
 #[tokio::test]
 async fn update_invalid_query_returns_err() {
-    let mut mock_services = get_mock_services();
+    let mut mock_contexts = get_mock_contexts();
 
     let old_query = query::Model {
         id: 1,
@@ -129,19 +132,19 @@ async fn update_invalid_query_returns_err() {
         user_id: 1,
     };
 
-    mock_services
+    mock_contexts
         .query_context_mock
         .expect_get_by_id()
         .with(predicate::eq(1))
         .returning(move |_| Ok(Some(old_query.clone())));
 
-    mock_services
+    mock_contexts
         .access_context_mock
         .expect_get_access_by_uid_and_project_id()
         .with(predicate::eq(1), predicate::eq(0))
         .returning(move |_, _| Ok(Some(access.clone())));
 
-    mock_services
+    mock_contexts
         .query_context_mock
         .expect_update()
         .with(predicate::eq(query.clone()))
@@ -156,16 +159,17 @@ async fn update_invalid_query_returns_err() {
         .metadata_mut()
         .insert("uid", metadata::MetadataValue::from_str("1").unwrap());
 
-    let api = get_mock_concrete_ecdar_api(mock_services);
+    let contexts = disguise_mocks(mock_contexts);
+    let query_logic = QueryLogic::new(contexts);
 
-    let res = api.update_query(request).await.unwrap_err();
+    let res = query_logic.update_query(request).await.unwrap_err();
 
     assert_eq!(res.code(), Code::Internal);
 }
 
 #[tokio::test]
 async fn update_query_returns_ok() {
-    let mut mock_services = get_mock_services();
+    let mut mock_contexts = get_mock_contexts();
 
     let old_query = query::Model {
         id: 1,
@@ -187,19 +191,19 @@ async fn update_query_returns_ok() {
         user_id: 1,
     };
 
-    mock_services
+    mock_contexts
         .access_context_mock
         .expect_get_access_by_uid_and_project_id()
         .with(predicate::eq(1), predicate::eq(0))
         .returning(move |_, _| Ok(Some(access.clone())));
 
-    mock_services
+    mock_contexts
         .query_context_mock
         .expect_get_by_id()
         .with(predicate::eq(1))
         .returning(move |_| Ok(Some(old_query.clone())));
 
-    mock_services
+    mock_contexts
         .query_context_mock
         .expect_update()
         .with(predicate::eq(query.clone()))
@@ -214,16 +218,17 @@ async fn update_query_returns_ok() {
         .metadata_mut()
         .insert("uid", metadata::MetadataValue::from_str("1").unwrap());
 
-    let api = get_mock_concrete_ecdar_api(mock_services);
+    let contexts = disguise_mocks(mock_contexts);
+    let query_logic = QueryLogic::new(contexts);
 
-    let res = api.update_query(request).await;
+    let res = query_logic.update_query(request).await;
 
     assert!(res.is_ok());
 }
 
 #[tokio::test]
 async fn delete_invalid_query_returns_err() {
-    let mut mock_services = get_mock_services();
+    let mut mock_contexts = get_mock_contexts();
 
     let access = access::Model {
         id: Default::default(),
@@ -240,19 +245,19 @@ async fn delete_invalid_query_returns_err() {
         outdated: Default::default(),
     };
 
-    mock_services
+    mock_contexts
         .access_context_mock
         .expect_get_access_by_uid_and_project_id()
         .with(predicate::eq(1), predicate::eq(0))
         .returning(move |_, _| Ok(Some(access.clone())));
 
-    mock_services
+    mock_contexts
         .query_context_mock
         .expect_get_by_id()
         .with(predicate::eq(1))
         .returning(move |_| Ok(Some(query.clone())));
 
-    mock_services
+    mock_contexts
         .query_context_mock
         .expect_delete()
         .with(predicate::eq(1))
@@ -264,16 +269,17 @@ async fn delete_invalid_query_returns_err() {
         .metadata_mut()
         .insert("uid", metadata::MetadataValue::from_str("1").unwrap());
 
-    let api = get_mock_concrete_ecdar_api(mock_services);
+    let contexts = disguise_mocks(mock_contexts);
+    let query_logic = QueryLogic::new(contexts);
 
-    let res = api.delete_query(request).await.unwrap_err();
+    let res = query_logic.delete_query(request).await.unwrap_err();
 
     assert_eq!(res.code(), Code::NotFound);
 }
 
 #[tokio::test]
 async fn delete_query_returns_ok() {
-    let mut mock_services = get_mock_services();
+    let mut mock_contexts = get_mock_contexts();
 
     let query = query::Model {
         id: 1,
@@ -292,19 +298,19 @@ async fn delete_query_returns_ok() {
         user_id: 1,
     };
 
-    mock_services
+    mock_contexts
         .query_context_mock
         .expect_get_by_id()
         .with(predicate::eq(1))
         .returning(move |_| Ok(Some(query.clone())));
 
-    mock_services
+    mock_contexts
         .access_context_mock
         .expect_get_access_by_uid_and_project_id()
         .with(predicate::eq(1), predicate::eq(0))
         .returning(move |_, _| Ok(Some(access.clone())));
 
-    mock_services
+    mock_contexts
         .query_context_mock
         .expect_delete()
         .with(predicate::eq(1))
@@ -316,16 +322,17 @@ async fn delete_query_returns_ok() {
         .metadata_mut()
         .insert("uid", metadata::MetadataValue::from_str("1").unwrap());
 
-    let api = get_mock_concrete_ecdar_api(mock_services);
+    let contexts = disguise_mocks(mock_contexts);
+    let query_logic = QueryLogic::new(contexts);
 
-    let res = api.delete_query(request).await;
+    let res = query_logic.delete_query(request).await;
 
     assert!(res.is_ok());
 }
 
 #[tokio::test]
 async fn create_query_invalid_role_returns_err() {
-    let mut mock_services = get_mock_services();
+    let mut mock_contexts = get_mock_contexts();
 
     let query = query::Model {
         id: 1,
@@ -342,13 +349,13 @@ async fn create_query_invalid_role_returns_err() {
         user_id: 1,
     };
 
-    mock_services
+    mock_contexts
         .access_context_mock
         .expect_get_access_by_uid_and_project_id()
         .with(predicate::eq(1), predicate::eq(1))
         .returning(move |_, _| Ok(Some(access.clone())));
 
-    mock_services
+    mock_contexts
         .query_context_mock
         .expect_create()
         .with(predicate::eq(query.clone()))
@@ -363,16 +370,17 @@ async fn create_query_invalid_role_returns_err() {
         .metadata_mut()
         .insert("uid", metadata::MetadataValue::from_str("1").unwrap());
 
-    let api = get_mock_concrete_ecdar_api(mock_services);
+    let contexts = disguise_mocks(mock_contexts);
+    let query_logic = QueryLogic::new(contexts);
 
-    let res = api.create_query(request).await.unwrap_err();
+    let res = query_logic.create_query(request).await.unwrap_err();
 
     assert_eq!(res.code(), Code::PermissionDenied);
 }
 
 #[tokio::test]
 async fn delete_query_invalid_role_returns_err() {
-    let mut mock_services = get_mock_services();
+    let mut mock_contexts = get_mock_contexts();
 
     let query = query::Model {
         id: 1,
@@ -391,19 +399,19 @@ async fn delete_query_invalid_role_returns_err() {
         user_id: 1,
     };
 
-    mock_services
+    mock_contexts
         .query_context_mock
         .expect_get_by_id()
         .with(predicate::eq(1))
         .returning(move |_| Ok(Some(query.clone())));
 
-    mock_services
+    mock_contexts
         .access_context_mock
         .expect_get_access_by_uid_and_project_id()
         .with(predicate::eq(1), predicate::eq(0))
         .returning(move |_, _| Ok(Some(access.clone())));
 
-    mock_services
+    mock_contexts
         .query_context_mock
         .expect_delete()
         .with(predicate::eq(1))
@@ -415,16 +423,17 @@ async fn delete_query_invalid_role_returns_err() {
         .metadata_mut()
         .insert("uid", metadata::MetadataValue::from_str("1").unwrap());
 
-    let api = get_mock_concrete_ecdar_api(mock_services);
+    let contexts = disguise_mocks(mock_contexts);
+    let query_logic = QueryLogic::new(contexts);
 
-    let res = api.delete_query(request).await.unwrap_err();
+    let res = query_logic.delete_query(request).await.unwrap_err();
 
     assert_eq!(res.code(), Code::PermissionDenied);
 }
 
 #[tokio::test]
 async fn update_query_invalid_role_returns_err() {
-    let mut mock_services = get_mock_services();
+    let mut mock_contexts = get_mock_contexts();
 
     let old_query = query::Model {
         id: 1,
@@ -446,19 +455,19 @@ async fn update_query_invalid_role_returns_err() {
         user_id: 1,
     };
 
-    mock_services
+    mock_contexts
         .access_context_mock
         .expect_get_access_by_uid_and_project_id()
         .with(predicate::eq(1), predicate::eq(0))
         .returning(move |_, _| Ok(Some(access.clone())));
 
-    mock_services
+    mock_contexts
         .query_context_mock
         .expect_get_by_id()
         .with(predicate::eq(1))
         .returning(move |_| Ok(Some(old_query.clone())));
 
-    mock_services
+    mock_contexts
         .query_context_mock
         .expect_update()
         .with(predicate::eq(query.clone()))
@@ -473,16 +482,17 @@ async fn update_query_invalid_role_returns_err() {
         .metadata_mut()
         .insert("uid", metadata::MetadataValue::from_str("1").unwrap());
 
-    let api = get_mock_concrete_ecdar_api(mock_services);
+    let contexts = disguise_mocks(mock_contexts);
+    let query_logic = QueryLogic::new(contexts);
 
-    let res = api.update_query(request).await.unwrap_err();
+    let res = query_logic.update_query(request).await.unwrap_err();
 
     assert_eq!(res.code(), Code::PermissionDenied);
 }
 
 #[tokio::test]
 async fn send_query_returns_ok() {
-    let mut mock_services = get_mock_services();
+    let mut mock_contexts = get_mock_contexts();
 
     let query = query::Model {
         id: Default::default(),
@@ -517,30 +527,30 @@ async fn send_query_returns_ok() {
         ..query.clone()
     };
 
-    mock_services
+    mock_contexts
         .project_context_mock
         .expect_get_by_id()
         .with(predicate::eq(0))
         .returning(move |_| Ok(Some(project.clone())));
 
-    mock_services
+    mock_contexts
         .access_context_mock
         .expect_get_access_by_uid_and_project_id()
         .with(predicate::eq(1), predicate::eq(0))
         .returning(move |_, _| Ok(Some(access.clone())));
 
-    mock_services
+    mock_contexts
         .query_context_mock
         .expect_get_by_id()
         .with(predicate::eq(0))
         .returning(move |_| Ok(Some(query.clone())));
 
-    mock_services
+    mock_contexts
         .reveaal_context_mock
         .expect_send_query()
         .returning(move |_| Ok(Response::new(query_response.clone())));
 
-    mock_services
+    mock_contexts
         .query_context_mock
         .expect_update()
         .with(predicate::eq(updated_query.clone()))
@@ -555,9 +565,10 @@ async fn send_query_returns_ok() {
         .metadata_mut()
         .insert("uid", metadata::MetadataValue::from_str("1").unwrap());
 
-    let api = get_mock_concrete_ecdar_api(mock_services);
+    let contexts = disguise_mocks(mock_contexts);
+    let query_logic = QueryLogic::new(contexts);
 
-    let res = api.send_query(request).await;
+    let res = query_logic.send_query(request).await;
 
     assert!(res.is_ok());
 }
