@@ -255,7 +255,7 @@ impl EcdarApi for ConcreteEcdarApi {
                     id: query.id,
                     model_id: query.model_id,
                     query: query.string,
-                    result: result,
+                    result,
                     outdated: query.outdated,
                 })
             })
@@ -263,7 +263,7 @@ impl EcdarApi for ConcreteEcdarApi {
             .map_err(|err| {
                 Status::internal(format!(
                     "failed to parse json result, inner error:  {}",
-                    err.to_string()
+                    err
                 ))
             })?;
 
