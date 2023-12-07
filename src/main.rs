@@ -23,6 +23,7 @@ use std::error::Error;
 use std::sync::Arc;
 
 #[tokio::main]
+#[allow(clippy::expect_used)] // if errors make it out here, something catastrophic probably happened
 async fn main() -> Result<(), Box<dyn Error>> {
     dotenv().ok();
 

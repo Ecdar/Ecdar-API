@@ -175,6 +175,7 @@ impl Token {
     ///
     /// assert_eq!(token.as_str(), "token");
     /// ```
+    #[allow(dead_code)]
     pub fn as_str(&self) -> &str {
         &self.token
     }
@@ -189,6 +190,7 @@ impl Token {
     ///
     /// assert_eq!(token.token_type(), TokenType::AccessToken);
     /// ```
+    #[allow(dead_code)]
     pub fn token_type(&self) -> TokenType {
         self.token_type.clone()
     }
