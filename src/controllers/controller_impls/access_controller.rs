@@ -211,7 +211,7 @@ impl AccessControllerTrait for AccessController {
 
         let uid = request
             .uid()
-            .map_err(|err| Status::internal("could not stringify user id in request metadata"))?
+            .map_err(|err| Status::internal(format!("could not stringify user id in request metadata, inner error: {}",err)))?
             .ok_or(Status::internal("Could not get uid from request metadata"))?;
 
         let user_access = self
