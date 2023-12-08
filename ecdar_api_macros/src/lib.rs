@@ -1,6 +1,7 @@
+use convert_case::{Case, Casing};
 use proc_macro::TokenStream;
 use quote::quote;
-use syn::{parse_macro_input, ImplItem, ImplItemFn, Item, ItemFn, ItemImpl, ItemMod};
+use syn::{parse_macro_input, ImplItem, Item, ItemImpl, ItemMod};
 
 #[proc_macro_attribute]
 pub fn endpoints(_attr: TokenStream, item: TokenStream) -> TokenStream {
@@ -60,7 +61,9 @@ pub fn endpoints(_attr: TokenStream, item: TokenStream) -> TokenStream {
             .items
             .iter()
             .filter_map(|item| match item {
-                syn::ImplItem::Fn(function) => Some(function.sig.ident.to_string()),
+                syn::ImplItem::Fn(function) => {
+                    Some(function.sig.ident.to_string().to_case(Case::Pascal))
+                }
                 _ => None,
             })
             .collect();
@@ -110,34 +113,6 @@ pub fn endpoints(_attr: TokenStream, item: TokenStream) -> TokenStream {
 
     let output = quote! {#item_mod};
 
-    println!("{}", output.to_string());
-
     output.into()
-
-    // let mut updated_items = input.items.clone();
-
-    // updated_items.push(syn::ImplItem::Fn(parse_macro_input!(
-    //     new_function as ImplItemFn
-    // )));
-
-    // let updated_impl = ItemImpl {
-    //     attrs: input.attrs,
-    //     defaultness: input.defaultness,
-    //     unsafety: input.unsafety,
-    //     impl_token: input.impl_token,
-    //     generics: input.generics,
-    //     trait_: input.trait_,
-    //     self_ty: input.self_ty,
-    //     brace_token: input.brace_token,
-    //     items: updated_items,
-    // };
-
-    // let output = quote! {
-    //     #updated_impl
-    // };
-
-    // println!("{}", output.to_string());
-
-    // output.into()
 }
 
