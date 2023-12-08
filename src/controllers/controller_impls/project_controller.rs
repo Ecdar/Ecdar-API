@@ -233,7 +233,7 @@ impl ProjectControllerTrait for ProjectController {
                     ))?,
             )
             .await
-            .map_err(|_err| Status::internal("failed to query database"))? //TODO better error message
+            .map_err(|_err| Status::internal("failed to query database"))?
             .ok_or(Status::not_found("token not found"))?;
 
         let in_use = in_use::Model {
@@ -371,7 +371,7 @@ impl ProjectControllerTrait for ProjectController {
                         "failed to parse components info object, internal error: {}",
                         err
                     ))
-                })?, // TODO unwrap
+                })?,
                 None => project.components_info,
             },
             owner_id: match message.clone().owner_id {
