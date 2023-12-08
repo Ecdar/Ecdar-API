@@ -12,10 +12,12 @@ use tonic::{
 
 /// This method is used to validate the access token (not refresh).
 pub fn validation_interceptor(mut req: Request<()>) -> Result<Request<()>, Status> {
-    let token = match req
-        .token_string()
-        .map_err(|err| Status::internal(format!("could not stringify user id in request metadata, internal error {}",err)))?
-    {
+    let token = match req.token_string().map_err(|err| {
+        Status::internal(format!(
+            "could not stringify user id in request metadata, internal error {}",
+            err
+        ))
+    })? {
         Some(token) => Token::from_str(TokenType::AccessToken, &token),
         None => return Err(Status::unauthenticated("Token not found")),
     };
