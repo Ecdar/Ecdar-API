@@ -1,16 +1,4 @@
-use super::server::server::{
-    ecdar_api_auth_server::EcdarApiAuth, ecdar_api_server::EcdarApi,
-    ecdar_backend_server::EcdarBackend, CreateAccessRequest, CreateProjectRequest,
-    CreateProjectResponse, CreateQueryRequest, CreateUserRequest, DeleteAccessRequest,
-    DeleteProjectRequest, DeleteQueryRequest, GetAuthTokenRequest, GetAuthTokenResponse,
-    GetProjectRequest, GetProjectResponse, GetUsersRequest, GetUsersResponse,
-    ListAccessInfoRequest, ListAccessInfoResponse, ListProjectsInfoResponse, QueryRequest,
-    QueryResponse, SendQueryRequest, SendQueryResponse, SimulationStartRequest,
-    SimulationStepRequest, SimulationStepResponse, UpdateAccessRequest, UpdateProjectRequest,
-    UpdateQueryRequest, UpdateUserRequest, UserTokenResponse,
-};
 use crate::controllers::controller_collection::ControllerCollection;
-use tonic::{Request, Response, Status};
 
 #[derive(Clone)]
 pub struct ConcreteEcdarApi {
@@ -36,7 +24,7 @@ mod routes {
         SimulationStepRequest, SimulationStepResponse, UpdateAccessRequest, UpdateProjectRequest,
         UpdateQueryRequest, UpdateUserRequest, UserTokenResponse,
     };
-    use crate::controllers::controller_collection::ControllerCollection;
+
     use tonic::{Request, Response, Status};
 
     #[tonic::async_trait]
@@ -258,4 +246,3 @@ mod routes {
         }
     }
 }
-
