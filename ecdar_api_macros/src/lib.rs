@@ -1,10 +1,10 @@
 use proc_macro::TokenStream;
 use quote::quote;
-use syn::{parse_macro_input, ImplItemFn, Item, ItemFn, ItemImpl, ItemMod};
+use syn::{parse_macro_input, ImplItem, ImplItemFn, Item, ItemFn, ItemImpl, ItemMod};
 
 #[proc_macro_attribute]
 pub fn endpoints(_attr: TokenStream, item: TokenStream) -> TokenStream {
-    let item_mod: ItemMod = parse_macro_input!(item as ItemMod);
+    let mut item_mod: ItemMod = parse_macro_input!(item as ItemMod);
 
     let impl_names: Vec<String> = item_mod
         .clone()
@@ -39,7 +39,7 @@ pub fn endpoints(_attr: TokenStream, item: TokenStream) -> TokenStream {
 
     let mut endpoints: Vec<String> = Vec::new();
 
-    let items_impl: Vec<Item> = item_mod.content.unwrap().1;
+    let items_impl: Vec<Item> = item_mod.clone().content.unwrap().1;
 
     let items_impl: Vec<ItemImpl> = items_impl
         .into_iter()
@@ -82,7 +82,37 @@ pub fn endpoints(_attr: TokenStream, item: TokenStream) -> TokenStream {
 
     println!("{}", new_function.to_string());
 
-    // let mut updated_items = item_mod.content.as_ref()
+    // It's cursed, but what could be expected from traversing an AST without some kind of pattern.
+    let specific_impl: Option<&mut ItemImpl> = item_mod
+        .content
+        .as_mut()
+        .map(|module_content| {
+            module_content.1.iter_mut().find_map(|item| {
+                if let Item::Impl(item_impl) = item {
+                    if let Some(trait_ref) = &item_impl.trait_ {
+                        if let Some(ident) = trait_ref.1.get_ident() {
+                            if ident == "EcdarApiAuth" {
+                                return Some(item_impl);
+                            }
+                        }
+                    }
+                }
+                None
+            })
+        })
+        .unwrap();
+
+    if let Some(impl_item) = specific_impl {
+        impl_item
+            .items
+            .push(parse_macro_input!(new_function as ImplItem));
+    }
+
+    let output = quote! {#item_mod};
+
+    println!("{}", output.to_string());
+
+    output.into()
 
     // let mut updated_items = input.items.clone();
 
@@ -109,6 +139,5 @@ pub fn endpoints(_attr: TokenStream, item: TokenStream) -> TokenStream {
     // println!("{}", output.to_string());
 
     // output.into()
-    todo!()
 }
 

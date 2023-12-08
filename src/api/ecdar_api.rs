@@ -1,5 +1,6 @@
-#![ecdar_api_macros::endpoints]
+#![feature(proc_macro_hygiene)]
 #![feature(custom_inner_attributes)]
+#![ecdar_api_macros::endpoints]
 
 use super::server::server::{
     ecdar_api_auth_server::EcdarApiAuth,
