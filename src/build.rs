@@ -9,6 +9,7 @@ fn main() {
             "#[derive(serde::Serialize, serde::Deserialize)]",
         )
         .type_attribute("ProjectInfo", "#[derive(sea_orm::FromQueryResult)]")
+        .type_attribute("AccessInfo", "#[derive(sea_orm::FromQueryResult)]")
         .type_attribute("Error", "#[derive(serde::Serialize, serde::Deserialize)]")
         .type_attribute(
             "ComponentsNotInCache",

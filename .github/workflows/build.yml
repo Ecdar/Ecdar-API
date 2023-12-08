@@ -17,6 +17,8 @@ jobs:
           submodules: true
       - name: Install Protoc
         uses: arduino/setup-protoc@v2
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
       - uses: Swatinem/rust-cache@v2
         with:
           cache-on-failure: true
