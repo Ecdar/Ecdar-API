@@ -63,7 +63,9 @@ async fn main() -> Result<(), Box<dyn Error>> {
         reveaal_controller: Arc::new(ReveaalController::new(services.clone())),
     };
 
-    start_grpc_server(logics).await.expect("failed to start grpc server");
+    start_grpc_server(logics)
+        .await
+        .expect("failed to start grpc server");
 
     Ok(())
 }
