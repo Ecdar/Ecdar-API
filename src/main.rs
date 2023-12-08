@@ -1,21 +1,18 @@
 mod api;
-mod database;
+mod contexts;
+mod controllers;
 mod entities;
+mod services;
 mod tests;
 
-use crate::api::context_collection::ContextCollection;
-use crate::api::hashing_context::HashingContext;
-use crate::api::reveaal_context::ReveaalContext;
-use crate::database::access_context::AccessContext;
-use crate::database::database_context::{PostgresDatabaseContext, SQLiteDatabaseContext};
-use crate::database::in_use_context::InUseContext;
-use crate::database::project_context::ProjectContext;
-use crate::database::query_context::QueryContext;
-use crate::database::session_context::SessionContext;
-use crate::database::user_context::UserContext;
+use crate::contexts::context_collection::ContextCollection;
+use crate::contexts::context_impls::*;
+use crate::contexts::context_traits::DatabaseContextTrait;
+use crate::controllers::controller_collection::ControllerCollection;
+use crate::controllers::controller_impls::*;
+use crate::services::service_collection::ServiceCollection;
+use crate::services::service_impls::{HashingService, ReveaalService};
 use api::server::start_grpc_server;
-use database::database_context::DatabaseContextTrait;
-use database::entity_context::EntityContextTrait;
 use dotenv::dotenv;
 use sea_orm::{ConnectionTrait, Database, DbBackend};
 use std::env;
@@ -41,11 +38,23 @@ async fn main() -> Result<(), Box<dyn Error>> {
         query_context: Arc::new(QueryContext::new(db_context.clone())),
         session_context: Arc::new(SessionContext::new(db_context.clone())),
         user_context: Arc::new(UserContext::new(db_context.clone())),
-        reveaal_context: Arc::new(ReveaalContext),
-        hashing_context: Arc::new(HashingContext),
     };
 
-    start_grpc_server(contexts).await.unwrap();
+    let services = ServiceCollection {
+        hashing_service: Arc::new(HashingService),
+        reveaal_service: Arc::new(ReveaalService),
+    };
+
+    let logics = ControllerCollection {
+        access_controller: Arc::new(AccessController::new(contexts.clone())),
+        project_controller: Arc::new(ProjectController::new(contexts.clone())),
+        query_controller: Arc::new(QueryController::new(contexts.clone(), services.clone())),
+        session_controller: Arc::new(SessionController::new(contexts.clone(), services.clone())),
+        user_controller: Arc::new(UserController::new(contexts.clone(), services.clone())),
+        reveaal_controller: Arc::new(ReveaalController::new(services.clone())),
+    };
+
+    start_grpc_server(logics).await.unwrap();
 
     Ok(())
 }
