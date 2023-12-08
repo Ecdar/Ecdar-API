@@ -1,3 +1,11 @@
+//! # Description
+//! This project serves as an API server between an ECDAR frontend and Reveaal
+//!
+//! The project is currently being developed at [Github](https://github.com/ECDAR-AAU-SW-P5/)
+//! Ecdar-API serves as the intermediary between the [Ecdar frontend](https://github.com/ECDAR-AAU-SW-P5/Ecdar-GUI-Web) and the [Ecdar backend](https://github.com/ECDAR-AAU-SW-P5/Reveaal) (Reveaal). Its core functionality revolves around storing and managing entities such as users and projects, allowing the backend to focus solely on computations.
+//!
+//! # Notes
+//! Currently, the only supported databases are `PostgreSQL` and `SQLite`
 mod api;
 mod contexts;
 mod controllers;
@@ -20,6 +28,7 @@ use std::error::Error;
 use std::sync::Arc;
 
 #[tokio::main]
+#[allow(clippy::expect_used)]
 async fn main() -> Result<(), Box<dyn Error>> {
     dotenv().ok();
 
@@ -54,7 +63,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         reveaal_controller: Arc::new(ReveaalController::new(services.clone())),
     };
 
-    start_grpc_server(logics).await.unwrap();
+    start_grpc_server(logics).await.expect("failed to start grpc server");
 
     Ok(())
 }
