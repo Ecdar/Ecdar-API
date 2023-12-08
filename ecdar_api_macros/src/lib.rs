@@ -83,8 +83,6 @@ pub fn endpoints(_attr: TokenStream, item: TokenStream) -> TokenStream {
     }
     .into();
 
-    println!("{}", new_function.to_string());
-
     // It's cursed, but what could be expected from traversing an AST without some kind of pattern.
     let specific_impl: Option<&mut ItemImpl> = item_mod
         .content
