@@ -38,10 +38,13 @@ impl QueryControllerTrait for QueryController {
             .get_access_by_uid_and_project_id(
                 request
                     .uid()
-                    .map_err(|_err| {
-                        Status::internal("could not stringify user id in request metadata")
+                    .map_err(|err| {
+                        Status::invalid_argument(format!(
+                            "could not stringify user id in request metadata, inner error {}",
+                            err
+                        ))
                     })?
-                    .ok_or(Status::internal(
+                    .ok_or(Status::invalid_argument(
                         "failed to get user id from request metadata",
                     ))?,
                 query_request.project_id,
@@ -105,8 +108,11 @@ impl QueryControllerTrait for QueryController {
             .get_access_by_uid_and_project_id(
                 request
                     .uid()
-                    .map_err(|_err| {
-                        Status::internal("could not stringify user id in request metadata")
+                    .map_err(|err| {
+                        Status::internal(format!(
+                            "could not stringify user id in request metadata, internal error {}",
+                            err
+                        ))
                     })?
                     .ok_or(Status::internal(
                         "failed to get user id from request metadata",
@@ -166,8 +172,11 @@ impl QueryControllerTrait for QueryController {
             .get_access_by_uid_and_project_id(
                 request
                     .uid()
-                    .map_err(|_err| {
-                        Status::internal("could not stringify user id in request metadata")
+                    .map_err(|err| {
+                        Status::internal(format!(
+                            "could not stringify user id in request metadata, internal error {}",
+                            err
+                        ))
                     })?
                     .ok_or(Status::internal(
                         "failed to get user id from request metadata",
@@ -213,7 +222,12 @@ impl QueryControllerTrait for QueryController {
 
         let uid = request
             .uid()
-            .map_err(|_err| Status::internal("could not stringify user id in request metadata"))?
+            .map_err(|err| {
+                Status::internal(format!(
+                    "could not stringify user id in request metadata, internal error {}",
+                    err
+                ))
+            })?
             .ok_or(Status::internal(
                 "failed to get user id from request metadata",
             ))?;

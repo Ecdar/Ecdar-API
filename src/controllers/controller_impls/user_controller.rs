@@ -96,7 +96,12 @@ impl UserControllerTrait for UserController {
 
         let uid = request
             .uid()
-            .map_err(|_err| Status::internal("could not stringify user id in request metadata"))?
+            .map_err(|err| {
+                Status::internal(format!(
+                    "could not stringify user id in request metadata, internal error {}",
+                    err
+                ))
+            })?
             .ok_or(Status::internal("Could not get uid from request metadata"))?;
 
         // Get user from contexts
@@ -155,7 +160,12 @@ impl UserControllerTrait for UserController {
     async fn delete_user(&self, request: Request<()>) -> Result<Response<()>, Status> {
         let uid = request
             .uid()
-            .map_err(|_err| Status::internal("could not stringify user id in request metadata"))?
+            .map_err(|err| {
+                Status::internal(format!(
+                    "could not stringify user id in request metadata, internal error {}",
+                    err
+                ))
+            })?
             .ok_or(Status::internal("Could not get uid from request metadata"))?;
 
         // Delete user from contexts

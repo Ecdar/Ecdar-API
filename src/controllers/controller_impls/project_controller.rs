@@ -39,7 +39,12 @@ impl ProjectControllerTrait for ProjectController {
 
         let uid = request
             .uid()
-            .map_err(|_err| Status::internal("could not stringify user id in request metadata"))?
+            .map_err(|err| {
+                Status::internal(format!(
+                    "could not stringify user id in request metadata, internal error {}",
+                    err
+                ))
+            })?
             .ok_or(Status::internal("Could not get uid from request metadata"))?;
 
         let access = self
@@ -92,9 +97,7 @@ impl ProjectControllerTrait for ProjectController {
                                 TokenType::AccessToken,
                                 request
                                     .token_string()
-                                    .map_err(|_err| {
-                                        Status::invalid_argument("token string from request metadata could not be stringified")
-                                    })?
+                                    .map_err(|err| Status::internal(format!("could not stringify user id in request metadata, internal error {}",err)))?
                                     .ok_or(Status::invalid_argument("failed to get token from request metadata"))?,
                             )
                             .await
@@ -166,7 +169,12 @@ impl ProjectControllerTrait for ProjectController {
         let message = request.get_ref().clone();
         let uid = request
             .uid()
-            .map_err(|_err| Status::internal("could not stringify user id in request metadata"))?
+            .map_err(|err| {
+                Status::internal(format!(
+                    "could not stringify user id in request metadata, internal error {}",
+                    err
+                ))
+            })?
             .ok_or(Status::internal("Could not get uid from request metadata"))?;
 
         let components_info = match message.clone().components_info {
@@ -225,10 +233,11 @@ impl ProjectControllerTrait for ProjectController {
                 TokenType::AccessToken,
                 request
                     .token_string()
-                    .map_err(|_err| {
-                        Status::invalid_argument(
-                            "token string from request metadata could not be stringified",
-                        )
+                    .map_err(|err| {
+                        Status::internal(format!(
+                            "could not stringify user id in request metadata, internal error {}",
+                            err
+                        ))
                     })?
                     .ok_or(Status::internal(
                         "failed to get token from request metadata",
@@ -274,7 +283,12 @@ impl ProjectControllerTrait for ProjectController {
         let message = request.get_ref().clone();
         let uid = request
             .uid()
-            .map_err(|_err| Status::internal("could not stringify user id in request metadata"))?
+            .map_err(|err| {
+                Status::internal(format!(
+                    "could not stringify user id in request metadata, internal error {}",
+                    err
+                ))
+            })?
             .ok_or(Status::internal("Could not get uid from request metadata"))?;
 
         // Check if the project exists
@@ -318,10 +332,11 @@ impl ProjectControllerTrait for ProjectController {
                 TokenType::AccessToken,
                 request
                     .token_string()
-                    .map_err(|_err| {
-                        Status::invalid_argument(
-                            "token string from request metadata could not be stringified",
-                        )
+                    .map_err(|err| {
+                        Status::internal(format!(
+                            "could not stringify user id in request metadata, internal error {}",
+                            err
+                        ))
                     })?
                     .ok_or(Status::internal(
                         "failed to get token from request metadata",
@@ -412,7 +427,12 @@ impl ProjectControllerTrait for ProjectController {
     ) -> Result<Response<()>, Status> {
         let uid = request
             .uid()
-            .map_err(|_err| Status::internal("could not stringify user id in request metadata"))?
+            .map_err(|err| {
+                Status::internal(format!(
+                    "could not stringify user id in request metadata, internal error {}",
+                    err
+                ))
+            })?
             .ok_or(Status::internal("Could not get uid from request metadata"))?;
         let project_id = request.get_ref().id;
 
@@ -452,7 +472,12 @@ impl ProjectControllerTrait for ProjectController {
     ) -> Result<Response<ListProjectsInfoResponse>, Status> {
         let uid = request
             .uid()
-            .map_err(|_err| Status::internal("could not stringify user id in request metadata"))?
+            .map_err(|err| {
+                Status::internal(format!(
+                    "could not stringify user id in request metadata, internal error {}",
+                    err
+                ))
+            })?
             .ok_or(Status::internal("Could not get uid from request metadata"))?;
 
         match self
