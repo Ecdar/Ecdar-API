@@ -118,7 +118,7 @@ pub fn endpoints(_attr: TokenStream, item: TokenStream) -> TokenStream {
             .push(parse_macro_input!(new_function as ImplItem));
     }
 
-    // Construct the tokens for the hole module.
+    // Construct the tokens for the whole module.
     let output = quote! {#item_mod};
 
     output.into()
