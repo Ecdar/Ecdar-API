@@ -107,7 +107,6 @@ impl Token {
         let expiration = now
             .checked_add_signed(token_type.duration())
             .ok_or(TokenError::InvalidSignature)?
-            // .expect("valid timestamp")
             .timestamp();
 
         let claims = Claims {
@@ -292,7 +291,6 @@ impl<T> RequestExt for Request<T> {
             Some(token) => Ok(Some(
                 token
                     .to_str()?
-                    // .expect("failed to parse token string")
                     .trim_start_matches("Bearer "),
             )),
             None => Ok(None),
