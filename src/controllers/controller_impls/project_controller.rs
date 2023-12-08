@@ -95,7 +95,7 @@ impl ProjectControllerTrait for ProjectController {
                                     .map_err(|_err| {
                                         Status::invalid_argument("token string from request metadata could not be stringified")
                                     })?
-                                    .ok_or(Status::invalid_argument("token string from request metadata could not be stringified"))?,
+                                    .ok_or(Status::invalid_argument("failed to get token from request metadata"))?,
                             )
                             .await
                             .map_err(|err| Status::new(Code::Internal, err.to_string()))?
