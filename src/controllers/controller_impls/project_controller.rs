@@ -39,6 +39,7 @@ impl ProjectControllerTrait for ProjectController {
 
         let uid = request
             .uid()
+            .map_err(|err| Status::internal("could not stringify user id in request metadata"))?
             .ok_or(Status::internal("Could not get uid from request metadata"))?;
 
         let access = self
@@ -169,6 +170,7 @@ impl ProjectControllerTrait for ProjectController {
         let message = request.get_ref().clone();
         let uid = request
             .uid()
+            .map_err(|err| Status::internal("could not stringify user id in request metadata"))?
             .ok_or(Status::internal("Could not get uid from request metadata"))?;
 
         let components_info = match message.clone().components_info {
@@ -272,6 +274,7 @@ impl ProjectControllerTrait for ProjectController {
         let message = request.get_ref().clone();
         let uid = request
             .uid()
+            .map_err(|err| Status::internal("could not stringify user id in request metadata"))?
             .ok_or(Status::internal("Could not get uid from request metadata"))?;
 
         // Check if the project exists
@@ -405,6 +408,7 @@ impl ProjectControllerTrait for ProjectController {
     ) -> Result<Response<()>, Status> {
         let uid = request
             .uid()
+            .map_err(|err| Status::internal("could not stringify user id in request metadata"))?
             .ok_or(Status::internal("Could not get uid from request metadata"))?;
         let project_id = request.get_ref().id;
 
@@ -444,6 +448,7 @@ impl ProjectControllerTrait for ProjectController {
     ) -> Result<Response<ListProjectsInfoResponse>, Status> {
         let uid = request
             .uid()
+            .map_err(|err| Status::internal("could not stringify user id in request metadata"))?
             .ok_or(Status::internal("Could not get uid from request metadata"))?;
 
         match self

@@ -4,7 +4,7 @@ use jsonwebtoken::{
 };
 
 use serde::{Deserialize, Serialize};
-use std::{env, fmt::Display, str::FromStr};
+use std::{env, fmt::Display, str::FromStr, num::{ParseIntError, IntErrorKind}};
 use tonic::{
     metadata::{self, errors::ToStrError},
     Request, Status,
@@ -281,7 +281,7 @@ impl From<TokenError> for Status {
 pub trait RequestExt {
     fn token_str(&self) -> Result<Option<&str>, ToStrError>;
     fn token_string(&self) -> Result<Option<String>, ToStrError>;
-    fn uid(&self) -> Option<i32>;
+    fn uid(&self) -> Result<Option<i32>,ToStrError>;
 }
 
 impl<T> RequestExt for Request<T> {
@@ -304,12 +304,15 @@ impl<T> RequestExt for Request<T> {
         }
     }
     /// Returns the uid from the request metadata.
-    fn uid(&self) -> Option<i32> {
-        let uid = match self.metadata().get("uid")?.to_str() {
-            Ok(uid) => uid,
-            Err(_) => return None,
-        };
-        uid.parse().ok()
+    fn uid(&self) -> Result<Option<i32>, ToStrError> {
+        match self.metadata().get("uid") {
+            Some(val) => {
+                match val.to_str()?.parse::<i32>() {
+                    Ok(val) => Ok(Some(val)),
+                    Err(err) => Ok(None),
+                }},
+            None => return Ok(None),
+        }
     }
 }
 

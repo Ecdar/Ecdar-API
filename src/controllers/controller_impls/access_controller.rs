@@ -31,6 +31,7 @@ impl AccessControllerTrait for AccessController {
 
         let uid = request
             .uid()
+            .map_err(|err| Status::internal("could not stringify user id in request metadata"))?
             .ok_or(Status::internal("Could not get uid from request metadata"))?;
 
         match self
@@ -81,6 +82,7 @@ impl AccessControllerTrait for AccessController {
 
         let uid = request
             .uid()
+            .map_err(|err| Status::internal("could not stringify user id in request metadata"))?
             .ok_or(Status::internal("Could not get uid from request metadata"))?;
 
         // Check if the requester has access to model with role 'Editor'
@@ -130,6 +132,7 @@ impl AccessControllerTrait for AccessController {
 
         let uid = request
             .uid()
+            .map_err(|err| Status::internal("could not stringify user id in request metadata"))?
             .ok_or(Status::internal("Could not get uid from request metadata"))?;
 
         let user_access = self
@@ -193,6 +196,7 @@ impl AccessControllerTrait for AccessController {
 
         let uid = request
             .uid()
+            .map_err(|err| Status::internal("could not stringify user id in request metadata"))?
             .ok_or(Status::internal("Could not get uid from request metadata"))?;
 
         let user_access = self
