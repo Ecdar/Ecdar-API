@@ -93,13 +93,9 @@ impl ProjectControllerTrait for ProjectController {
                                 request
                                     .token_string()
                                     .map_err(|_err| {
-                                        Status::internal(
-                                            "failed to get token from request metadata",
-                                        )
+                                        Status::invalid_argument("token string from request metadata could not be stringified")
                                     })?
-                                    .ok_or(Status::internal(
-                                        "failed to get token from request metadata",
-                                    ))?,
+                                    .ok_or(Status::invalid_argument("token string from request metadata could not be stringified"))?,
                             )
                             .await
                             .map_err(|err| Status::new(Code::Internal, err.to_string()))?
@@ -229,7 +225,11 @@ impl ProjectControllerTrait for ProjectController {
                 TokenType::AccessToken,
                 request
                     .token_string()
-                    .map_err(|_err| Status::internal("failed to get token from request metadata"))?
+                    .map_err(|_err| {
+                        Status::invalid_argument(
+                            "token string from request metadata could not be stringified",
+                        )
+                    })?
                     .ok_or(Status::internal(
                         "failed to get token from request metadata",
                     ))?,
@@ -318,7 +318,11 @@ impl ProjectControllerTrait for ProjectController {
                 TokenType::AccessToken,
                 request
                     .token_string()
-                    .map_err(|_err| Status::internal("failed to get token from request metadata"))?
+                    .map_err(|_err| {
+                        Status::invalid_argument(
+                            "token string from request metadata could not be stringified",
+                        )
+                    })?
                     .ok_or(Status::internal(
                         "failed to get token from request metadata",
                     ))?,

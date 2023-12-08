@@ -281,7 +281,7 @@ impl From<TokenError> for Status {
 pub trait RequestExt {
     fn token_str(&self) -> Result<Option<&str>, ToStrError>;
     fn token_string(&self) -> Result<Option<String>, ToStrError>;
-    fn uid(&self) -> Result<Option<i32>,ToStrError>;
+    fn uid(&self) -> Result<Option<i32>, ToStrError>;
 }
 
 impl<T> RequestExt for Request<T> {
@@ -306,12 +306,11 @@ impl<T> RequestExt for Request<T> {
     /// Returns the uid from the request metadata.
     fn uid(&self) -> Result<Option<i32>, ToStrError> {
         match self.metadata().get("uid") {
-            Some(val) => {
-                match val.to_str()?.parse::<i32>() {
-                    Ok(val) => Ok(Some(val)),
-                    Err(_err) => Ok(None),
-                }},
-            None => return Ok(None),
+            Some(val) => match val.to_str()?.parse::<i32>() {
+                Ok(val) => Ok(Some(val)),
+                Err(_err) => Ok(None),
+            },
+            None => Ok(None),
         }
     }
 }
