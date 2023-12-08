@@ -1,6 +1,6 @@
 use crate::api::auth::RequestExt;
-use crate::api::server::server::create_access_request::User;
-use crate::api::server::server::{
+use crate::api::server::protobuf::create_access_request::User;
+use crate::api::server::protobuf::{
     CreateAccessRequest, DeleteAccessRequest, ListAccessInfoRequest, ListAccessInfoResponse,
     UpdateAccessRequest,
 };

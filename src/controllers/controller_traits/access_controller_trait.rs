@@ -1,4 +1,4 @@
-use crate::api::server::server::{
+use crate::api::server::protobuf::{
     CreateAccessRequest, DeleteAccessRequest, ListAccessInfoRequest, ListAccessInfoResponse,
     UpdateAccessRequest,
 };

@@ -1,6 +1,6 @@
 use crate::api::auth::{RequestExt, Token, TokenError, TokenType};
-use crate::api::server::server::get_auth_token_request::{user_credentials, UserCredentials};
-use crate::api::server::server::{GetAuthTokenRequest, GetAuthTokenResponse};
+use crate::api::server::protobuf::get_auth_token_request::{user_credentials, UserCredentials};
+use crate::api::server::protobuf::{GetAuthTokenRequest, GetAuthTokenResponse};
 use crate::contexts::context_collection::ContextCollection;
 use crate::controllers::controller_traits::SessionControllerTrait;
 use crate::entities::{session, user};
@@ -67,7 +67,7 @@ impl SessionController {
                 user_id: session.user_id,
             })
             .await
-            .unwrap();
+            .map_err(|err| Status::internal(format!("a database error occurred, internal message: {}",err)))?;
 
         Ok((access_token, refresh_token))
     }
@@ -81,6 +81,7 @@ impl SessionControllerTrait for SessionController {
     async fn delete_session(&self, request: Request<()>) -> Result<Response<()>, Status> {
         let access_token = request
             .token_string()
+            .map_err(|err| Status::internal(format!("failed to convert token to string, internal error: {}",err)))?
             .ok_or(Status::unauthenticated("No access token provided"))?;
 
         match self
@@ -112,6 +113,7 @@ impl SessionControllerTrait for SessionController {
                     TokenType::RefreshToken,
                     request
                         .token_str()
+                        .map_err(|err| Status::internal(format!("failed to convert token to string, internal error: {}",err)))?
                         .ok_or(Status::unauthenticated("No refresh token provided"))?,
                 );
 
@@ -146,6 +148,7 @@ impl SessionControllerTrait for SessionController {
                     .services
                     .hashing_service
                     .verify_password(input_password, user.password.as_str())
+                    .map_err(|__err| Status::internal("failed to verify password"))?
                 {
                     return Err(Status::unauthenticated("Wrong username or password"));
                 }
@@ -162,7 +165,7 @@ impl SessionControllerTrait for SessionController {
                         access_token: access_token.to_string(),
                         refresh_token: refresh_token.to_string(),
                         updated_at: Default::default(),
-                        user_id: uid.parse().unwrap(),
+                        user_id: uid.parse().map_err(|err| Status::internal(format!("failed to parse user id, internal error: {}",err)))?,
                     })
                     .await
                     .map_err(|err| Status::internal(err.to_string()))?;

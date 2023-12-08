@@ -1,5 +1,5 @@
 use crate::api::auth::RequestExt;
-use crate::api::server::server::{
+use crate::api::server::protobuf::{
     CreateQueryRequest, DeleteQueryRequest, QueryRequest, SendQueryRequest, SendQueryResponse,
     UpdateQueryRequest,
 };
@@ -35,7 +35,7 @@ impl QueryControllerTrait for QueryController {
         let access = self
             .contexts
             .access_context
-            .get_access_by_uid_and_project_id(request.uid().unwrap(), query_request.project_id)
+            .get_access_by_uid_and_project_id(request.uid().ok_or(Status::internal("failed to get user id from request metadata"))?, query_request.project_id)
             .await
             .map_err(|err| Status::new(Code::Internal, err.to_string()))?
             .ok_or_else(|| {
@@ -92,7 +92,7 @@ impl QueryControllerTrait for QueryController {
         let access = self
             .contexts
             .access_context
-            .get_access_by_uid_and_project_id(request.uid().unwrap(), old_query.project_id)
+            .get_access_by_uid_and_project_id(request.uid().ok_or(Status::internal("failed to get user id from request metadata"))?, old_query.project_id)
             .await
             .map_err(|err| Status::new(Code::Internal, err.to_string()))?
             .ok_or_else(|| {
@@ -143,7 +143,7 @@ impl QueryControllerTrait for QueryController {
         let access = self
             .contexts
             .access_context
-            .get_access_by_uid_and_project_id(request.uid().unwrap(), query.project_id)
+            .get_access_by_uid_and_project_id(request.uid().ok_or(Status::internal("failed to get user id from request metadata"))?, query.project_id)
             .await
             .map_err(|err| Status::new(Code::Internal, err.to_string()))?
             .ok_or_else(|| {
@@ -181,7 +181,7 @@ impl QueryControllerTrait for QueryController {
     ) -> Result<Response<SendQueryResponse>, Status> {
         let message = request.get_ref();
 
-        let uid = request.uid().unwrap();
+        let uid = request.uid().ok_or(Status::internal("failed to get user id from request metadata"))?;
 
         // Verify user access
         self.contexts
@@ -219,7 +219,8 @@ impl QueryControllerTrait for QueryController {
             user_id: uid,
             query_id: message.id,
             query: query.string.clone(),
-            components_info: serde_json::from_value(project.components_info).unwrap(),
+            components_info: serde_json::from_value(project.components_info)
+                .map_err(|err| Status::internal(format!("error parsing query result, internal error: {}", err)))?,
             settings: Default::default(), //TODO
         });
 
@@ -237,7 +238,10 @@ impl QueryControllerTrait for QueryController {
                 id: query.id,
                 string: query.string.clone(),
                 result: Some(
-                    serde_json::to_value(query_result.get_ref().result.clone().unwrap()).unwrap(),
+                    serde_json::to_value(query_result.get_ref().result.clone()
+                    .ok_or(Status::internal("failed to get query result"))? //TODO better error message ?
+                    )
+                    .map_err(|err| Status::internal(format!("error parsing query result, internal error: {}", err)))?,
                 ),
                 outdated: false,
                 project_id: query.project_id,

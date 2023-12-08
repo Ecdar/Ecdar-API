@@ -1,4 +1,4 @@
-use crate::api::server::server::AccessInfo;
+use crate::api::server::protobuf::AccessInfo;
 use crate::contexts::context_traits::{
     AccessContextTrait, DatabaseContextTrait, EntityContextTrait,
 };

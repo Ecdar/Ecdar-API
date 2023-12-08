@@ -4,7 +4,7 @@ use crate::tests::controllers::helpers::disguise_context_mocks;
 use crate::{
     api::{
         auth::TokenType,
-        server::server::{
+        server::protobuf::{
             component::Rep, Component, ComponentsInfo, CreateProjectRequest, DeleteProjectRequest,
             GetProjectRequest, ProjectInfo, UpdateProjectRequest,
         },

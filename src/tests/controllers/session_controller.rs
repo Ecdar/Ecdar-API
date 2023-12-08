@@ -8,8 +8,8 @@ use crate::tests::controllers::helpers::{
 };
 
 use crate::api::auth::{Token, TokenType};
-use crate::api::server::server::get_auth_token_request::{user_credentials, UserCredentials};
-use crate::api::server::server::GetAuthTokenRequest;
+use crate::api::server::protobuf::get_auth_token_request::{user_credentials, UserCredentials};
+use crate::api::server::protobuf::GetAuthTokenRequest;
 use crate::controllers::controller_impls::SessionController;
 use crate::controllers::controller_traits::SessionControllerTrait;
 use sea_orm::DbErr;
@@ -161,7 +161,7 @@ async fn get_auth_token_from_credentials_returns_ok() {
     mock_services
         .hashing_service_mock
         .expect_verify_password()
-        .returning(move |_, _| true);
+        .returning(move |_, _| Ok(true));
 
     mock_contexts
         .session_context_mock

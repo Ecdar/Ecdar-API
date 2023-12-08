@@ -1,4 +1,4 @@
-use crate::api::server::server::{
+use crate::api::server::protobuf::{
     CreateQueryRequest, DeleteQueryRequest, SendQueryRequest, SendQueryResponse, UpdateQueryRequest,
 };
 use async_trait::async_trait;

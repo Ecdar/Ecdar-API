@@ -1,5 +1,5 @@
-use crate::api::server::server::create_access_request::User;
-use crate::api::server::server::{
+use crate::api::server::protobuf::create_access_request::User;
+use crate::api::server::protobuf::{
     AccessInfo, CreateAccessRequest, DeleteAccessRequest, ListAccessInfoRequest,
     UpdateAccessRequest,
 };

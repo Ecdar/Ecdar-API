@@ -1,4 +1,4 @@
-use crate::api::server::server::{GetAuthTokenRequest, GetAuthTokenResponse};
+use crate::api::server::protobuf::{GetAuthTokenRequest, GetAuthTokenResponse};
 use async_trait::async_trait;
 use tonic::{Request, Response, Status};
 

@@ -26,7 +26,7 @@ impl SQLiteDatabaseContext {
 #[async_trait]
 impl DatabaseContextTrait for SQLiteDatabaseContext {
     async fn reset(&self) -> Result<Arc<dyn DatabaseContextTrait>, DbErr> {
-        Migrator::fresh(&self.db_connection).await.unwrap();
+        Migrator::fresh(&self.db_connection).await?;
 
         Ok(Arc::new(SQLiteDatabaseContext {
             db_connection: self.get_connection(),

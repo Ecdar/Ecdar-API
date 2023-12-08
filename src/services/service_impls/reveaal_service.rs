@@ -1,5 +1,5 @@
-use crate::api::server::server::ecdar_backend_client::EcdarBackendClient;
-use crate::api::server::server::{
+use crate::api::server::protobuf::ecdar_backend_client::EcdarBackendClient;
+use crate::api::server::protobuf::{
     QueryRequest, QueryResponse, SimulationStartRequest, SimulationStepRequest,
     SimulationStepResponse, UserTokenResponse,
 };
@@ -13,9 +13,10 @@ use tonic::{Request, Response, Status};
 pub struct ReveaalService;
 
 impl ReveaalController {
-    async fn get_connection() -> EcdarBackendClient<Channel> {
+    #[allow(clippy::expect_used)]
+    async fn get_connection() -> Result<EcdarBackendClient<Channel>,tonic::transport::Error> {
         let url = env::var("REVEAAL_ADDRESS").expect("Expected REVEAAL_ADDRESS to be set.");
-        EcdarBackendClient::connect(url).await.unwrap()
+        EcdarBackendClient::connect(url).await
     }
 }
 
@@ -27,9 +28,9 @@ impl ReveaalServiceTrait for ReveaalService {
     ) -> Result<Response<UserTokenResponse>, Status> {
         Ok(ReveaalController::get_connection()
             .await
+            .map_err(|err| Status::internal(format!("{err}")))?
             .get_user_token(request)
-            .await
-            .unwrap())
+            .await?)
     }
 
     async fn send_query(
@@ -38,9 +39,9 @@ impl ReveaalServiceTrait for ReveaalService {
     ) -> Result<Response<QueryResponse>, Status> {
         Ok(ReveaalController::get_connection()
             .await
+            .map_err(|err| Status::internal(format!("{err}")))?
             .send_query(request)
-            .await
-            .unwrap())
+            .await?)
     }
 
     async fn start_simulation(
@@ -49,9 +50,9 @@ impl ReveaalServiceTrait for ReveaalService {
     ) -> Result<Response<SimulationStepResponse>, Status> {
         Ok(ReveaalController::get_connection()
             .await
+            .map_err(|err| Status::internal(format!("{err}")))?
             .start_simulation(request)
-            .await
-            .unwrap())
+            .await?)
     }
 
     async fn take_simulation_step(
@@ -60,8 +61,8 @@ impl ReveaalServiceTrait for ReveaalService {
     ) -> Result<Response<SimulationStepResponse>, Status> {
         Ok(ReveaalController::get_connection()
             .await
+            .map_err(|err| Status::internal(format!("{err}")))?
             .take_simulation_step(request)
-            .await
-            .unwrap())
+            .await?)
     }
 }
