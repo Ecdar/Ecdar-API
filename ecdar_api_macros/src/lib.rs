@@ -7,6 +7,8 @@ use syn::{parse_macro_input, ImplItem, Item, ItemImpl, ItemMod};
 pub fn endpoints(_attr: TokenStream, item: TokenStream) -> TokenStream {
     let mut item_mod: ItemMod = parse_macro_input!(item as ItemMod);
 
+    // Extract the name of the trait that is being Implemented.
+    // The trait name is the service in the protobuffer file.
     let impl_names: Vec<String> = item_mod
         .clone()
         .content
@@ -32,6 +34,7 @@ pub fn endpoints(_attr: TokenStream, item: TokenStream) -> TokenStream {
         .unwrap()
         .collect();
 
+    // Implementations that does not implement a trait is filtered out.
     let names: Vec<String> = impl_names
         .clone()
         .into_iter()
@@ -42,6 +45,7 @@ pub fn endpoints(_attr: TokenStream, item: TokenStream) -> TokenStream {
 
     let items_impl: Vec<Item> = item_mod.clone().content.unwrap().1;
 
+    // Will convert Item to ItemImpl
     let items_impl: Vec<ItemImpl> = items_impl
         .into_iter()
         .filter_map(|item| match item {
@@ -50,12 +54,14 @@ pub fn endpoints(_attr: TokenStream, item: TokenStream) -> TokenStream {
         })
         .collect();
 
+    // Filter out impl without trait.
     let items_impl: Vec<ItemImpl> = items_impl
         .clone()
         .into_iter()
         .filter(|item| item.trait_.is_some())
         .collect();
 
+    // Iterate over all functions in an implementation and adds the name of trait and function in Pascal case.
     for i in 0..items_impl.len() {
         let existing_functions: Vec<String> = items_impl[i]
             .items
@@ -73,6 +79,7 @@ pub fn endpoints(_attr: TokenStream, item: TokenStream) -> TokenStream {
         }
     }
 
+    // The endpoints function is constructed.
     let new_function: TokenStream = quote! {
         async fn endpoints(&self, request: tonic::Request<()>) -> std::result::Result<tonic::Response<EndpointsResponse>, tonic::Status> {
             let names = vec![#(#endpoints.to_string()),*];
@@ -84,6 +91,7 @@ pub fn endpoints(_attr: TokenStream, item: TokenStream) -> TokenStream {
     .into();
 
     // It's cursed, but what could be expected from traversing an AST without some kind of pattern.
+    // A method of getting the reference to the "EcdarApiAuth" implementation
     let specific_impl: Option<&mut ItemImpl> = item_mod
         .content
         .as_mut()
@@ -103,13 +111,16 @@ pub fn endpoints(_attr: TokenStream, item: TokenStream) -> TokenStream {
         })
         .unwrap();
 
+    // Appends the function to the implementation.
     if let Some(impl_item) = specific_impl {
         impl_item
             .items
             .push(parse_macro_input!(new_function as ImplItem));
     }
 
+    // Construct the tokens for the hole module.
     let output = quote! {#item_mod};
 
     output.into()
 }
+
