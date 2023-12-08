@@ -131,8 +131,11 @@ impl UserControllerTrait for UserController {
                 None => user.email,
             },
             password: match message.clone().password {
-                Some(password) => self.services.hashing_service.hash_password(password)
-                .map_err(|_err| Status::internal("failed to hash password"))?,
+                Some(password) => self
+                    .services
+                    .hashing_service
+                    .hash_password(password)
+                    .map_err(|_err| Status::internal("failed to hash password"))?,
                 None => user.password,
             },
         };

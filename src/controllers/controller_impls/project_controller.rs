@@ -65,8 +65,12 @@ impl ProjectControllerTrait for ProjectController {
         let project = Project {
             id: project.id,
             name: project.name,
-            components_info: serde_json::from_value(project.components_info)
-                .map_err(|err| Status::internal(format!("failed to parse components info object, internal error: {}",err)))?,
+            components_info: serde_json::from_value(project.components_info).map_err(|err| {
+                Status::internal(format!(
+                    "failed to parse components info object, internal error: {}",
+                    err
+                ))
+            })?,
             owner_id: project.owner_id,
         };
 
@@ -83,9 +87,19 @@ impl ProjectControllerTrait for ProjectController {
                         let session = self
                             .contexts
                             .session_context
-                            .get_by_token(TokenType::AccessToken, request.token_string()
-                            .map_err(|_err| Status::internal("failed to get token from request metadata"))?
-                            .ok_or(Status::internal("failed to get token from request metadata"))?)
+                            .get_by_token(
+                                TokenType::AccessToken,
+                                request
+                                    .token_string()
+                                    .map_err(|_err| {
+                                        Status::internal(
+                                            "failed to get token from request metadata",
+                                        )
+                                    })?
+                                    .ok_or(Status::internal(
+                                        "failed to get token from request metadata",
+                                    ))?,
+                            )
                             .await
                             .map_err(|err| Status::new(Code::Internal, err.to_string()))?
                             .ok_or_else(|| {
@@ -120,7 +134,7 @@ impl ProjectControllerTrait for ProjectController {
             .await
             .map_err(|err| Status::new(Code::Internal, err.to_string()))?;
 
-            let queries = queries
+        let queries = queries
             .into_iter()
             .map(|query| {
                 let result = serde_json::from_value(query.result.unwrap_or_else(|| "".into()))?;
@@ -158,8 +172,12 @@ impl ProjectControllerTrait for ProjectController {
             .ok_or(Status::internal("Could not get uid from request metadata"))?;
 
         let components_info = match message.clone().components_info {
-            Some(components_info) => serde_json::to_value(components_info)
-            .map_err(|err| Status::internal(format!("failed to parse components info object, internal error: {}",err)))?,
+            Some(components_info) => serde_json::to_value(components_info).map_err(|err| {
+                Status::internal(format!(
+                    "failed to parse components info object, internal error: {}",
+                    err
+                ))
+            })?,
             None => return Err(Status::invalid_argument("No components info provided")),
         };
 
@@ -205,9 +223,15 @@ impl ProjectControllerTrait for ProjectController {
         let session = self
             .contexts
             .session_context
-            .get_by_token(TokenType::AccessToken, request.token_string()
-            .map_err(|_err| Status::internal("failed to get token from request metadata"))?
-            .ok_or(Status::internal("failed to get token from request metadata"))?)
+            .get_by_token(
+                TokenType::AccessToken,
+                request
+                    .token_string()
+                    .map_err(|_err| Status::internal("failed to get token from request metadata"))?
+                    .ok_or(Status::internal(
+                        "failed to get token from request metadata",
+                    ))?,
+            )
             .await
             .map_err(|_err| Status::internal("failed to query database"))? //TODO better error message
             .ok_or(Status::not_found("token not found"))?;
@@ -218,10 +242,20 @@ impl ProjectControllerTrait for ProjectController {
             latest_activity: Default::default(),
         };
 
-        self.contexts.in_use_context.create(in_use).await
-        .map_err(|err| Status::internal(format!("a database error occured, internal error: {}",err)))?;
-        self.contexts.access_context.create(access).await
-        .map_err(|err| Status::internal(format!("a database error occured, internal error: {}",err)))?;
+        self.contexts
+            .in_use_context
+            .create(in_use)
+            .await
+            .map_err(|err| {
+                Status::internal(format!("a database error occured, internal error: {}", err))
+            })?;
+        self.contexts
+            .access_context
+            .create(access)
+            .await
+            .map_err(|err| {
+                Status::internal(format!("a database error occured, internal error: {}", err))
+            })?;
 
         Ok(Response::new(CreateProjectResponse { id: project.id }))
     }
@@ -277,9 +311,15 @@ impl ProjectControllerTrait for ProjectController {
         let session = match self
             .contexts
             .session_context
-            .get_by_token(TokenType::AccessToken, request.token_string()
-            .map_err(|_err| Status::internal("failed to get token from request metadata"))?
-            .ok_or(Status::internal("failed to get token from request metadata"))?)
+            .get_by_token(
+                TokenType::AccessToken,
+                request
+                    .token_string()
+                    .map_err(|_err| Status::internal("failed to get token from request metadata"))?
+                    .ok_or(Status::internal(
+                        "failed to get token from request metadata",
+                    ))?,
+            )
             .await
         {
             Ok(Some(session)) => session,
@@ -326,8 +366,12 @@ impl ProjectControllerTrait for ProjectController {
                 None => project.name,
             },
             components_info: match message.clone().components_info {
-                Some(components_info) => serde_json::to_value(components_info)
-                .map_err(|err| Status::internal(format!("failed to parse components info object, internal error: {}",err)))?, // TODO unwrap
+                Some(components_info) => serde_json::to_value(components_info).map_err(|err| {
+                    Status::internal(format!(
+                        "failed to parse components info object, internal error: {}",
+                        err
+                    ))
+                })?, // TODO unwrap
                 None => project.components_info,
             },
             owner_id: match message.clone().owner_id {

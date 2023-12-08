@@ -1,5 +1,5 @@
 use crate::services::service_traits::hashing_service_trait::HashingServiceTrait;
-use bcrypt::{hash, verify, DEFAULT_COST, BcryptError};
+use bcrypt::{hash, verify, BcryptError, DEFAULT_COST};
 
 pub struct HashingService;
 

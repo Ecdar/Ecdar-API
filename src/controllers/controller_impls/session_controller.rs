@@ -67,7 +67,12 @@ impl SessionController {
                 user_id: session.user_id,
             })
             .await
-            .map_err(|err| Status::internal(format!("a database error occurred, internal message: {}",err)))?;
+            .map_err(|err| {
+                Status::internal(format!(
+                    "a database error occurred, internal message: {}",
+                    err
+                ))
+            })?;
 
         Ok((access_token, refresh_token))
     }
@@ -81,7 +86,12 @@ impl SessionControllerTrait for SessionController {
     async fn delete_session(&self, request: Request<()>) -> Result<Response<()>, Status> {
         let access_token = request
             .token_string()
-            .map_err(|err| Status::internal(format!("failed to convert token to string, internal error: {}",err)))?
+            .map_err(|err| {
+                Status::internal(format!(
+                    "failed to convert token to string, internal error: {}",
+                    err
+                ))
+            })?
             .ok_or(Status::unauthenticated("No access token provided"))?;
 
         match self
@@ -113,7 +123,12 @@ impl SessionControllerTrait for SessionController {
                     TokenType::RefreshToken,
                     request
                         .token_str()
-                        .map_err(|err| Status::internal(format!("failed to convert token to string, internal error: {}",err)))?
+                        .map_err(|err| {
+                            Status::internal(format!(
+                                "failed to convert token to string, internal error: {}",
+                                err
+                            ))
+                        })?
                         .ok_or(Status::unauthenticated("No refresh token provided"))?,
                 );
 
@@ -165,7 +180,12 @@ impl SessionControllerTrait for SessionController {
                         access_token: access_token.to_string(),
                         refresh_token: refresh_token.to_string(),
                         updated_at: Default::default(),
-                        user_id: uid.parse().map_err(|err| Status::internal(format!("failed to parse user id, internal error: {}",err)))?,
+                        user_id: uid.parse().map_err(|err| {
+                            Status::internal(format!(
+                                "failed to parse user id, internal error: {}",
+                                err
+                            ))
+                        })?,
                     })
                     .await
                     .map_err(|err| Status::internal(err.to_string()))?;

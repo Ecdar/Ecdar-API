@@ -14,7 +14,7 @@ pub struct ReveaalService;
 
 impl ReveaalController {
     #[allow(clippy::expect_used)]
-    async fn get_connection() -> Result<EcdarBackendClient<Channel>,tonic::transport::Error> {
+    async fn get_connection() -> Result<EcdarBackendClient<Channel>, tonic::transport::Error> {
         let url = env::var("REVEAAL_ADDRESS").expect("Expected REVEAAL_ADDRESS to be set.");
         EcdarBackendClient::connect(url).await
     }

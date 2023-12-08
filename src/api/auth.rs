@@ -5,7 +5,10 @@ use jsonwebtoken::{
 
 use serde::{Deserialize, Serialize};
 use std::{env, fmt::Display, str::FromStr};
-use tonic::{metadata::{self, errors::ToStrError}, Request, Status};
+use tonic::{
+    metadata::{self, errors::ToStrError},
+    Request, Status,
+};
 
 /// This method is used to validate the access token (not refresh).
 pub fn validation_interceptor(mut req: Request<()>) -> Result<Request<()>, Status> {
@@ -22,7 +25,7 @@ pub fn validation_interceptor(mut req: Request<()>) -> Result<Request<()>, Statu
             req.metadata_mut().insert(
                 "uid",
                 metadata::MetadataValue::from_str(&token_data.claims.sub)
-                .map_err(|err| Status::internal(err.to_string()))?,
+                    .map_err(|err| Status::internal(err.to_string()))?,
             );
             Ok(req)
         }
@@ -277,8 +280,8 @@ impl From<TokenError> for Status {
 /// An extension trait for [Request]`s that provides a variety of convenient
 /// auth related methods.
 pub trait RequestExt {
-    fn token_str(&self) -> Result<Option<&str>,ToStrError>;
-    fn token_string(&self) -> Result<Option<String>,ToStrError>;
+    fn token_str(&self) -> Result<Option<&str>, ToStrError>;
+    fn token_string(&self) -> Result<Option<String>, ToStrError>;
     fn uid(&self) -> Option<i32>;
 }
 
@@ -297,7 +300,7 @@ impl<T> RequestExt for Request<T> {
     }
 
     /// Returns the token string from the request metadata.
-    fn token_string(&self) -> Result<Option<String>,ToStrError> {
+    fn token_string(&self) -> Result<Option<String>, ToStrError> {
         let res = self.metadata().get("authorization");
         match res {
             Some(val) => Ok(Some(
@@ -308,11 +311,7 @@ impl<T> RequestExt for Request<T> {
     }
     /// Returns the uid from the request metadata.
     fn uid(&self) -> Option<i32> {
-        let uid = match self
-            .metadata()
-            .get("uid")?
-            .to_str()
-        {
+        let uid = match self.metadata().get("uid")?.to_str() {
             Ok(uid) => uid,
             Err(_) => return None,
         };
