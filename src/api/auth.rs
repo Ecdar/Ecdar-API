@@ -4,7 +4,7 @@ use jsonwebtoken::{
 };
 
 use serde::{Deserialize, Serialize};
-use std::{env, fmt::Display, str::FromStr, num::{ParseIntError, IntErrorKind}};
+use std::{env, fmt::Display, str::FromStr};
 use tonic::{
     metadata::{self, errors::ToStrError},
     Request, Status,
@@ -309,7 +309,7 @@ impl<T> RequestExt for Request<T> {
             Some(val) => {
                 match val.to_str()?.parse::<i32>() {
                     Ok(val) => Ok(Some(val)),
-                    Err(err) => Ok(None),
+                    Err(_err) => Ok(None),
                 }},
             None => return Ok(None),
         }
