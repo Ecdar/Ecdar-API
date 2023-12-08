@@ -288,11 +288,7 @@ impl<T> RequestExt for Request<T> {
     /// Returns the token string slice from the request metadata.
     fn token_str(&self) -> Result<Option<&str>, ToStrError> {
         match self.metadata().get("authorization") {
-            Some(token) => Ok(Some(
-                token
-                    .to_str()?
-                    .trim_start_matches("Bearer "),
-            )),
+            Some(token) => Ok(Some(token.to_str()?.trim_start_matches("Bearer "))),
             None => Ok(None),
         }
     }
