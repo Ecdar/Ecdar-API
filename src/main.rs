@@ -32,11 +32,13 @@ use std::sync::Arc;
 async fn main() -> Result<(), Box<dyn Error>> {
     dotenv().ok();
 
-    let url = env::var("DATABASE_URL").expect("Expected DATABASE_URL to be set.");
-    let db = Database::connect(&url).await?;
+    let reveaal_addr = env::var("REVEAAL_ADDRESS").expect("Expected REVEAAL_ADDRESS to be set.");
+    let db_url = env::var("DATABASE_URL").expect("Expected DATABASE_URL to be set.");
+
+    let db = Database::connect(&db_url).await?;
     let db_context: Arc<dyn DatabaseContextTrait> = match db.get_database_backend() {
-        DbBackend::Sqlite => Arc::new(SQLiteDatabaseContext::new(&url).await?),
-        DbBackend::Postgres => Arc::new(PostgresDatabaseContext::new(&url).await?),
+        DbBackend::Sqlite => Arc::new(SQLiteDatabaseContext::new(&db_url).await?),
+        DbBackend::Postgres => Arc::new(PostgresDatabaseContext::new(&db_url).await?),
         _ => panic!("Database protocol not supported"),
     };
 
@@ -51,10 +53,10 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     let services = ServiceCollection {
         hashing_service: Arc::new(HashingService),
-        reveaal_service: Arc::new(ReveaalService),
+        reveaal_service: Arc::new(ReveaalService::new(&reveaal_addr)),
     };
 
-    let logics = ControllerCollection {
+    let controllers = ControllerCollection {
         access_controller: Arc::new(AccessController::new(contexts.clone())),
         project_controller: Arc::new(ProjectController::new(contexts.clone())),
         query_controller: Arc::new(QueryController::new(contexts.clone(), services.clone())),
@@ -63,7 +65,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         reveaal_controller: Arc::new(ReveaalController::new(services.clone())),
     };
 
-    start_grpc_server(logics)
+    start_grpc_server(controllers)
         .await
         .expect("failed to start grpc server");
 
