@@ -8,7 +8,7 @@ use tonic::{Request, Response, Status};
 #[async_trait]
 pub trait AccessControllerTrait: Send + Sync {
     /// handles the list_access_info endpoint
-    /// # Errors 
+    /// # Errors
     /// If an invalid or non-existent [`ListAccessInfoRequest::project_id`] is provided
     async fn list_access_info(
         &self,
@@ -33,7 +33,7 @@ pub trait AccessControllerTrait: Send + Sync {
         &self,
         request: Request<UpdateAccessRequest>,
     ) -> Result<Response<()>, Status>;
-    
+
     /// Deletes the an Access from the contexts. This has no sideeffects.
     ///
     /// # Errors
