@@ -113,7 +113,6 @@ impl EntityContextTrait<query::Model> for QueryContext {
         .await
     }
 
-    /// Delete a query entity by id
     async fn delete(&self, entity_id: i32) -> Result<query::Model, DbErr> {
         let query = self.get_by_id(entity_id).await?;
         match query {
