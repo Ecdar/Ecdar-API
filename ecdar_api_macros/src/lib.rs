@@ -131,4 +131,3 @@ pub fn endpoints(_attr: TokenStream, item: TokenStream) -> TokenStream {
 
     output.into()
 }
-
