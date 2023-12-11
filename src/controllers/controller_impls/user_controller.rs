@@ -1,6 +1,6 @@
 use crate::api::auth::RequestExt;
-use crate::api::server::server::get_users_response::UserInfo;
-use crate::api::server::server::{
+use crate::api::server::protobuf::get_users_response::UserInfo;
+use crate::api::server::protobuf::{
     CreateUserRequest, GetUsersRequest, GetUsersResponse, UpdateUserRequest,
 };
 use crate::contexts::context_collection::ContextCollection;
@@ -23,16 +23,18 @@ impl UserController {
     }
 
     /// Returns true if the given email is a valid format.
+    #[allow(clippy::expect_used)]
     fn is_valid_email(&self, email: &str) -> bool {
         Regex::new(r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$")
-            .unwrap()
+            .expect("failed to compile regex")
             .is_match(email)
     }
 
     /// Returns true if the given username is a valid format, i.e. only contains letters and numbers and a length from 3 to 32.
+    #[allow(clippy::expect_used)]
     fn is_valid_username(&self, username: &str) -> bool {
         Regex::new(r"^[a-zA-Z0-9_]{3,32}$")
-            .unwrap()
+            .expect("failed to compile regex")
             .is_match(username)
     }
 }
@@ -56,7 +58,8 @@ impl UserControllerTrait for UserController {
         let hashed_password = self
             .services
             .hashing_service
-            .hash_password(message.clone().password);
+            .hash_password(message.clone().password)
+            .map_err(|_err| Status::internal("failed to hash password"))?;
 
         let user = user::Model {
             id: Default::default(),
@@ -93,6 +96,12 @@ impl UserControllerTrait for UserController {
 
         let uid = request
             .uid()
+            .map_err(|err| {
+                Status::internal(format!(
+                    "could not stringify user id in request metadata, internal error {}",
+                    err
+                ))
+            })?
             .ok_or(Status::internal("Could not get uid from request metadata"))?;
 
         // Get user from contexts
@@ -128,7 +137,11 @@ impl UserControllerTrait for UserController {
                 None => user.email,
             },
             password: match message.clone().password {
-                Some(password) => self.services.hashing_service.hash_password(password),
+                Some(password) => self
+                    .services
+                    .hashing_service
+                    .hash_password(password)
+                    .map_err(|_err| Status::internal("failed to hash password"))?,
                 None => user.password,
             },
         };
@@ -147,6 +160,12 @@ impl UserControllerTrait for UserController {
     async fn delete_user(&self, request: Request<()>) -> Result<Response<()>, Status> {
         let uid = request
             .uid()
+            .map_err(|err| {
+                Status::internal(format!(
+                    "could not stringify user id in request metadata, internal error {}",
+                    err
+                ))
+            })?
             .ok_or(Status::internal("Could not get uid from request metadata"))?;
 
         // Delete user from contexts

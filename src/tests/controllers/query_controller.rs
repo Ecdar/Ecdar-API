@@ -1,5 +1,5 @@
-use crate::api::server::server::query_response::{self, Result};
-use crate::api::server::server::{
+use crate::api::server::protobuf::query_response::{self, Result};
+use crate::api::server::protobuf::{
     CreateQueryRequest, DeleteQueryRequest, QueryResponse, SendQueryRequest, UpdateQueryRequest,
 };
 use crate::controllers::controller_impls::QueryController;

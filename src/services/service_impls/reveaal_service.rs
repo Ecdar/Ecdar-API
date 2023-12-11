@@ -1,12 +1,12 @@
-use crate::api::server::server::ecdar_backend_client::EcdarBackendClient;
-use crate::api::server::server::{
+use crate::api::server::protobuf::ecdar_backend_client::EcdarBackendClient;
+use crate::api::server::protobuf::{
     QueryRequest, QueryResponse, SimulationStartRequest, SimulationStepRequest,
     SimulationStepResponse, UserTokenResponse,
 };
 use crate::services::service_traits::ReveaalServiceTrait;
 use async_trait::async_trait;
 use tonic::transport::Channel;
-use tonic::{Code, Request, Response, Status};
+use tonic::{Request, Response, Status};
 
 pub struct ReveaalService {
     address: String,
@@ -22,7 +22,7 @@ impl ReveaalService {
     async fn get_connection(&self) -> Result<EcdarBackendClient<Channel>, Status> {
         EcdarBackendClient::connect(self.address.clone())
             .await
-            .map_err(|_| Status::new(Code::Internal, "Could not connect to Reveaal"))
+            .map_err(|err| Status::internal(format!("{err}")))
     }
 }
 

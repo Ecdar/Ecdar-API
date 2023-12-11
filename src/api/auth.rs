@@ -5,12 +5,20 @@ use jsonwebtoken::{
 
 use serde::{Deserialize, Serialize};
 use std::{env, fmt::Display, str::FromStr};
-use tonic::{metadata, Request, Status};
+use tonic::{
+    metadata::{self, errors::ToStrError},
+    Request, Status,
+};
 
 /// This method is used to validate the access token (not refresh).
 pub fn validation_interceptor(mut req: Request<()>) -> Result<Request<()>, Status> {
-    let token = match req.token_str() {
-        Some(token) => Token::from_str(TokenType::AccessToken, token),
+    let token = match req.token_string().map_err(|err| {
+        Status::internal(format!(
+            "could not stringify user id in request metadata, internal error {}",
+            err
+        ))
+    })? {
+        Some(token) => Token::from_str(TokenType::AccessToken, &token),
         None => return Err(Status::unauthenticated("Token not found")),
     };
 
@@ -18,7 +26,8 @@ pub fn validation_interceptor(mut req: Request<()>) -> Result<Request<()>, Statu
         Ok(token_data) => {
             req.metadata_mut().insert(
                 "uid",
-                metadata::MetadataValue::from_str(&token_data.claims.sub).unwrap(),
+                metadata::MetadataValue::from_str(&token_data.claims.sub)
+                    .map_err(|err| Status::internal(err.to_string()))?,
             );
             Ok(req)
         }
@@ -50,6 +59,7 @@ impl TokenType {
     ///
     /// # Panics
     /// This method will panic if the token secret environment variable is not set.
+    #[allow(clippy::expect_used)]
     fn secret(&self) -> String {
         match self {
             TokenType::AccessToken => env::var("ACCESS_TOKEN_HS512_SECRET")
@@ -98,7 +108,7 @@ impl Token {
         let now = Utc::now();
         let expiration = now
             .checked_add_signed(token_type.duration())
-            .expect("valid timestamp")
+            .ok_or(TokenError::InvalidSignature)?
             .timestamp();
 
         let claims = Claims {
@@ -203,6 +213,7 @@ impl Token {
     ///
     /// assert_eq!(token.as_str(), "token");
     /// ```
+    #[allow(dead_code)]
     pub fn as_str(&self) -> &str {
         &self.token
     }
@@ -217,6 +228,7 @@ impl Token {
     ///
     /// assert_eq!(token.token_type(), TokenType::AccessToken);
     /// ```
+    #[allow(dead_code)]
     pub fn token_type(&self) -> TokenType {
         self.token_type.clone()
     }
@@ -269,30 +281,39 @@ impl From<TokenError> for Status {
 /// An extension trait for [Request]`s that provides a variety of convenient
 /// auth related methods.
 pub trait RequestExt {
-    fn token_str(&self) -> Option<&str>;
-    fn token_string(&self) -> Option<String>;
-    fn uid(&self) -> Option<i32>;
+    fn token_str(&self) -> Result<Option<&str>, ToStrError>;
+    fn token_string(&self) -> Result<Option<String>, ToStrError>;
+    fn uid(&self) -> Result<Option<i32>, ToStrError>;
 }
 
 impl<T> RequestExt for Request<T> {
     /// Returns the token string slice from the request metadata.
-    fn token_str(&self) -> Option<&str> {
-        self.metadata()
-            .get("authorization")
-            .and_then(|token| token.to_str().ok())
-            .map(|token_str| token_str.trim_start_matches("Bearer "))
+    fn token_str(&self) -> Result<Option<&str>, ToStrError> {
+        match self.metadata().get("authorization") {
+            Some(token) => Ok(Some(token.to_str()?.trim_start_matches("Bearer "))),
+            None => Ok(None),
+        }
     }
 
     /// Returns the token string from the request metadata.
-    fn token_string(&self) -> Option<String> {
-        self.token_str().map(String::from)
+    fn token_string(&self) -> Result<Option<String>, ToStrError> {
+        let res = self.metadata().get("authorization");
+        match res {
+            Some(val) => Ok(Some(
+                val.to_str()?.trim_start_matches("Bearer ").to_string(),
+            )),
+            None => Ok(None),
+        }
     }
     /// Returns the uid from the request metadata.
-    fn uid(&self) -> Option<i32> {
-        self.metadata()
-            .get("uid")
-            .and_then(|uid| uid.to_str().ok())
-            .and_then(|uid_str| uid_str.parse().ok())
+    fn uid(&self) -> Result<Option<i32>, ToStrError> {
+        match self.metadata().get("uid") {
+            Some(val) => match val.to_str()?.parse::<i32>() {
+                Ok(val) => Ok(Some(val)),
+                Err(_err) => Ok(None),
+            },
+            None => Ok(None),
+        }
     }
 }
 

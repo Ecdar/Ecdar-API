@@ -1,5 +1,5 @@
 use crate::api::auth::{RequestExt, TokenType};
-use crate::api::server::server::{
+use crate::api::server::protobuf::{
     CreateProjectRequest, CreateProjectResponse, DeleteProjectRequest, GetProjectRequest,
     GetProjectResponse, ListProjectsInfoResponse, Project, Query, UpdateProjectRequest,
 };
@@ -39,6 +39,12 @@ impl ProjectControllerTrait for ProjectController {
 
         let uid = request
             .uid()
+            .map_err(|err| {
+                Status::internal(format!(
+                    "could not stringify user id in request metadata, internal error {}",
+                    err
+                ))
+            })?
             .ok_or(Status::internal("Could not get uid from request metadata"))?;
 
         let access = self
@@ -65,7 +71,12 @@ impl ProjectControllerTrait for ProjectController {
         let project = Project {
             id: project.id,
             name: project.name,
-            components_info: serde_json::from_value(project.components_info).unwrap(),
+            components_info: serde_json::from_value(project.components_info).map_err(|err| {
+                Status::internal(format!(
+                    "failed to parse components info object, internal error: {}",
+                    err
+                ))
+            })?,
             owner_id: project.owner_id,
         };
 
@@ -82,7 +93,13 @@ impl ProjectControllerTrait for ProjectController {
                         let session = self
                             .contexts
                             .session_context
-                            .get_by_token(TokenType::AccessToken, request.token_string().unwrap())
+                            .get_by_token(
+                                TokenType::AccessToken,
+                                request
+                                    .token_string()
+                                    .map_err(|err| Status::internal(format!("could not stringify user id in request metadata, internal error {}",err)))?
+                                    .ok_or(Status::invalid_argument("failed to get token from request metadata"))?,
+                            )
                             .await
                             .map_err(|err| Status::new(Code::Internal, err.to_string()))?
                             .ok_or_else(|| {
@@ -119,17 +136,24 @@ impl ProjectControllerTrait for ProjectController {
 
         let queries = queries
             .into_iter()
-            .map(|query| Query {
-                id: query.id,
-                project_id: query.project_id,
-                query: query.string,
-                result: match query.result {
-                    Some(result) => serde_json::from_value(result).unwrap(),
-                    None => "".to_owned(),
-                },
-                outdated: query.outdated,
+            .map(|query| {
+                let result = serde_json::from_value(query.result.unwrap_or_else(|| "".into()))?;
+
+                Ok(Query {
+                    id: query.id,
+                    project_id: query.project_id,
+                    query: query.string,
+                    result,
+                    outdated: query.outdated,
+                })
             })
-            .collect::<Vec<Query>>();
+            .collect::<Result<Vec<Query>, serde_json::Error>>()
+            .map_err(|err| {
+                Status::internal(format!(
+                    "failed to parse json result, inner error:  {}",
+                    err
+                ))
+            })?;
 
         Ok(Response::new(GetProjectResponse {
             project: Some(project),
@@ -145,10 +169,21 @@ impl ProjectControllerTrait for ProjectController {
         let message = request.get_ref().clone();
         let uid = request
             .uid()
+            .map_err(|err| {
+                Status::internal(format!(
+                    "could not stringify user id in request metadata, internal error {}",
+                    err
+                ))
+            })?
             .ok_or(Status::internal("Could not get uid from request metadata"))?;
 
         let components_info = match message.clone().components_info {
-            Some(components_info) => serde_json::to_value(components_info).unwrap(),
+            Some(components_info) => serde_json::to_value(components_info).map_err(|err| {
+                Status::internal(format!(
+                    "failed to parse components info object, internal error: {}",
+                    err
+                ))
+            })?,
             None => return Err(Status::invalid_argument("No components info provided")),
         };
 
@@ -194,10 +229,23 @@ impl ProjectControllerTrait for ProjectController {
         let session = self
             .contexts
             .session_context
-            .get_by_token(TokenType::AccessToken, request.token_string().unwrap())
+            .get_by_token(
+                TokenType::AccessToken,
+                request
+                    .token_string()
+                    .map_err(|err| {
+                        Status::internal(format!(
+                            "could not stringify user id in request metadata, internal error {}",
+                            err
+                        ))
+                    })?
+                    .ok_or(Status::internal(
+                        "failed to get token from request metadata",
+                    ))?,
+            )
             .await
-            .unwrap()
-            .unwrap();
+            .map_err(|_err| Status::internal("failed to query database"))?
+            .ok_or(Status::not_found("token not found"))?;
 
         let in_use = in_use::Model {
             project_id: project.clone().id,
@@ -205,8 +253,20 @@ impl ProjectControllerTrait for ProjectController {
             latest_activity: Default::default(),
         };
 
-        self.contexts.in_use_context.create(in_use).await.unwrap();
-        self.contexts.access_context.create(access).await.unwrap();
+        self.contexts
+            .in_use_context
+            .create(in_use)
+            .await
+            .map_err(|err| {
+                Status::internal(format!("a database error occured, internal error: {}", err))
+            })?;
+        self.contexts
+            .access_context
+            .create(access)
+            .await
+            .map_err(|err| {
+                Status::internal(format!("a database error occured, internal error: {}", err))
+            })?;
 
         Ok(Response::new(CreateProjectResponse { id: project.id }))
     }
@@ -223,6 +283,12 @@ impl ProjectControllerTrait for ProjectController {
         let message = request.get_ref().clone();
         let uid = request
             .uid()
+            .map_err(|err| {
+                Status::internal(format!(
+                    "could not stringify user id in request metadata, internal error {}",
+                    err
+                ))
+            })?
             .ok_or(Status::internal("Could not get uid from request metadata"))?;
 
         // Check if the project exists
@@ -262,7 +328,20 @@ impl ProjectControllerTrait for ProjectController {
         let session = match self
             .contexts
             .session_context
-            .get_by_token(TokenType::AccessToken, request.token_string().unwrap())
+            .get_by_token(
+                TokenType::AccessToken,
+                request
+                    .token_string()
+                    .map_err(|err| {
+                        Status::internal(format!(
+                            "could not stringify user id in request metadata, internal error {}",
+                            err
+                        ))
+                    })?
+                    .ok_or(Status::internal(
+                        "failed to get token from request metadata",
+                    ))?,
+            )
             .await
         {
             Ok(Some(session)) => session,
@@ -309,7 +388,12 @@ impl ProjectControllerTrait for ProjectController {
                 None => project.name,
             },
             components_info: match message.clone().components_info {
-                Some(components_info) => serde_json::to_value(components_info).unwrap(),
+                Some(components_info) => serde_json::to_value(components_info).map_err(|err| {
+                    Status::internal(format!(
+                        "failed to parse components info object, internal error: {}",
+                        err
+                    ))
+                })?,
                 None => project.components_info,
             },
             owner_id: match message.clone().owner_id {
@@ -343,6 +427,12 @@ impl ProjectControllerTrait for ProjectController {
     ) -> Result<Response<()>, Status> {
         let uid = request
             .uid()
+            .map_err(|err| {
+                Status::internal(format!(
+                    "could not stringify user id in request metadata, internal error {}",
+                    err
+                ))
+            })?
             .ok_or(Status::internal("Could not get uid from request metadata"))?;
         let project_id = request.get_ref().id;
 
@@ -382,6 +472,12 @@ impl ProjectControllerTrait for ProjectController {
     ) -> Result<Response<ListProjectsInfoResponse>, Status> {
         let uid = request
             .uid()
+            .map_err(|err| {
+                Status::internal(format!(
+                    "could not stringify user id in request metadata, internal error {}",
+                    err
+                ))
+            })?
             .ok_or(Status::internal("Could not get uid from request metadata"))?;
 
         match self

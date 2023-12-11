@@ -3,7 +3,7 @@ use crate::contexts::context_traits::{
 };
 use crate::entities::{access, project, query};
 
-use crate::api::server::server::ProjectInfo;
+use crate::api::server::protobuf::ProjectInfo;
 use async_trait::async_trait;
 use sea_orm::{
     ActiveModelTrait, ColumnTrait, DbErr, EntityTrait, IntoActiveModel, JoinType, ModelTrait,

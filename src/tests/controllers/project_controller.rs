@@ -4,7 +4,7 @@ use crate::tests::controllers::helpers::disguise_context_mocks;
 use crate::{
     api::{
         auth::TokenType,
-        server::server::{
+        server::protobuf::{
             component::Rep, Component, ComponentsInfo, CreateProjectRequest, DeleteProjectRequest,
             GetProjectRequest, ProjectInfo, UpdateProjectRequest,
         },
@@ -1081,7 +1081,7 @@ async fn update_returns_ok() {
             Ok(Some(project::Model {
                 id: project_id,
                 name: "old_name".to_owned(),
-                components_info: serde_json::to_value("{\"old_components\":1}".clone()).unwrap(),
+                components_info: serde_json::to_value("{\"old_components\":1}").unwrap(),
                 owner_id: user_id,
             }))
         });

@@ -1,4 +1,4 @@
-use crate::api::server::server::ecdar_backend_server::EcdarBackend;
+use crate::api::server::protobuf::ecdar_backend_server::EcdarBackend;
 use crate::controllers::controller_traits::*;
 use std::sync::Arc;
 

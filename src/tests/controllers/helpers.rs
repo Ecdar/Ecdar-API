@@ -1,9 +1,9 @@
 #![cfg(test)]
 
 use crate::api::auth::TokenType;
-use crate::api::server::server::AccessInfo;
-use crate::api::server::server::ProjectInfo;
-use crate::api::server::server::{
+use crate::api::server::protobuf::AccessInfo;
+use crate::api::server::protobuf::ProjectInfo;
+use crate::api::server::protobuf::{
     QueryRequest, QueryResponse, SimulationStartRequest, SimulationStepRequest,
     SimulationStepResponse, UserTokenResponse,
 };
@@ -188,7 +188,7 @@ mock! {
 mock! {
     pub HashingService {}
     impl HashingServiceTrait for HashingService {
-        fn hash_password(&self, password: String) -> String;
-        fn verify_password(&self, password: String, hash: &str) -> bool;
+        fn hash_password(&self, password: String) -> Result<String,bcrypt::BcryptError>;
+        fn verify_password(&self, password: String, hash: &str) -> Result<bool,bcrypt::BcryptError>;
     }
 }

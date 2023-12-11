@@ -1,4 +1,4 @@
-use crate::api::server::server::ProjectInfo;
+use crate::api::server::protobuf::ProjectInfo;
 use crate::contexts::context_traits::EntityContextTrait;
 use crate::entities::project;
 use async_trait::async_trait;

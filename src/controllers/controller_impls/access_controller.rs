@@ -1,6 +1,6 @@
 use crate::api::auth::RequestExt;
-use crate::api::server::server::create_access_request::User;
-use crate::api::server::server::{
+use crate::api::server::protobuf::create_access_request::User;
+use crate::api::server::protobuf::{
     CreateAccessRequest, DeleteAccessRequest, ListAccessInfoRequest, ListAccessInfoResponse,
     UpdateAccessRequest,
 };
@@ -31,6 +31,12 @@ impl AccessControllerTrait for AccessController {
 
         let uid = request
             .uid()
+            .map_err(|err| {
+                Status::internal(format!(
+                    "could not stringify user id in request metadata, internal error {}",
+                    err
+                ))
+            })?
             .ok_or(Status::internal("Could not get uid from request metadata"))?;
 
         match self
@@ -81,6 +87,12 @@ impl AccessControllerTrait for AccessController {
 
         let uid = request
             .uid()
+            .map_err(|err| {
+                Status::internal(format!(
+                    "could not stringify user id in request metadata, internal error {}",
+                    err
+                ))
+            })?
             .ok_or(Status::internal("Could not get uid from request metadata"))?;
 
         // Check if the requester has access to model with role 'Editor'
@@ -130,6 +142,12 @@ impl AccessControllerTrait for AccessController {
 
         let uid = request
             .uid()
+            .map_err(|err| {
+                Status::internal(format!(
+                    "could not stringify user id in request metadata, internal error {}",
+                    err
+                ))
+            })?
             .ok_or(Status::internal("Could not get uid from request metadata"))?;
 
         let user_access = self
@@ -193,6 +211,12 @@ impl AccessControllerTrait for AccessController {
 
         let uid = request
             .uid()
+            .map_err(|err| {
+                Status::internal(format!(
+                    "could not stringify user id in request metadata, inner error: {}",
+                    err
+                ))
+            })?
             .ok_or(Status::internal("Could not get uid from request metadata"))?;
 
         let user_access = self
