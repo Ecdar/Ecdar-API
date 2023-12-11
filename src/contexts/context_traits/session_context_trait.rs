@@ -6,7 +6,7 @@ use sea_orm::DbErr;
 
 #[async_trait]
 pub trait SessionContextTrait: EntityContextTrait<session::Model> {
-    /// Searches for a token by `Access` or `Refresh` token, 
+    /// Searches for a token by `Access` or `Refresh` token,
     /// returning [`Some`] if one is found, [`None`] otherwise
     /// # Errors
     /// Errors on failed connection, execution error or constraint violations.

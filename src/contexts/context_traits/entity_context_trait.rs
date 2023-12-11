@@ -11,7 +11,7 @@ pub trait EntityContextTrait<T>: Send + Sync {
     /// # Errors
     /// Errors on failed connection, execution error or constraint violations.
     /// # Notes
-    /// Most implementations does not allow the caller to set the primary key manually, 
+    /// Most implementations does not allow the caller to set the primary key manually,
     /// if the key is needed, use the returned value to ensure that the correct key is used
     async fn create(&self, entity: T) -> Result<T, DbErr>;
     /// Searches for an entity by its primary key, returning [`Some`] if an entity is found, [`None`] otherwise
@@ -25,7 +25,7 @@ pub trait EntityContextTrait<T>: Send + Sync {
     /// Updates a given entity. This is usually done by searching by primary key
     /// # Errors
     /// Errors on failed connection, execution error or constraint violations.
-    /// # Notes 
+    /// # Notes
     /// It is not possible to change the primary key, as it is used to look up the given entity.
     async fn update(&self, entity: T) -> Result<T, DbErr>;
     /// Searches for an entity by primary key and deletes it

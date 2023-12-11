@@ -6,7 +6,7 @@ use sea_orm::DbErr;
 
 #[async_trait]
 pub trait AccessContextTrait: EntityContextTrait<access::Model> {
-    /// Searches for an access entity by `User` and `Project` id, 
+    /// Searches for an access entity by `User` and `Project` id,
     /// returning [`Some`] if any entity was found, [`None`] otherwise
     /// # Errors
     /// Errors on failed connection, execution error or constraint violations.
