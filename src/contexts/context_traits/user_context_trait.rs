@@ -5,7 +5,17 @@ use sea_orm::DbErr;
 
 #[async_trait]
 pub trait UserContextTrait: EntityContextTrait<user::Model> {
+    /// Searches for a `User` by username, returning [`Some`] if one is found, [`None`] otherwise.
+    /// # Errors
+    /// Errors on failed connection, execution error or constraint violations.
+    /// # Notes
+    /// Since usernames are unique, it is guaranteed that at most one user with the given username exists.
     async fn get_by_username(&self, username: String) -> Result<Option<user::Model>, DbErr>;
+    /// Searches for a `User` by email address, returning [`Some`] if one is found, [`None`] otherwise.
+    /// # Errors
+    /// Errors on failed connection, execution error or constraint violations.
+    /// # Notes
+    /// Since email address' are unique, it is guaranteed that at most one user with the given email address exists.
     async fn get_by_email(&self, email: String) -> Result<Option<user::Model>, DbErr>;
     /// Returns all the user entities with the given ids
     /// # Example
