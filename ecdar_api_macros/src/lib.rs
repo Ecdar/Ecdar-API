@@ -22,7 +22,15 @@ pub fn endpoints(_attr: TokenStream, item: TokenStream) -> TokenStream {
                             .as_ref()
                             .map_or_else(
                                 || None,
-                                |t| Some(t.1.segments.last().unwrap().ident.to_string()),
+                                |t| {
+                                    Some(
+                                        t.1.segments
+                                            .last()
+                                            .expect("No trait implementation in module")
+                                            .ident
+                                            .to_string(),
+                                    )
+                                },
                             )
                             .unwrap_or_else(|| "".to_string()),
                     )
@@ -31,7 +39,7 @@ pub fn endpoints(_attr: TokenStream, item: TokenStream) -> TokenStream {
                 }
             })
         })
-        .unwrap()
+        .expect("No trait implementation in module.")
         .collect();
 
     // Implementations that does not implement a trait is filtered out.
@@ -109,7 +117,7 @@ pub fn endpoints(_attr: TokenStream, item: TokenStream) -> TokenStream {
                 None
             })
         })
-        .unwrap();
+        .expect("No specific implementation for EcdarApiAuth");
 
     // Appends the function to the implementation.
     if let Some(impl_item) = specific_impl {
@@ -118,8 +126,9 @@ pub fn endpoints(_attr: TokenStream, item: TokenStream) -> TokenStream {
             .push(parse_macro_input!(new_function as ImplItem));
     }
 
-    // Construct the tokens for the whole module.
+    // Construct the tokens for the hole module.
     let output = quote! {#item_mod};
 
     output.into()
 }
+
