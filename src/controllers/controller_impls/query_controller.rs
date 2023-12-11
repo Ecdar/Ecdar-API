@@ -23,9 +23,6 @@ impl QueryController {
 
 #[async_trait]
 impl QueryControllerTrait for QueryController {
-    /// Creates a query in the contexts
-    /// # Errors
-    /// Returns an error if the contexts context fails to create the query or
     async fn create_query(
         &self,
         request: Request<CreateQueryRequest>,
@@ -79,11 +76,6 @@ impl QueryControllerTrait for QueryController {
         }
     }
 
-    /// Endpoint for updating a query record.
-    ///
-    /// Takes `UpdateQueryRequest` as input
-    ///
-    /// Returns a `Status` as response
     async fn update_query(
         &self,
         request: Request<UpdateQueryRequest>,
@@ -149,9 +141,6 @@ impl QueryControllerTrait for QueryController {
         }
     }
 
-    /// Deletes a query record in the contexts.
-    /// # Errors
-    /// Returns an error if the provided query_id is not found in the contexts.
     async fn delete_query(
         &self,
         request: Request<DeleteQueryRequest>,
@@ -210,10 +199,6 @@ impl QueryControllerTrait for QueryController {
         }
     }
 
-    /// Sends a query to be run on Reveaal.
-    /// After query is run the result is stored in the contexts.
-    ///  
-    /// Returns the response that is received from Reveaal.
     async fn send_query(
         &self,
         request: Request<SendQueryRequest>,
