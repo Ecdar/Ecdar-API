@@ -35,12 +35,15 @@ pub fn validation_interceptor(mut req: Request<()>) -> Result<Request<()>, Statu
     }
 }
 
+/// Claims is a struct that implements Serialize.
+/// This will create a JWT using HS256 as algorithm
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Claims {
     pub sub: String,
     exp: usize,
 }
 
+/// Enumerator for specifying the token type.
 #[derive(Clone, Debug, PartialEq)]
 pub enum TokenType {
     AccessToken,
@@ -320,3 +323,4 @@ impl<T> RequestExt for Request<T> {
 #[cfg(test)]
 #[path = "../tests/api/auth.rs"]
 mod tests;
+
