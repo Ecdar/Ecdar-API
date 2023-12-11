@@ -406,7 +406,7 @@ impl ProjectControllerTrait for ProjectController {
             Err(error) => Err(Status::new(Code::Internal, error.to_string())),
         }
     }
-    
+
     async fn delete_project(
         &self,
         request: Request<DeleteProjectRequest>,

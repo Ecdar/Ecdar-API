@@ -17,7 +17,7 @@ pub trait ProjectControllerTrait: Send + Sync {
     ) -> Result<Response<GetProjectResponse>, Status>;
 
     /// Creates a project from [`CreateProjectRequest`]
-    /// # Errors 
+    /// # Errors
     /// Errors on invalid JSON, invalid user id or if a project already exists
     async fn create_project(
         &self,
