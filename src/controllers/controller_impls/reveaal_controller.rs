@@ -1,5 +1,5 @@
-use crate::api::server::server::ecdar_backend_server::EcdarBackend;
-use crate::api::server::server::{
+use crate::api::server::protobuf::ecdar_backend_server::EcdarBackend;
+use crate::api::server::protobuf::{
     QueryRequest, QueryResponse, SimulationStartRequest, SimulationStepRequest,
     SimulationStepResponse, UserTokenResponse,
 };

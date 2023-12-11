@@ -1,4 +1,4 @@
-use crate::api::server::server::AccessInfo;
+use crate::api::server::protobuf::AccessInfo;
 use crate::contexts::context_traits::{AccessContextTrait, EntityContextTrait};
 use crate::tests::contexts::helpers::{
     create_accesses, create_projects, create_users, get_reset_database_context,

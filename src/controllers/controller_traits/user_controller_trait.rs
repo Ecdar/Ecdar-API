@@ -1,4 +1,4 @@
-use crate::api::server::server::{
+use crate::api::server::protobuf::{
     CreateUserRequest, GetUsersRequest, GetUsersResponse, UpdateUserRequest,
 };
 use async_trait::async_trait;

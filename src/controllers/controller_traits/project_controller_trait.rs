@@ -1,4 +1,4 @@
-use crate::api::server::server::{
+use crate::api::server::protobuf::{
     CreateProjectRequest, CreateProjectResponse, DeleteProjectRequest, GetProjectRequest,
     GetProjectResponse, ListProjectsInfoResponse, UpdateProjectRequest,
 };

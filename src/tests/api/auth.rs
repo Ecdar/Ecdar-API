@@ -12,7 +12,7 @@ mod auth {
             .metadata_mut()
             .insert("authorization", MetadataValue::from_str(token).unwrap());
 
-        let result = request.token_str().unwrap();
+        let result = request.token_str().unwrap().unwrap();
 
         assert_eq!(result, token.trim_start_matches("Bearer "));
     }
@@ -20,7 +20,7 @@ mod auth {
     #[tokio::test]
     async fn request_token_no_token_returns_none() {
         let request = Request::new(());
-        let result = request.token_str();
+        let result = request.token_str().unwrap();
 
         assert!(result.is_none());
     }

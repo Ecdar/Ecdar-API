@@ -1,3 +1,4 @@
+#[allow(clippy::expect_used)]
 fn main() {
     tonic_build::configure()
         .type_attribute(
@@ -121,7 +122,7 @@ fn main() {
         .enum_attribute("rep", "#[derive(serde::Serialize, serde::Deserialize)]")
         .enum_attribute("result", "#[derive(serde::Serialize, serde::Deserialize)]")
         .compile(&["Ecdar-ProtoBuf/services.proto"], &["Ecdar-ProtoBuf/"])
-        .unwrap();
+        .expect("failed to compile protobuf");
 
     // Tell cargo to invalidate the crate when the protobuf repository changes
     println!("cargo:rerun-if-changed=Ecdar-ProtoBuf");

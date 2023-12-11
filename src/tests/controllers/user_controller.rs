@@ -1,4 +1,4 @@
-use crate::api::server::server::{CreateUserRequest, GetUsersRequest, UpdateUserRequest};
+use crate::api::server::protobuf::{CreateUserRequest, GetUsersRequest, UpdateUserRequest};
 use crate::controllers::controller_impls::UserController;
 use crate::controllers::controller_traits::UserControllerTrait;
 use crate::entities::user;
@@ -95,7 +95,7 @@ async fn create_user_nonexistent_user_returns_ok() {
     mock_services
         .hashing_service_mock
         .expect_hash_password()
-        .returning(move |_| password.clone());
+        .returning(move |_| Ok(password.clone()));
 
     mock_contexts
         .user_context_mock
@@ -134,7 +134,7 @@ async fn create_user_duplicate_email_returns_error() {
     mock_services
         .hashing_service_mock
         .expect_hash_password()
-        .returning(move |_| password.clone());
+        .returning(move |_| Ok(password.clone()));
 
     mock_contexts
         .user_context_mock
@@ -192,7 +192,7 @@ async fn create_user_duplicate_username_returns_error() {
     mock_services
         .hashing_service_mock
         .expect_hash_password()
-        .returning(move |_| password.clone());
+        .returning(move |_| Ok(password.clone()));
 
     mock_contexts
         .user_context_mock
@@ -250,7 +250,7 @@ async fn create_user_valid_request_returns_ok() {
     mock_services
         .hashing_service_mock
         .expect_hash_password()
-        .returning(move |_| password.clone());
+        .returning(move |_| Ok(password.clone()));
 
     mock_contexts
         .user_context_mock
@@ -295,7 +295,7 @@ async fn update_user_returns_ok() {
         .hashing_service_mock
         .expect_hash_password()
         .with(predicate::eq("StrongPassword123".to_string()))
-        .returning(move |_| "g76df2gd7hd837g8hjd8723hd8gd823d82d3".to_string());
+        .returning(move |_| Ok("g76df2gd7hd837g8hjd8723hd8gd823d82d3".to_string()));
 
     mock_contexts
         .user_context_mock
