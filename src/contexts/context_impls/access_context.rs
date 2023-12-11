@@ -46,7 +46,7 @@ impl AccessContext {
 
 #[async_trait]
 impl EntityContextTrait<access::Model> for AccessContext {
-    /// Used for creating an access::Model entity
+    /// Used for creating an [`access::Model`] entity
     /// # Example
     /// ```
     /// let access = access::Model {
