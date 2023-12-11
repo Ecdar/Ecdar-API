@@ -243,6 +243,7 @@ impl Display for Token {
     }
 }
 
+/// Token errors that can be returned by authentication.
 #[derive(Debug, PartialEq, thiserror::Error)]
 pub enum TokenError {
     #[error("Invalid token")]

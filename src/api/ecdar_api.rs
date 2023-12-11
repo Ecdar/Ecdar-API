@@ -1,5 +1,6 @@
 use crate::controllers::controller_collection::ControllerCollection;
 
+/// The collection of all controllers that Ecdar API offers.
 #[derive(Clone)]
 pub struct ConcreteEcdarApi {
     controllers: ControllerCollection,
@@ -11,6 +12,11 @@ impl ConcreteEcdarApi {
     }
 }
 
+/// A module that contains all implementations for protobuffer endpoints.
+///
+/// The module uses the attribute macro `endpoints` to automatically implement the `endpoints` function as specified by the protobuffers.
+/// Therefore, if new endpoints or services are added and implemented by the api server, then the macro will automatically add it to the list.
+/// The macro can be found in the `ecdar_api_macros` crate.
 #[ecdar_api_macros::endpoints]
 mod routes {
     use super::super::server::protobuf::{
@@ -27,6 +33,7 @@ mod routes {
 
     use tonic::{Request, Response, Status};
 
+    /// Implementation of all the endpoits that the Ecdar API service expose through protobuffers.
     #[tonic::async_trait]
     impl EcdarApi for super::ConcreteEcdarApi {
         async fn get_project(
@@ -226,6 +233,9 @@ mod routes {
         }
     }
 
+    /// The implementation for EcdarApiAuth.
+    /// NOTE that this is the implementation that the macro extents.
+    /// Therefore if changed then the macro should be changed too, else you will only get compile errors.
     #[tonic::async_trait]
     impl EcdarApiAuth for super::ConcreteEcdarApi {
         async fn get_auth_token(
@@ -246,3 +256,4 @@ mod routes {
         }
     }
 }
+
