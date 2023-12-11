@@ -76,9 +76,6 @@ impl AccessControllerTrait for AccessController {
         }
     }
 
-    /// Creates an access in the contexts.
-    /// # Errors
-    /// Returns an error if the contexts context fails to create the access
     async fn create_access(
         &self,
         request: Request<CreateAccessRequest>,
@@ -127,13 +124,6 @@ impl AccessControllerTrait for AccessController {
         }
     }
 
-    /// Endpoint for updating an access record.
-    ///
-    /// Takes `UpdateAccessRequest` as input
-    ///
-    /// Returns a `Status` as response
-    ///
-    /// `project_id` and `user_id` is set to 'default' since they won't be updated in the contexts.
     async fn update_access(
         &self,
         request: Request<UpdateAccessRequest>,
@@ -199,10 +189,6 @@ impl AccessControllerTrait for AccessController {
         }
     }
 
-    /// Deletes the an Access from the contexts. This has no sideeffects.
-    ///
-    /// # Errors
-    /// This function will return an error if the access does not exist in the contexts.
     async fn delete_access(
         &self,
         request: Request<DeleteAccessRequest>,
