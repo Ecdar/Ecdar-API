@@ -25,14 +25,19 @@ impl EcdarBackend for ReveaalController {
     ) -> Result<Response<UserTokenResponse>, Status> {
         self.services.reveaal_service.get_user_token(request).await
     }
-
+    /// Forwards the query to the Reveaal backend
+    /// # Errors
+    /// Errors when Reveaal backend errors
     async fn send_query(
         &self,
         request: Request<QueryRequest>,
     ) -> Result<Response<QueryResponse>, Status> {
         self.services.reveaal_service.send_query(request).await
     }
-
+    /// Forwards the query to the Reveaal backend
+    /// # Errors
+    /// Errors when Reveaal backend errors
+    //TODO Bedre doc comment
     async fn start_simulation(
         &self,
         request: Request<SimulationStartRequest>,
@@ -42,7 +47,7 @@ impl EcdarBackend for ReveaalController {
             .start_simulation(request)
             .await
     }
-
+    //TODO Bedre doc comment
     async fn take_simulation_step(
         &self,
         request: Request<SimulationStepRequest>,

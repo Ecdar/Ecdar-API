@@ -80,9 +80,6 @@ impl SessionController {
 
 #[async_trait]
 impl SessionControllerTrait for SessionController {
-    /// Deletes the requester's session, found by their access token.
-    ///  
-    /// Returns the response that is received from Reveaal.
     async fn delete_session(&self, request: Request<()>) -> Result<Response<()>, Status> {
         let access_token = request
             .token_string()
@@ -105,12 +102,6 @@ impl SessionControllerTrait for SessionController {
         }
     }
 
-    /// This method is used to get a new access and refresh token for a user.
-    ///
-    /// # Errors
-    /// This function will return an error if the user does not exist in the contexts,
-    /// if the password in the request does not match the user's password,
-    /// or if no user is provided in the request.
     async fn get_auth_token(
         &self,
         request: Request<GetAuthTokenRequest>,
