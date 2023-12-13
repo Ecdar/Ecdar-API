@@ -9,7 +9,7 @@ use tonic::{Request, Response, Status};
 pub trait ProjectControllerTrait: Send + Sync {
     /// Gets a project and its queries from the contexts.
     ///
-    /// If the project is not in use, it will now be in use by the requestees session,
+    /// If the project is not in use, it will now be in use by the requester's session,
     /// given that they are an Editor.
     async fn get_project(
         &self,
