@@ -3,6 +3,20 @@ name = "api_server"
 version = "0.0.1"
 build = "src/build.rs"
 edition = "2021"
+authors = [
+    'Alexander Manich',
+    'Ali Khorami',
+    'Anders Sørensen',
+    'Emil Laursen',
+    'Mads Risager',
+    'Mike Jensen',
+    'Mikkel Jensen',
+    'Rasmus Nielsen',
+    'Simon Bejer',
+    'Thorbjørn Møller',
+    'Viktor Platz',
+    'William Woldum'
+]
 
 [[bin]]
 name = "server"
