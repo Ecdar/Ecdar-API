@@ -234,7 +234,7 @@ mod routes {
     }
 
     /// The implementation for EcdarApiAuth.
-    /// NOTE that this is the implementation that the macro extents.
+    /// NOTE that this is the implementation that the macro extends.
     /// Therefore if changed then the macro should be changed too, else you will only get compile errors.
     #[tonic::async_trait]
     impl EcdarApiAuth for super::ConcreteEcdarApi {
@@ -256,3 +256,4 @@ mod routes {
         }
     }
 }
+
