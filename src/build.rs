@@ -1,4 +1,3 @@
-#[allow(clippy::expect_used)]
 fn main() {
     tonic_build::configure()
         .type_attribute(
@@ -107,6 +106,10 @@ fn main() {
         )
         .type_attribute(
             "SystemClock",
+            "#[derive(serde::Serialize, serde::Deserialize)]",
+        )
+        .type_attribute(
+            "SyntaxFailure",
             "#[derive(serde::Serialize, serde::Deserialize)]",
         )
         .enum_attribute("clock", "#[derive(serde::Serialize, serde::Deserialize)]")

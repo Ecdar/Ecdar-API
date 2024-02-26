@@ -18,12 +18,15 @@ authors = [
     'William Woldum'
 ]
 
+[lib]
+name = "ecdar_api"
+proc-macro = true
+
 [[bin]]
 name = "server"
 path = "src/main.rs"
 
 [dependencies]
-migration = { path = "migration" }
 tokio = { version = "1.33.0", features = ["full"] }
 dotenv = "0.15.0"
 sea-orm = { version = "^0.12.0", features = ["sqlx-postgres", "runtime-async-std-native-tls", "macros", "tests-cfg", "sqlx-sqlite"] }
@@ -40,7 +43,10 @@ regex = "1.10.2"
 mockall = "0.11.4"
 bcrypt = "0.15.0"
 serde_json = "1.0.108"
-ecdar_api_macros = { version = "0.1.0", path = "ecdar_api_macros" }
+syn = { version = "2.0", features = ["full"] }
+quote = "1.0"
+convert_case = "0.6.0"
+migration = { path = "migration" }
 thiserror = "1.0.50"
 
 [build-dependencies]

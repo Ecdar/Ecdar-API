@@ -96,7 +96,7 @@ pub fn endpoints(_attr: TokenStream, item: TokenStream) -> TokenStream {
             }))
         }
     }
-    .into();
+        .into();
 
     // It's cursed, but what could be expected from traversing an AST without some kind of pattern.
     // A method of getting the reference to the "EcdarApiAuth" implementation

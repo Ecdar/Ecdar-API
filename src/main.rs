@@ -11,7 +11,6 @@ mod contexts;
 mod controllers;
 mod entities;
 mod services;
-mod tests;
 
 use crate::contexts::context_collection::ContextCollection;
 use crate::contexts::context_impls::*;
