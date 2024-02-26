@@ -1,5 +1,5 @@
 [package]
-name = "api_server"
+name = "ecdar_api"
 version = "0.0.1"
 build = "src/build.rs"
 edition = "2021"
