@@ -1,6 +1,5 @@
 use crate::api::server::protobuf::AccessInfo;
-use crate::contexts::db_centexts::DatabaseContextTrait;
-use crate::contexts::EntityContextTrait;
+use crate::contexts::{DatabaseContextTrait, EntityContextTrait};
 use crate::entities::access;
 use sea_orm::prelude::async_trait::async_trait;
 use sea_orm::ActiveValue::{Set, Unchanged};
@@ -152,7 +151,7 @@ mod tests {
         create_accesses, create_projects, create_users, get_reset_database_context,
     };
     use crate::api::server::protobuf::AccessInfo;
-    use crate::contexts::access_context::AccessContextTrait;
+    use crate::contexts::AccessContextTrait;
     use crate::contexts::EntityContextTrait;
     use crate::{
         contexts::AccessContext,
@@ -532,7 +531,7 @@ mod tests {
 
         let access = access_context.get_access_by_project_id(model.id).await;
 
-        assert!(access.unwrap() == expected_access_access_info_vector);
+        assert_eq!(access.unwrap(), expected_access_access_info_vector);
     }
 
     #[tokio::test]

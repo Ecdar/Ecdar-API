@@ -15,7 +15,7 @@ pub fn endpoints(_attr: TokenStream, item: TokenStream) -> TokenStream {
         .as_ref()
         .map(|(_, items)| {
             items.iter().filter_map(|item| {
-                if let syn::Item::Impl(impl_item) = item {
+                if let Item::Impl(impl_item) = item {
                     Some(
                         impl_item
                             .trait_
@@ -75,7 +75,7 @@ pub fn endpoints(_attr: TokenStream, item: TokenStream) -> TokenStream {
             .items
             .iter()
             .filter_map(|item| match item {
-                syn::ImplItem::Fn(function) => {
+                ImplItem::Fn(function) => {
                     Some(function.sig.ident.to_string().to_case(Case::Pascal))
                 }
                 _ => None,

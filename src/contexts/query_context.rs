@@ -1,5 +1,4 @@
-use crate::contexts::db_centexts::DatabaseContextTrait;
-use crate::contexts::EntityContextTrait;
+use crate::contexts::{DatabaseContextTrait, EntityContextTrait};
 use crate::entities::query;
 use sea_orm::prelude::async_trait::async_trait;
 use sea_orm::ActiveValue::{Set, Unchanged};

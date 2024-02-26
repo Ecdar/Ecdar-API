@@ -1,6 +1,8 @@
 use crate::api::auth::{RequestExt, Token, TokenError, TokenType};
-use crate::api::server::protobuf::get_auth_token_request::{user_credentials, UserCredentials};
-use crate::api::server::protobuf::{GetAuthTokenRequest, GetAuthTokenResponse};
+use crate::api::server::protobuf::{
+    get_auth_token_request::{user_credentials, UserCredentials},
+    GetAuthTokenRequest, GetAuthTokenResponse,
+};
 use crate::contexts::ContextCollection;
 use crate::entities::{session, user};
 use crate::services::ServiceCollection;

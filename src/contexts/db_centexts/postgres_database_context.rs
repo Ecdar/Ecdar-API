@@ -1,4 +1,4 @@
-use crate::contexts::db_centexts::DatabaseContextTrait;
+use crate::contexts::DatabaseContextTrait;
 use async_trait::async_trait;
 use migration::{Migrator, MigratorTrait};
 use sea_orm::{ConnectionTrait, Database, DatabaseConnection, DbBackend, DbErr};

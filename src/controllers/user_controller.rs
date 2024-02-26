@@ -1,7 +1,7 @@
 use crate::api::auth::RequestExt;
-use crate::api::server::protobuf::get_users_response::UserInfo;
 use crate::api::server::protobuf::{
-    CreateUserRequest, GetUsersRequest, GetUsersResponse, UpdateUserRequest,
+    get_users_response::UserInfo, CreateUserRequest, GetUsersRequest, GetUsersResponse,
+    UpdateUserRequest,
 };
 use crate::contexts::ContextCollection;
 use crate::entities::user;

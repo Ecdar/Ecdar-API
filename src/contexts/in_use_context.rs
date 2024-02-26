@@ -1,4 +1,4 @@
-use crate::contexts::{db_centexts::DatabaseContextTrait, EntityContextTrait};
+use crate::contexts::{DatabaseContextTrait, EntityContextTrait};
 use crate::entities::in_use;
 use async_trait::async_trait;
 use chrono::Utc;

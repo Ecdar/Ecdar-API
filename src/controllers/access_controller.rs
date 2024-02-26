@@ -4,9 +4,7 @@ use crate::api::server::protobuf::{
     CreateAccessRequest, DeleteAccessRequest, ListAccessInfoRequest, ListAccessInfoResponse,
     UpdateAccessRequest,
 };
-use crate::contexts::AccessContextTrait;
-use crate::contexts::ContextCollection;
-use crate::contexts::UserContextTrait;
+use crate::contexts::{AccessContextTrait, ContextCollection, UserContextTrait};
 use crate::entities::{access, user};
 use async_trait::async_trait;
 use std::sync::Arc;

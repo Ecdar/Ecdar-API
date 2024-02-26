@@ -892,7 +892,7 @@ mod tests {
 
         let res = project_logic.get_project(request).await.unwrap_err();
 
-        assert!(res.code() == Code::PermissionDenied);
+        assert_eq!(res.code(), Code::PermissionDenied);
     }
 
     #[tokio::test]

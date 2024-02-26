@@ -1,7 +1,6 @@
-use crate::api::server::protobuf::ecdar_backend_server::EcdarBackend;
 use crate::api::server::protobuf::{
-    QueryRequest, QueryResponse, SimulationStartRequest, SimulationStepRequest,
-    SimulationStepResponse, UserTokenResponse,
+    ecdar_backend_server::EcdarBackend, QueryRequest, QueryResponse, SimulationStartRequest,
+    SimulationStepRequest, SimulationStepResponse, UserTokenResponse,
 };
 use crate::services::ServiceCollection;
 use async_trait::async_trait;

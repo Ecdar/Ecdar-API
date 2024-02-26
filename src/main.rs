@@ -1,8 +1,8 @@
 //! # Description
 //! This project serves as an API server between an ECDAR frontend and Reveaal
 //!
-//! The project is currently being developed at [Github](https://github.com/ECDAR-AAU-SW-P5/)
-//! Ecdar-API serves as the intermediary between the [Ecdar frontend](https://github.com/ECDAR-AAU-SW-P5/Ecdar-GUI-Web) and the [Ecdar backend](https://github.com/ECDAR-AAU-SW-P5/Reveaal) (Reveaal). Its core functionality revolves around storing and managing entities such as users and projects, allowing the backend to focus solely on computations.
+//! The project is currently being developed at [Github](https://github.com/Ecdar/)
+//! Ecdar-API serves as the intermediary between the [Ecdar frontend](https://github.com/Ecdar/Ecdar-GUI-Web) and the [Ecdar backend](https://github.com/Ecdar/Reveaal) (Reveaal). Its core functionality revolves around storing and managing entities such as users and projects, allowing the backend to focus solely on computations.
 //!
 //! # Notes
 //! Currently, the only supported databases are `PostgreSQL` and `SQLite`
@@ -12,9 +12,6 @@ mod controllers;
 mod entities;
 mod services;
 
-use crate::contexts::*;
-use crate::controllers::*;
-use crate::services::{HashingService, ReveaalService, ServiceCollection};
 use api::server::start_grpc_server;
 use dotenv::dotenv;
 use sea_orm::{ConnectionTrait, Database, DbBackend};
@@ -24,6 +21,13 @@ use std::sync::Arc;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
+    use crate::contexts::{
+        AccessContext, ContextCollection, DatabaseContextTrait, InUseContext,
+        PostgresDatabaseContext, ProjectContext, QueryContext, SQLiteDatabaseContext,
+        SessionContext, UserContext,
+    };
+    use crate::controllers::*;
+    use crate::services::{HashingService, ReveaalService, ServiceCollection};
     dotenv().ok();
 
     let reveaal_addr = env::var("REVEAAL_ADDRESS").expect("Expected REVEAAL_ADDRESS to be set.");

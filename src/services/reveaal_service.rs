@@ -1,11 +1,9 @@
-use crate::api::server::protobuf::ecdar_backend_client::EcdarBackendClient;
 use crate::api::server::protobuf::{
-    QueryRequest, QueryResponse, SimulationStartRequest, SimulationStepRequest,
-    SimulationStepResponse, UserTokenResponse,
+    ecdar_backend_client::EcdarBackendClient, QueryRequest, QueryResponse, SimulationStartRequest,
+    SimulationStepRequest, SimulationStepResponse, UserTokenResponse,
 };
 use async_trait::async_trait;
-use tonic::transport::Channel;
-use tonic::{Request, Response, Status};
+use tonic::{transport::Channel, Request, Response, Status};
 
 #[async_trait]
 pub trait ReveaalServiceTrait: Send + Sync {

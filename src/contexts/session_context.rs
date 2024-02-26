@@ -1,6 +1,5 @@
 use crate::api::auth::TokenType;
-use crate::contexts::db_centexts::DatabaseContextTrait;
-use crate::contexts::EntityContextTrait;
+use crate::contexts::{DatabaseContextTrait, EntityContextTrait};
 use crate::entities::session;
 use chrono::Local;
 use sea_orm::prelude::async_trait::async_trait;
