@@ -1,11 +1,11 @@
-use crate::contexts::context_traits::{
-    DatabaseContextTrait, EntityContextTrait, InUseContextTrait,
-};
+use crate::contexts::{db_centexts::DatabaseContextTrait, EntityContextTrait};
 use crate::entities::in_use;
 use async_trait::async_trait;
 use chrono::Utc;
 use sea_orm::{ActiveModelTrait, DbErr, EntityTrait, Set, Unchanged};
 use std::sync::Arc;
+
+pub trait InUseContextTrait: EntityContextTrait<in_use::Model> {}
 
 pub struct InUseContext {
     db_context: Arc<dyn DatabaseContextTrait>,
@@ -69,10 +69,10 @@ impl EntityContextTrait<in_use::Model> for InUseContext {
 
 #[cfg(test)]
 mod tests {
-    use super::super::super::helpers::*;
+    use super::super::helpers::*;
     use crate::{
-        contexts::context_impls::InUseContext,
-        contexts::context_traits::EntityContextTrait,
+        contexts::EntityContextTrait,
+        contexts::InUseContext,
         entities::{in_use, project, session, user},
         to_active_models,
     };

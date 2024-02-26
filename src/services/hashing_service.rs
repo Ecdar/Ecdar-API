@@ -1,5 +1,9 @@
-use crate::services::service_traits::hashing_service_trait::HashingServiceTrait;
 use bcrypt::{hash, verify, BcryptError, DEFAULT_COST};
+
+pub trait HashingServiceTrait: Send + Sync {
+    fn hash_password(&self, password: String) -> Result<String, BcryptError>;
+    fn verify_password(&self, password: String, hash: &str) -> Result<bool, BcryptError>;
+}
 
 pub struct HashingService;
 

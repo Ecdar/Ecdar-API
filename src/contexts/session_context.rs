@@ -1,13 +1,33 @@
 use crate::api::auth::TokenType;
-use crate::contexts::context_traits::{
-    DatabaseContextTrait, EntityContextTrait, SessionContextTrait,
-};
+use crate::contexts::db_centexts::DatabaseContextTrait;
+use crate::contexts::EntityContextTrait;
 use crate::entities::session;
 use chrono::Local;
 use sea_orm::prelude::async_trait::async_trait;
 use sea_orm::ActiveValue::{Set, Unchanged};
 use sea_orm::{ActiveModelTrait, ColumnTrait, DbErr, EntityTrait, NotSet, QueryFilter};
 use std::sync::Arc;
+
+#[async_trait]
+pub trait SessionContextTrait: EntityContextTrait<session::Model> {
+    /// Searches for a token by `Access` or `Refresh` token,
+    /// returning [`Some`] if one is found, [`None`] otherwise
+    /// # Errors
+    /// Errors on failed connection, execution error or constraint violations.
+    async fn get_by_token(
+        &self,
+        token_type: TokenType,
+        token: String,
+    ) -> Result<Option<session::Model>, DbErr>;
+    /// Searches for a token by `Access` or `Refresh` token, deleting and returning it
+    /// # Errors
+    /// Errors on failed connection, execution error or constraint violations.
+    async fn delete_by_token(
+        &self,
+        token_type: TokenType,
+        token: String,
+    ) -> Result<session::Model, DbErr>;
+}
 
 pub struct SessionContext {
     db_context: Arc<dyn DatabaseContextTrait>,
@@ -179,14 +199,14 @@ impl EntityContextTrait<session::Model> for SessionContext {
 
 #[cfg(test)]
 mod tests {
-    use super::super::super::helpers::*;
+    use super::super::helpers::*;
     use crate::api::auth::TokenType;
     use sea_orm::{entity::prelude::*, IntoActiveModel};
     use std::ops::Add;
 
     use crate::{
-        contexts::context_impls::SessionContext,
-        contexts::context_traits::{EntityContextTrait, SessionContextTrait},
+        contexts::SessionContext,
+        contexts::{EntityContextTrait, SessionContextTrait},
         entities::{in_use, project, session, user},
         to_active_models,
     };

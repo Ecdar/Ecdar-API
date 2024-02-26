@@ -18,7 +18,7 @@ pub fn validation_interceptor(mut req: Request<()>) -> Result<Request<()>, Statu
             err
         ))
     })? {
-        Some(token) => Token::from_str(TokenType::AccessToken, &token),
+        Some(token) => Token::from_str(TokenType::AccessToken, token),
         None => return Err(Status::unauthenticated("Token not found")),
     };
 
@@ -60,7 +60,6 @@ impl TokenType {
     ///
     /// # Panics
     /// This method will panic if the token secret environment variable is not set.
-    #[allow(clippy::expect_used)]
     fn secret(&self) -> String {
         match self {
             TokenType::AccessToken => env::var("ACCESS_TOKEN_HS512_SECRET")
@@ -174,10 +173,10 @@ impl Token {
     ///
     /// let token = Token::from_str(TokenType::AccessToken, "token")
     /// ```
-    pub fn from_str(token_type: TokenType, token: &str) -> Token {
+    pub fn from_str<T: Into<String>>(token_type: TokenType, token: T) -> Token {
         Token {
             token_type,
-            token: token.to_string(),
+            token: token.into(),
         }
     }
     /// Validate the token. Returns the token data if the token is valid.
@@ -204,34 +203,6 @@ impl Token {
             Ok(c) => Ok(c),
             Err(err) => Err(err.into()),
         }
-    }
-    /// # Examples
-    ///
-    /// ```
-    /// use ecdar_api::controllers::auth::{Token, TokenType};
-    ///
-    /// let token = Token::from_str(TokenType::AccessToken, "token");
-    ///
-    /// assert_eq!(token.as_str(), "token");
-    /// ```
-    #[allow(dead_code)]
-    pub fn as_str(&self) -> &str {
-        &self.token
-    }
-    /// Returns the token type.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use ecdar_api::controllers::auth::{Token, TokenType};
-    ///
-    /// let token = Token::new(TokenType::AccessToken, "1").unwrap();
-    ///
-    /// assert_eq!(token.token_type(), TokenType::AccessToken);
-    /// ```
-    #[allow(dead_code)]
-    pub fn token_type(&self) -> TokenType {
-        self.token_type.clone()
     }
 }
 
@@ -404,7 +375,7 @@ mod tests {
         env::set_var("ACCESS_TOKEN_HS512_SECRET", "access_secret");
 
         let token = Token::new(TokenType::AccessToken, "1").unwrap();
-        let result = token.token_type();
+        let result = token.token_type;
 
         assert_eq!(result, TokenType::AccessToken);
     }
@@ -414,7 +385,7 @@ mod tests {
         env::set_var("REFRESH_TOKEN_HS512_SECRET", "refresh_secret");
 
         let token = Token::new(TokenType::RefreshToken, "1").unwrap();
-        let result = token.token_type();
+        let result = token.token_type;
 
         assert_eq!(result, TokenType::RefreshToken);
     }
@@ -426,17 +397,7 @@ mod tests {
         let token = Token::new(TokenType::AccessToken, "1").unwrap();
         let result = token.to_string();
 
-        assert_eq!(result, token.as_str());
-    }
-
-    #[tokio::test]
-    async fn token_as_str_returns_string() {
-        env::set_var("ACCESS_TOKEN_HS512_SECRET", "access_secret");
-
-        let token = Token::new(TokenType::AccessToken, "1").unwrap();
-        let result = token.as_str();
-
-        assert_eq!(result, token.to_string());
+        assert_eq!(result, token.token);
     }
 
     #[tokio::test]
@@ -444,7 +405,7 @@ mod tests {
         env::set_var("ACCESS_TOKEN_HS512_SECRET", "access_secret");
 
         let token = Token::new(TokenType::AccessToken, "1").unwrap();
-        let token_from_str = Token::from_str(TokenType::AccessToken, token.as_str());
+        let token_from_str = Token::from_str(TokenType::AccessToken, token.token);
 
         let result = token_from_str.validate();
 

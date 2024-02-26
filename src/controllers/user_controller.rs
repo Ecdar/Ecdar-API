@@ -3,14 +3,30 @@ use crate::api::server::protobuf::get_users_response::UserInfo;
 use crate::api::server::protobuf::{
     CreateUserRequest, GetUsersRequest, GetUsersResponse, UpdateUserRequest,
 };
-use crate::contexts::context_collection::ContextCollection;
-use crate::controllers::controller_traits::UserControllerTrait;
+use crate::contexts::ContextCollection;
 use crate::entities::user;
-use crate::services::service_collection::ServiceCollection;
+use crate::services::ServiceCollection;
 use async_trait::async_trait;
 use regex::Regex;
 use sea_orm::SqlErr;
 use tonic::{Code, Request, Response, Status};
+
+#[async_trait]
+pub trait UserControllerTrait: Send + Sync {
+    async fn create_user(
+        &self,
+        request: Request<CreateUserRequest>,
+    ) -> Result<Response<()>, Status>;
+    async fn update_user(
+        &self,
+        request: Request<UpdateUserRequest>,
+    ) -> Result<Response<()>, Status>;
+    async fn delete_user(&self, request: Request<()>) -> Result<Response<()>, Status>;
+    async fn get_users(
+        &self,
+        request: Request<GetUsersRequest>,
+    ) -> Result<Response<GetUsersResponse>, Status>;
+}
 
 pub struct UserController {
     contexts: ContextCollection,
@@ -208,8 +224,8 @@ mod tests {
         disguise_context_mocks, disguise_service_mocks, get_mock_contexts, get_mock_services,
     };
     use crate::api::server::protobuf::{CreateUserRequest, GetUsersRequest, UpdateUserRequest};
-    use crate::controllers::controller_impls::UserController;
-    use crate::controllers::controller_traits::UserControllerTrait;
+    use crate::controllers::UserController;
+    use crate::controllers::UserControllerTrait;
     use crate::entities::user;
     use mockall::predicate;
     use sea_orm::DbErr;

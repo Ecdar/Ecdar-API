@@ -1,4 +1,4 @@
-use crate::services::service_traits::{HashingServiceTrait, ReveaalServiceTrait};
+use crate::services::{HashingServiceTrait, ReveaalServiceTrait};
 use std::sync::Arc;
 
 #[derive(Clone)]

@@ -1,11 +1,26 @@
-pub mod context_collection;
-pub mod context_impls;
-pub mod context_traits;
+mod access_context;
+mod context_collection;
+mod db_centexts;
+mod entity_context_trait;
+mod in_use_context;
+mod project_context;
+mod query_context;
+mod session_context;
+mod user_context;
+
+pub use access_context::*;
+pub use context_collection::*;
+pub use db_centexts::*;
+pub use entity_context_trait::*;
+pub use in_use_context::*;
+pub use project_context::*;
+pub use query_context::*;
+pub use session_context::*;
+pub use user_context::*;
 
 #[cfg(test)]
 mod helpers {
-    use crate::contexts::context_impls::{PostgresDatabaseContext, SQLiteDatabaseContext};
-    use crate::contexts::context_traits::DatabaseContextTrait;
+    use crate::contexts::*;
     use crate::entities::{access, in_use, project, query, session, user};
     use dotenv::dotenv;
     use sea_orm::{ConnectionTrait, Database, DbBackend};

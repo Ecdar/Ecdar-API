@@ -1,11 +1,16 @@
-use crate::contexts::context_traits::{
-    DatabaseContextTrait, EntityContextTrait, QueryContextTrait,
-};
+use crate::contexts::db_centexts::DatabaseContextTrait;
+use crate::contexts::EntityContextTrait;
 use crate::entities::query;
 use sea_orm::prelude::async_trait::async_trait;
 use sea_orm::ActiveValue::{Set, Unchanged};
 use sea_orm::{ActiveModelTrait, ColumnTrait, DbErr, EntityTrait, NotSet, QueryFilter};
 use std::sync::Arc;
+
+#[async_trait]
+pub trait QueryContextTrait: EntityContextTrait<query::Model> {
+    /// Returns the queries associated with a given project id
+    async fn get_all_by_project_id(&self, project_id: i32) -> Result<Vec<query::Model>, DbErr>;
+}
 
 pub struct QueryContext {
     db_context: Arc<dyn DatabaseContextTrait>,
@@ -129,12 +134,12 @@ impl EntityContextTrait<query::Model> for QueryContext {
 
 #[cfg(test)]
 mod tests {
-    use super::super::super::helpers::{
+    use super::super::helpers::{
         create_projects, create_queries, create_users, get_reset_database_context,
     };
     use crate::{
-        contexts::context_impls::QueryContext,
-        contexts::context_traits::EntityContextTrait,
+        contexts::EntityContextTrait,
+        contexts::QueryContext,
         entities::{project, query, user},
         to_active_models,
     };

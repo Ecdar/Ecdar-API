@@ -1,4 +1,4 @@
-use crate::controllers::controller_collection::ControllerCollection;
+use crate::controllers::ControllerCollection;
 
 /// The collection of all controllers that Ecdar API offers.
 #[derive(Clone)]

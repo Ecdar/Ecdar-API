@@ -3,7 +3,7 @@ use crate::api::server::protobuf::{
     QueryRequest, QueryResponse, SimulationStartRequest, SimulationStepRequest,
     SimulationStepResponse, UserTokenResponse,
 };
-use crate::services::service_collection::ServiceCollection;
+use crate::services::ServiceCollection;
 use async_trait::async_trait;
 use tonic::{Request, Response, Status};
 

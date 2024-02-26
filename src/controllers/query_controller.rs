@@ -3,12 +3,47 @@ use crate::api::server::protobuf::{
     CreateQueryRequest, DeleteQueryRequest, QueryRequest, SendQueryRequest, SendQueryResponse,
     UpdateQueryRequest,
 };
-use crate::contexts::context_collection::ContextCollection;
-use crate::controllers::controller_traits::QueryControllerTrait;
+use crate::contexts::ContextCollection;
 use crate::entities::query;
-use crate::services::service_collection::ServiceCollection;
+use crate::services::ServiceCollection;
 use async_trait::async_trait;
 use tonic::{Code, Request, Response, Status};
+
+#[async_trait]
+pub trait QueryControllerTrait: Send + Sync {
+    /// Creates a query in the contexts
+    /// # Errors
+    /// Returns an error if the contexts context fails to create the query or
+    async fn create_query(
+        &self,
+        request: Request<CreateQueryRequest>,
+    ) -> Result<Response<()>, Status>;
+
+    /// Endpoint for updating a query record.
+    /// # Errors
+    /// Errors on non existent entity, parsing error or invalid rights
+    async fn update_query(
+        &self,
+        request: Request<UpdateQueryRequest>,
+    ) -> Result<Response<()>, Status>;
+
+    /// Deletes a query record in the contexts.
+    /// # Errors
+    /// Returns an error if the provided query_id is not found in the contexts.
+    async fn delete_query(
+        &self,
+        request: Request<DeleteQueryRequest>,
+    ) -> Result<Response<()>, Status>;
+
+    /// Sends a query to be run on Reveaal.
+    /// After query is run the result is stored in the contexts.
+    ///
+    /// Returns the response that is received from Reveaal.
+    async fn send_query(
+        &self,
+        request: Request<SendQueryRequest>,
+    ) -> Result<Response<SendQueryResponse>, Status>;
+}
 
 pub struct QueryController {
     contexts: ContextCollection,
@@ -311,8 +346,8 @@ mod tests {
     use crate::api::server::protobuf::{
         CreateQueryRequest, DeleteQueryRequest, QueryResponse, SendQueryRequest, UpdateQueryRequest,
     };
-    use crate::controllers::controller_impls::QueryController;
-    use crate::controllers::controller_traits::QueryControllerTrait;
+    use crate::controllers::QueryController;
+    use crate::controllers::QueryControllerTrait;
     use crate::entities::{access, project, query};
     use mockall::predicate;
     use sea_orm::DbErr;

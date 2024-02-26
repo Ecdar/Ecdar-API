@@ -1,15 +1,22 @@
-use crate::contexts::context_traits::{
-    DatabaseContextTrait, EntityContextTrait, ProjectContextTrait,
-};
+use crate::contexts::EntityContextTrait;
 use crate::entities::{access, project, query};
 
 use crate::api::server::protobuf::ProjectInfo;
+use crate::contexts::db_centexts::DatabaseContextTrait;
 use async_trait::async_trait;
 use sea_orm::{
     ActiveModelTrait, ColumnTrait, DbErr, EntityTrait, IntoActiveModel, JoinType, ModelTrait,
     QueryFilter, QuerySelect, RelationTrait, Set, Unchanged,
 };
 use std::sync::Arc;
+
+#[async_trait]
+pub trait ProjectContextTrait: EntityContextTrait<project::Model> {
+    /// Returns the projects owned by a given user id
+    /// # Errors
+    /// Errors on failed connection, execution error or constraint violations.
+    async fn get_project_info_by_uid(&self, uid: i32) -> Result<Vec<ProjectInfo>, DbErr>;
+}
 
 pub struct ProjectContext {
     db_context: Arc<dyn DatabaseContextTrait>,
@@ -151,10 +158,10 @@ impl EntityContextTrait<project::Model> for ProjectContext {
 
 #[cfg(test)]
 mod tests {
-    use super::super::super::helpers::*;
+    use super::super::helpers::*;
     use crate::{
-        contexts::context_impls::ProjectContext,
-        contexts::context_traits::EntityContextTrait,
+        contexts::EntityContextTrait,
+        contexts::ProjectContext,
         entities::{access, in_use, project, query, session, user},
         to_active_models,
     };

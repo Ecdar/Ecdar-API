@@ -4,13 +4,52 @@ use crate::api::server::protobuf::{
     CreateAccessRequest, DeleteAccessRequest, ListAccessInfoRequest, ListAccessInfoResponse,
     UpdateAccessRequest,
 };
-use crate::contexts::context_collection::ContextCollection;
-use crate::contexts::context_traits::{AccessContextTrait, UserContextTrait};
-use crate::controllers::controller_traits::AccessControllerTrait;
+use crate::contexts::AccessContextTrait;
+use crate::contexts::ContextCollection;
+use crate::contexts::UserContextTrait;
 use crate::entities::{access, user};
 use async_trait::async_trait;
 use std::sync::Arc;
 use tonic::{Code, Request, Response, Status};
+
+#[async_trait]
+pub trait AccessControllerTrait: Send + Sync {
+    /// handles the list_access_info endpoint
+    /// # Errors
+    /// If an invalid or non-existent [`ListAccessInfoRequest::project_id`] is provided
+    async fn list_access_info(
+        &self,
+        request: Request<ListAccessInfoRequest>,
+    ) -> Result<Response<ListAccessInfoResponse>, Status>;
+    /// Creates an access in the contexts.
+    /// # Errors
+    /// Returns an error if the contexts context fails to create the access
+    async fn create_access(
+        &self,
+        request: Request<CreateAccessRequest>,
+    ) -> Result<Response<()>, Status>;
+
+    /// Endpoint for updating an access record.
+    ///
+    /// Takes [`UpdateAccessRequest`] as input
+    ///
+    /// Returns a [`Status`] as response
+    ///
+    /// `project_id` and `user_id` is set to 'default' since they won't be updated in the contexts.
+    async fn update_access(
+        &self,
+        request: Request<UpdateAccessRequest>,
+    ) -> Result<Response<()>, Status>;
+
+    /// Deletes the an Access from the contexts. This has no sideeffects.
+    ///
+    /// # Errors
+    /// This function will return an error if the access does not exist in the contexts.
+    async fn delete_access(
+        &self,
+        request: Request<DeleteAccessRequest>,
+    ) -> Result<Response<()>, Status>;
+}
 
 pub struct AccessController {
     contexts: ContextCollection,
@@ -312,8 +351,8 @@ mod tests {
         AccessInfo, CreateAccessRequest, DeleteAccessRequest, ListAccessInfoRequest,
         UpdateAccessRequest,
     };
-    use crate::controllers::controller_impls::AccessController;
-    use crate::controllers::controller_traits::AccessControllerTrait;
+    use crate::controllers::AccessController;
+    use crate::controllers::AccessControllerTrait;
     use crate::entities::{access, project, user};
     use mockall::predicate;
     use sea_orm::DbErr;

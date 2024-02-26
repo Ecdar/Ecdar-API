@@ -1,13 +1,31 @@
 use crate::api::auth::{RequestExt, Token, TokenError, TokenType};
 use crate::api::server::protobuf::get_auth_token_request::{user_credentials, UserCredentials};
 use crate::api::server::protobuf::{GetAuthTokenRequest, GetAuthTokenResponse};
-use crate::contexts::context_collection::ContextCollection;
-use crate::controllers::controller_traits::SessionControllerTrait;
+use crate::contexts::ContextCollection;
 use crate::entities::{session, user};
-use crate::services::service_collection::ServiceCollection;
+use crate::services::ServiceCollection;
 use async_trait::async_trait;
 use sea_orm::DbErr;
 use tonic::{Code, Request, Response, Status};
+
+#[async_trait]
+pub trait SessionControllerTrait: Send + Sync {
+    /// Deletes the requester's session, found by their access token.
+    ///
+    /// Returns the response that is received from Reveaal.
+    async fn delete_session(&self, _request: Request<()>) -> Result<Response<()>, Status>;
+
+    /// This method is used to get a new access and refresh token for a user.
+    ///
+    /// # Errors
+    /// This function will return an error if the user does not exist in the contexts,
+    /// if the password in the request does not match the user's password,
+    /// or if no user is provided in the request.
+    async fn get_auth_token(
+        &self,
+        request: Request<GetAuthTokenRequest>,
+    ) -> Result<Response<GetAuthTokenResponse>, Status>;
+}
 
 pub struct SessionController {
     contexts: ContextCollection,
@@ -206,8 +224,8 @@ mod tests {
     use crate::api::auth::{Token, TokenType};
     use crate::api::server::protobuf::get_auth_token_request::{user_credentials, UserCredentials};
     use crate::api::server::protobuf::GetAuthTokenRequest;
-    use crate::controllers::controller_impls::SessionController;
-    use crate::controllers::controller_traits::SessionControllerTrait;
+    use crate::controllers::SessionController;
+    use crate::controllers::SessionControllerTrait;
     use sea_orm::DbErr;
     use tonic::{metadata, Code, Request};
 

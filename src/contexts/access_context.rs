@@ -1,12 +1,26 @@
 use crate::api::server::protobuf::AccessInfo;
-use crate::contexts::context_traits::{
-    AccessContextTrait, DatabaseContextTrait, EntityContextTrait,
-};
+use crate::contexts::db_centexts::DatabaseContextTrait;
+use crate::contexts::EntityContextTrait;
 use crate::entities::access;
 use sea_orm::prelude::async_trait::async_trait;
 use sea_orm::ActiveValue::{Set, Unchanged};
 use sea_orm::{ActiveModelTrait, ColumnTrait, Condition, DbErr, EntityTrait, QueryFilter};
 use std::sync::Arc;
+
+#[async_trait]
+pub trait AccessContextTrait: EntityContextTrait<access::Model> {
+    /// Searches for an access entity by `User` and `Project` id,
+    /// returning [`Some`] if any entity was found, [`None`] otherwise
+    /// # Errors
+    /// Errors on failed connection, execution error or constraint violations.
+    async fn get_access_by_uid_and_project_id(
+        &self,
+        uid: i32,
+        project_id: i32,
+    ) -> Result<Option<access::Model>, DbErr>;
+    /// Returns all [`access::Model`] that are associated with a given `Project``
+    async fn get_access_by_project_id(&self, project_id: i32) -> Result<Vec<AccessInfo>, DbErr>;
+}
 
 pub struct AccessContext {
     db_context: Arc<dyn DatabaseContextTrait>,
@@ -134,13 +148,14 @@ impl EntityContextTrait<access::Model> for AccessContext {
 }
 #[cfg(test)]
 mod tests {
-    use super::super::super::helpers::{
+    use super::super::helpers::{
         create_accesses, create_projects, create_users, get_reset_database_context,
     };
     use crate::api::server::protobuf::AccessInfo;
-    use crate::contexts::context_traits::{AccessContextTrait, EntityContextTrait};
+    use crate::contexts::access_context::AccessContextTrait;
+    use crate::contexts::EntityContextTrait;
     use crate::{
-        contexts::context_impls::AccessContext,
+        contexts::AccessContext,
         entities::{access, project, user},
         to_active_models,
     };

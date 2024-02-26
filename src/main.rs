@@ -12,13 +12,9 @@ mod controllers;
 mod entities;
 mod services;
 
-use crate::contexts::context_collection::ContextCollection;
-use crate::contexts::context_impls::*;
-use crate::contexts::context_traits::DatabaseContextTrait;
-use crate::controllers::controller_collection::ControllerCollection;
-use crate::controllers::controller_impls::*;
-use crate::services::service_collection::ServiceCollection;
-use crate::services::service_impls::{HashingService, ReveaalService};
+use crate::contexts::*;
+use crate::controllers::*;
+use crate::services::{HashingService, ReveaalService, ServiceCollection};
 use api::server::start_grpc_server;
 use dotenv::dotenv;
 use sea_orm::{ConnectionTrait, Database, DbBackend};
@@ -27,7 +23,6 @@ use std::error::Error;
 use std::sync::Arc;
 
 #[tokio::main]
-#[allow(clippy::expect_used)]
 async fn main() -> Result<(), Box<dyn Error>> {
     dotenv().ok();
 

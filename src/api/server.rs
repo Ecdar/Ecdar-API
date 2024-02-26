@@ -7,7 +7,7 @@ use crate::api::ecdar_api::ConcreteEcdarApi;
 use crate::api::server::protobuf::ecdar_api_auth_server::EcdarApiAuthServer;
 use crate::api::server::protobuf::ecdar_api_server::EcdarApiServer;
 use crate::api::server::protobuf::ecdar_backend_server::EcdarBackendServer;
-use crate::controllers::controller_collection::ControllerCollection;
+use crate::controllers::ControllerCollection;
 
 pub mod protobuf {
     tonic::include_proto!("ecdar_proto_buf");
