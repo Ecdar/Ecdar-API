@@ -1,34 +1,31 @@
 use crate::contexts::DatabaseContextTrait;
+use async_trait::async_trait;
 use migration::{Migrator, MigratorTrait};
-use sea_orm::prelude::async_trait::async_trait;
 use sea_orm::{ConnectionTrait, Database, DatabaseConnection, DbBackend, DbErr};
-use std::fmt::Debug;
 use std::sync::Arc;
 
 #[derive(Debug)]
-pub struct SQLiteDatabaseContext {
+pub struct PostgresDatabaseContext {
     pub(crate) db_connection: DatabaseConnection,
 }
-
-impl SQLiteDatabaseContext {
-    pub async fn new(connection_string: &str) -> Result<SQLiteDatabaseContext, DbErr> {
+impl PostgresDatabaseContext {
+    pub async fn new(connection_string: &str) -> Result<Self, DbErr> {
         let db = Database::connect(connection_string).await?;
 
-        let db = match db.get_database_backend() {
-            DbBackend::Sqlite => db,
-            _ => panic!("Expected sqlite connection string"),
-        };
+        if db.get_database_backend() != DbBackend::Postgres {
+            panic!("Expected postgresql connection string");
+        }
 
-        Ok(SQLiteDatabaseContext { db_connection: db })
+        Ok(Self { db_connection: db })
     }
 }
 
 #[async_trait]
-impl DatabaseContextTrait for SQLiteDatabaseContext {
+impl DatabaseContextTrait for PostgresDatabaseContext {
     async fn reset(&self) -> Result<Arc<dyn DatabaseContextTrait>, DbErr> {
         Migrator::fresh(&self.db_connection).await?;
 
-        Ok(Arc::new(SQLiteDatabaseContext {
+        Ok(Arc::new(PostgresDatabaseContext {
             db_connection: self.get_connection(),
         }))
     }

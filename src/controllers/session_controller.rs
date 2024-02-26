@@ -1,14 +1,14 @@
 use crate::api::auth::{RequestExt, Token, TokenError, TokenType};
+use crate::api::server::protobuf::get_auth_token_request::user_credentials::User;
 use crate::api::server::protobuf::{
-    get_auth_token_request::{user_credentials, UserCredentials},
-    GetAuthTokenRequest, GetAuthTokenResponse,
+    get_auth_token_request::UserCredentials, GetAuthTokenRequest, GetAuthTokenResponse,
 };
 use crate::contexts::ContextCollection;
 use crate::entities::{session, user};
 use crate::services::ServiceCollection;
 use async_trait::async_trait;
 use sea_orm::DbErr;
-use tonic::{Code, Request, Response, Status};
+use tonic::{Request, Response, Status};
 
 #[async_trait]
 pub trait SessionControllerTrait: Send + Sync {
@@ -43,13 +43,12 @@ impl SessionController {
         &self,
         user_credentials: UserCredentials,
     ) -> Result<Option<user::Model>, DbErr> {
-        match user_credentials.user {
-            Some(user_credentials::User::Username(username)) => {
-                Ok(self.contexts.user_context.get_by_username(username).await?)
-            }
-            Some(user_credentials::User::Email(email)) => {
-                Ok(self.contexts.user_context.get_by_email(email).await?)
-            }
+        let m = user_credentials.user.map(|u| match u {
+            User::Username(username) => self.contexts.user_context.get_by_username(username),
+            User::Email(email) => self.contexts.user_context.get_by_email(email),
+        });
+        match m {
+            Some(l) => Ok(l.await?),
             None => Ok(None),
         }
     }
@@ -111,15 +110,12 @@ impl SessionControllerTrait for SessionController {
             })?
             .ok_or(Status::unauthenticated("No access token provided"))?;
 
-        match self
-            .contexts
+        self.contexts
             .session_context
             .delete_by_token(TokenType::AccessToken, access_token)
             .await
-        {
-            Ok(_) => Ok(Response::new(())),
-            Err(error) => Err(Status::new(Code::Internal, error.to_string())),
-        }
+            .map(|_| Response::new(()))
+            .map_err(|e| Status::internal(e.to_string()))
     }
 
     async fn get_auth_token(

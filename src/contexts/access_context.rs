@@ -78,8 +78,8 @@ impl EntityContextTrait<access::Model> for AccessContext {
             project_id: Set(entity.project_id),
             user_id: Set(entity.user_id),
         };
-        let access: access::Model = access.insert(&self.db_context.get_connection()).await?;
-        Ok(access)
+        access.insert(&self.db_context.get_connection()).await
+        //Ok(access.insert(&self.db_context.get_connection()).await?)
     }
 
     /// Returns a single access entity (uses primary key)
@@ -131,17 +131,15 @@ impl EntityContextTrait<access::Model> for AccessContext {
         .await
     }
 
-    /// Deletes a access entity by id
+    /// Deletes an access entity by id
     async fn delete(&self, entity_id: i32) -> Result<access::Model, DbErr> {
         let access = self.get_by_id(entity_id).await?;
         match access {
             None => Err(DbErr::RecordNotFound("No record was deleted".into())),
-            Some(access) => {
-                access::Entity::delete_by_id(entity_id)
-                    .exec(&self.db_context.get_connection())
-                    .await?;
-                Ok(access)
-            }
+            Some(access) => access::Entity::delete_by_id(entity_id)
+                .exec(&self.db_context.get_connection())
+                .await
+                .map(|_| access),
         }
     }
 }

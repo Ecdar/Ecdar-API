@@ -19,6 +19,7 @@ impl ConcreteEcdarApi {
 /// The macro can be found in the `ecdar_api_macros` crate.
 #[ecdar_api::endpoints]
 mod routes {
+    // TODO: Sometime maybe update it such that some endpoints are combined (queries, users, access, etc) to one endpoint (update project perhaps), but it takes an object with the updates
     use super::super::server::protobuf::{
         ecdar_api_auth_server::EcdarApiAuth, ecdar_api_server::EcdarApi,
         ecdar_backend_server::EcdarBackend, CreateAccessRequest, CreateProjectRequest,

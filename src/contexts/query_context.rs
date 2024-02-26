@@ -46,15 +46,15 @@ impl EntityContextTrait<query::Model> for QueryContext {
     /// context.create(model);
     /// ```
     async fn create(&self, entity: query::Model) -> Result<query::Model, DbErr> {
-        let query = query::ActiveModel {
+        query::ActiveModel {
             id: Default::default(),
             string: Set(entity.string),
             project_id: Set(entity.project_id),
             result: NotSet,
             outdated: NotSet,
-        };
-        let query = query.insert(&self.db_context.get_connection()).await?;
-        Ok(query)
+        }
+        .insert(&self.db_context.get_connection())
+        .await
     }
 
     /// Returns a single query entity (uses primary key)
@@ -118,16 +118,14 @@ impl EntityContextTrait<query::Model> for QueryContext {
     }
 
     async fn delete(&self, entity_id: i32) -> Result<query::Model, DbErr> {
-        let query = self.get_by_id(entity_id).await?;
-        match query {
-            None => Err(DbErr::RecordNotFound("No record was deleted".into())),
-            Some(query) => {
-                query::Entity::delete_by_id(entity_id)
-                    .exec(&self.db_context.get_connection())
-                    .await?;
-                Ok(query)
-            }
-        }
+        let query = self
+            .get_by_id(entity_id)
+            .await?
+            .ok_or(DbErr::RecordNotFound("No record was deleted".into()))?;
+        query::Entity::delete_by_id(entity_id)
+            .exec(&self.db_context.get_connection())
+            .await?;
+        Ok(query)
     }
 }
 

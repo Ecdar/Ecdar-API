@@ -27,7 +27,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         SessionContext, UserContext,
     };
     use crate::controllers::*;
-    use crate::services::{HashingService, ReveaalService, ServiceCollection};
+    use crate::services::{DefaultHashing, ReveaalService, ServiceCollection};
     dotenv().ok();
 
     let reveaal_addr = env::var("REVEAAL_ADDRESS").expect("Expected REVEAAL_ADDRESS to be set.");
@@ -50,7 +50,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     };
 
     let services = ServiceCollection {
-        hashing_service: Arc::new(HashingService),
+        hashing_service: Arc::new(DefaultHashing),
         reveaal_service: Arc::new(ReveaalService::new(&reveaal_addr)),
     };
 

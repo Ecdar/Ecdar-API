@@ -199,7 +199,7 @@ mod helpers {
 
     mock! {
         pub HashingService {}
-        impl HashingServiceTrait for HashingService {
+        impl HashingService for HashingService {
             fn hash_password(&self, password: String) -> Result<String,bcrypt::BcryptError>;
             fn verify_password(&self, password: String, hash: &str) -> Result<bool,bcrypt::BcryptError>;
         }

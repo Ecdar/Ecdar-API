@@ -8,7 +8,7 @@ use crate::contexts::{AccessContextTrait, ContextCollection, UserContextTrait};
 use crate::entities::{access, user};
 use async_trait::async_trait;
 use std::sync::Arc;
-use tonic::{Code, Request, Response, Status};
+use tonic::{Request, Response, Status};
 
 #[async_trait]
 pub trait AccessControllerTrait: Send + Sync {
@@ -19,7 +19,7 @@ pub trait AccessControllerTrait: Send + Sync {
         &self,
         request: Request<ListAccessInfoRequest>,
     ) -> Result<Response<ListAccessInfoResponse>, Status>;
-    /// Creates an access in the contexts.
+    /// Creates access in the contexts.
     /// # Errors
     /// Returns an error if the contexts context fails to create the access
     async fn create_access(
@@ -76,41 +76,26 @@ impl AccessControllerTrait for AccessController {
             })?
             .ok_or(Status::internal("Could not get uid from request metadata"))?;
 
-        match self
-            .contexts
+        self.contexts
             .access_context
             .get_access_by_uid_and_project_id(uid, message.project_id)
             .await
-        {
-            Ok(access) => {
-                if access.is_none() {
-                    return Err(Status::new(
-                        Code::PermissionDenied,
-                        "User does not have access to model",
-                    ));
-                }
-            }
-            Err(error) => return Err(Status::new(Code::Internal, error.to_string())),
-        };
-
-        match self
-            .contexts
+            .map_err(|error| Status::internal(error.to_string()))?
+            .ok_or(Status::permission_denied(
+                "User does not have access to model",
+            ))?;
+        self.contexts
             .access_context
             .get_access_by_project_id(message.project_id)
             .await
-        {
-            Ok(access_info_list) => {
+            .map_err(|error| Status::internal(error.to_string()))
+            .and_then(|access_info_list| {
                 if access_info_list.is_empty() {
-                    return Err(Status::new(
-                        Code::NotFound,
-                        "No access found for given user",
-                    ));
+                    Err(Status::not_found("No access found for given user"))
                 } else {
                     Ok(Response::new(ListAccessInfoResponse { access_info_list }))
                 }
-            }
-            Err(error) => Err(Status::new(Code::Internal, error.to_string())),
-        }
+            })
     }
 
     async fn create_access(
@@ -151,13 +136,10 @@ impl AccessControllerTrait for AccessController {
 
             match self.contexts.access_context.create(access).await {
                 Ok(_) => Ok(Response::new(())),
-                Err(error) => Err(Status::new(Code::Internal, error.to_string())),
+                Err(error) => Err(Status::internal(error.to_string())),
             }
         } else {
-            Err(Status::new(
-                Code::InvalidArgument,
-                "No user identification provided",
-            ))
+            Err(Status::invalid_argument("No user identification provided"))
         }
     }
 
@@ -182,13 +164,8 @@ impl AccessControllerTrait for AccessController {
             .access_context
             .get_by_id(message.id)
             .await
-            .map_err(|err| Status::new(Code::Internal, err.to_string()))?
-            .ok_or_else(|| {
-                Status::new(
-                    Code::NotFound,
-                    "No access entity found for user".to_string(),
-                )
-            })?;
+            .map_err(|err| Status::internal(err.to_string()))?
+            .ok_or_else(|| Status::not_found("No access entity found for user".to_string()))?;
 
         check_editor_role_helper(
             Arc::clone(&self.contexts.access_context),
@@ -202,13 +179,12 @@ impl AccessControllerTrait for AccessController {
             .project_context
             .get_by_id(user_access.project_id)
             .await
-            .map_err(|err| Status::new(Code::Internal, err.to_string()))?
-            .ok_or_else(|| Status::new(Code::NotFound, "No model found for access".to_string()))?;
+            .map_err(|err| Status::internal(err.to_string()))?
+            .ok_or_else(|| Status::not_found("No model found for access".to_string()))?;
 
         // Check that the requester is not trying to update the owner's access
         if model.owner_id == message.id {
-            return Err(Status::new(
-                Code::PermissionDenied,
+            return Err(Status::permission_denied(
                 "Requester does not have permission to update access for this user",
             ));
         }
@@ -220,10 +196,12 @@ impl AccessControllerTrait for AccessController {
             user_id: Default::default(),
         };
 
-        match self.contexts.access_context.update(access).await {
-            Ok(_) => Ok(Response::new(())),
-            Err(error) => Err(Status::new(Code::Internal, error.to_string())),
-        }
+        self.contexts
+            .access_context
+            .update(access)
+            .await
+            .map(|_| Response::new(()))
+            .map_err(|error| Status::internal(error.to_string()))
     }
 
     async fn delete_access(
@@ -247,13 +225,8 @@ impl AccessControllerTrait for AccessController {
             .access_context
             .get_by_id(message.id)
             .await
-            .map_err(|err| Status::new(Code::Internal, err.to_string()))?
-            .ok_or_else(|| {
-                Status::new(
-                    Code::NotFound,
-                    "No access entity found for user".to_string(),
-                )
-            })?;
+            .map_err(|err| Status::internal(err.to_string()))?
+            .ok_or_else(|| Status::not_found("No access entity found for user".to_string()))?;
 
         check_editor_role_helper(
             Arc::clone(&self.contexts.access_context),
@@ -267,13 +240,12 @@ impl AccessControllerTrait for AccessController {
             .project_context
             .get_by_id(user_access.project_id)
             .await
-            .map_err(|err| Status::new(Code::Internal, err.to_string()))?
-            .ok_or_else(|| Status::new(Code::NotFound, "No model found for access".to_string()))?;
+            .map_err(|err| Status::internal(err.to_string()))?
+            .ok_or_else(|| Status::not_found("No model found for access".to_string()))?;
 
         // Check that the requester is not trying to delete the owner's access
         if model.owner_id == message.id {
-            return Err(Status::new(
-                Code::PermissionDenied,
+            return Err(Status::permission_denied(
                 "You cannot delete the access entity for this user",
             ));
         }
@@ -281,10 +253,8 @@ impl AccessControllerTrait for AccessController {
         match self.contexts.access_context.delete(message.id).await {
             Ok(_) => Ok(Response::new(())),
             Err(error) => match error {
-                sea_orm::DbErr::RecordNotFound(message) => {
-                    Err(Status::new(Code::NotFound, message))
-                }
-                _ => Err(Status::new(Code::Internal, error.to_string())),
+                sea_orm::DbErr::RecordNotFound(message) => Err(Status::not_found(message)),
+                _ => Err(Status::internal(error.to_string())),
             },
         }
     }
@@ -297,23 +267,19 @@ async fn check_editor_role_helper(
     let access = access_context
         .get_access_by_uid_and_project_id(user_id, project_id)
         .await
-        .map_err(|err| Status::new(Code::Internal, err.to_string()))?
+        .map_err(|err| Status::internal(err.to_string()))?
         .ok_or_else(|| {
-            Status::new(
-                Code::PermissionDenied,
-                "User does not have access to model".to_string(),
-            )
+            Status::permission_denied("User does not have access to model".to_string())
         })?;
 
     // Check if the requester has role 'Editor'
     if access.role != "Editor" {
-        return Err(Status::new(
-            Code::PermissionDenied,
+        Err(Status::permission_denied(
             "User does not have 'Editor' role for this model",
-        ));
+        ))
+    } else {
+        Ok(())
     }
-
-    Ok(())
 }
 
 async fn create_access_find_user_helper(
@@ -324,20 +290,20 @@ async fn create_access_find_user_helper(
         User::UserId(user_id) => Ok(user_context
             .get_by_id(user_id)
             .await
-            .map_err(|err| Status::new(Code::Internal, err.to_string()))?
-            .ok_or_else(|| Status::new(Code::NotFound, "No user found with given id"))?),
+            .map_err(|err| Status::internal(err.to_string()))?
+            .ok_or_else(|| Status::not_found("No user found with given id"))?),
 
         User::Username(username) => Ok(user_context
             .get_by_username(username)
             .await
-            .map_err(|err| Status::new(Code::Internal, err.to_string()))?
-            .ok_or_else(|| Status::new(Code::NotFound, "No user found with given username"))?),
+            .map_err(|err| Status::internal(err.to_string()))?
+            .ok_or_else(|| Status::not_found("No user found with given username"))?),
 
         User::Email(email) => Ok(user_context
             .get_by_email(email)
             .await
-            .map_err(|err| Status::new(Code::Internal, err.to_string()))?
-            .ok_or_else(|| Status::new(Code::NotFound, "No user found with given email"))?),
+            .map_err(|err| Status::internal(err.to_string()))?
+            .ok_or_else(|| Status::not_found("No user found with given email"))?),
     }
 }
 

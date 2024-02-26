@@ -63,14 +63,14 @@ impl EntityContextTrait<project::Model> for ProjectContext {
     /// project_context.create(project);
     /// ```
     async fn create(&self, entity: project::Model) -> Result<project::Model, DbErr> {
-        let project = project::ActiveModel {
+        project::ActiveModel {
             id: Default::default(),
             name: Set(entity.name),
             components_info: Set(entity.components_info),
             owner_id: Set(entity.owner_id),
-        };
-        let project: project::Model = project.insert(&self.db_context.get_connection()).await?;
-        Ok(project)
+        }
+        .insert(&self.db_context.get_connection())
+        .await
     }
 
     /// Returns a single project entity (Uses primary key)
@@ -109,30 +109,28 @@ impl EntityContextTrait<project::Model> for ProjectContext {
     /// let project = project_context.update(update_project).unwrap();
     /// ```
     async fn update(&self, entity: project::Model) -> Result<project::Model, DbErr> {
-        let existing_project = self.get_by_id(entity.id).await?;
+        let existing_project = self
+            .get_by_id(entity.id)
+            .await?
+            .ok_or(DbErr::RecordNotUpdated)?;
 
-        return match existing_project {
-            None => Err(DbErr::RecordNotUpdated),
-            Some(existing_project) => {
-                let queries: Vec<query::Model> = existing_project
-                    .find_related(query::Entity)
-                    .all(&self.db_context.get_connection())
-                    .await?;
-                for q in queries.iter() {
-                    let mut aq = q.clone().into_active_model();
-                    aq.outdated = Set(true);
-                    aq.update(&self.db_context.get_connection()).await?;
-                }
-                project::ActiveModel {
-                    id: Unchanged(entity.id),
-                    name: Set(entity.name),
-                    components_info: Set(entity.components_info),
-                    owner_id: Unchanged(entity.id),
-                }
-                .update(&self.db_context.get_connection())
-                .await
-            }
-        };
+        let queries: Vec<query::Model> = existing_project
+            .find_related(query::Entity)
+            .all(&self.db_context.get_connection())
+            .await?;
+        for q in queries.iter() {
+            let mut aq = q.clone().into_active_model();
+            aq.outdated = Set(true);
+            aq.update(&self.db_context.get_connection()).await?;
+        }
+        project::ActiveModel {
+            id: Unchanged(entity.id),
+            name: Set(entity.name),
+            components_info: Set(entity.components_info),
+            owner_id: Unchanged(entity.id),
+        }
+        .update(&self.db_context.get_connection())
+        .await
     }
 
     /// Returns and deletes a single project entity
@@ -142,16 +140,14 @@ impl EntityContextTrait<project::Model> for ProjectContext {
     /// let project = project_context.delete().unwrap();
     /// ```
     async fn delete(&self, entity_id: i32) -> Result<project::Model, DbErr> {
-        let project = self.get_by_id(entity_id).await?;
-        match project {
-            None => Err(DbErr::RecordNotFound("No record was deleted".into())),
-            Some(project) => {
-                project::Entity::delete_by_id(entity_id)
-                    .exec(&self.db_context.get_connection())
-                    .await?;
-                Ok(project)
-            }
-        }
+        let project = self
+            .get_by_id(entity_id)
+            .await?
+            .ok_or(DbErr::RecordNotFound("No record was deleted".into()))?;
+        project::Entity::delete_by_id(entity_id)
+            .exec(&self.db_context.get_connection())
+            .await?;
+        Ok(project)
     }
 }
 

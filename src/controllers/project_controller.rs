@@ -8,7 +8,7 @@ use crate::entities::{access, in_use, project};
 use async_trait::async_trait;
 use chrono::{Duration, Utc};
 use sea_orm::SqlErr;
-use tonic::{Code, Request, Response, Status};
+use tonic::{Request, Response, Status};
 
 const IN_USE_DURATION_MINUTES: i64 = 10;
 
@@ -73,7 +73,7 @@ impl ProjectControllerTrait for ProjectController {
         &self,
         request: Request<GetProjectRequest>,
     ) -> Result<Response<GetProjectResponse>, Status> {
-        let message = request.get_ref().clone();
+        let message = request.get_ref();
 
         let project_id = message.id;
 
@@ -92,21 +92,16 @@ impl ProjectControllerTrait for ProjectController {
             .access_context
             .get_access_by_uid_and_project_id(uid, project_id)
             .await
-            .map_err(|err| Status::new(Code::Internal, err.to_string()))?
-            .ok_or_else(|| {
-                Status::new(
-                    Code::PermissionDenied,
-                    "User does not have access to project",
-                )
-            })?;
+            .map_err(|err| Status::internal(err.to_string()))?
+            .ok_or_else(|| Status::permission_denied("User does not have access to project"))?;
 
         let project = self
             .contexts
             .project_context
             .get_by_id(project_id)
             .await
-            .map_err(|err| Status::new(Code::Internal, err.to_string()))?
-            .ok_or_else(|| Status::new(Code::Internal, "Model not found"))?;
+            .map_err(|err| Status::internal(err.to_string()))?
+            .ok_or_else(|| Status::internal("Model not found"))?;
 
         let project = Project {
             id: project.id,
@@ -141,10 +136,9 @@ impl ProjectControllerTrait for ProjectController {
                                     .ok_or(Status::invalid_argument("failed to get token from request metadata"))?,
                             )
                             .await
-                            .map_err(|err| Status::new(Code::Internal, err.to_string()))?
+                            .map_err(|err| Status::internal(err.to_string()))?
                             .ok_or_else(|| {
-                                Status::new(
-                                    Code::Unauthenticated,
+                                Status::unauthenticated(
                                     "No session found with given access token",
                                 )
                             })?;
@@ -159,12 +153,12 @@ impl ProjectControllerTrait for ProjectController {
                             .in_use_context
                             .update(in_use)
                             .await
-                            .map_err(|err| Status::new(Code::Internal, err.to_string()))?;
+                            .map_err(|err| Status::internal(err.to_string()))?;
                     }
                 }
             }
-            Ok(None) => return Err(Status::new(Code::Internal, "No in use found for project")),
-            Err(err) => return Err(Status::new(Code::Internal, err.to_string())),
+            Ok(None) => return Err(Status::internal("No in use found for project")),
+            Err(err) => return Err(Status::internal(err.to_string())),
         }
 
         let queries = self
@@ -172,7 +166,7 @@ impl ProjectControllerTrait for ProjectController {
             .query_context
             .get_all_by_project_id(project_id)
             .await
-            .map_err(|err| Status::new(Code::Internal, err.to_string()))?;
+            .map_err(|err| Status::internal(err.to_string()))?;
 
         let queries = queries
             .into_iter()
@@ -327,11 +321,13 @@ impl ProjectControllerTrait for ProjectController {
             .ok_or(Status::internal("Could not get uid from request metadata"))?;
 
         // Check if the project exists
-        let project = match self.contexts.project_context.get_by_id(message.id).await {
-            Ok(Some(project)) => project,
-            Ok(None) => return Err(Status::not_found("No project found with given id")),
-            Err(error) => return Err(Status::internal(error.to_string())),
-        };
+        let project = self
+            .contexts
+            .project_context
+            .get_by_id(message.id)
+            .await
+            .map_err(|error| Status::internal(error.to_string()))?
+            .ok_or(Status::not_found("No project found with given id"))?;
 
         // Check if the user has access to the project
         match self
@@ -447,7 +443,7 @@ impl ProjectControllerTrait for ProjectController {
 
         match self.contexts.project_context.update(new_project).await {
             Ok(_) => Ok(Response::new(())),
-            Err(error) => Err(Status::new(Code::Internal, error.to_string())),
+            Err(error) => Err(Status::internal(error.to_string())),
         }
     }
 
@@ -466,21 +462,17 @@ impl ProjectControllerTrait for ProjectController {
             .ok_or(Status::internal("Could not get uid from request metadata"))?;
         let project_id = request.get_ref().id;
 
-        let project = match self.contexts.project_context.get_by_id(project_id).await {
-            Ok(Some(project)) => project,
-            Ok(None) => {
-                return Err(Status::new(
-                    Code::NotFound,
-                    "No project found with given id",
-                ));
-            }
-            Err(err) => return Err(Status::new(Code::Internal, err.to_string())),
-        };
+        let project = self
+            .contexts
+            .project_context
+            .get_by_id(project_id)
+            .await
+            .map_err(|err| Status::internal(err.to_string()))?
+            .ok_or(Status::not_found("No project found with given id"))?;
 
         // Check if user is owner and thereby has permission to delete project
         if project.owner_id != uid {
-            return Err(Status::new(
-                Code::PermissionDenied,
+            return Err(Status::permission_denied(
                 "You do not have permission to delete this project",
             ));
         }
@@ -488,10 +480,8 @@ impl ProjectControllerTrait for ProjectController {
         match self.contexts.project_context.delete(project_id).await {
             Ok(_) => Ok(Response::new(())),
             Err(error) => match error {
-                sea_orm::DbErr::RecordNotFound(message) => {
-                    Err(Status::new(Code::NotFound, message))
-                }
-                _ => Err(Status::new(Code::Internal, error.to_string())),
+                sea_orm::DbErr::RecordNotFound(message) => Err(Status::not_found(message)),
+                _ => Err(Status::internal(error.to_string())),
             },
         }
     }
@@ -518,17 +508,14 @@ impl ProjectControllerTrait for ProjectController {
         {
             Ok(project_info_list) => {
                 if project_info_list.is_empty() {
-                    return Err(Status::new(
-                        Code::NotFound,
-                        "No access found for given user",
-                    ));
+                    Err(Status::not_found("No access found for given user"))
                 } else {
                     Ok(Response::new(ListProjectsInfoResponse {
                         project_info_list,
                     }))
                 }
             }
-            Err(error) => Err(Status::new(Code::Internal, error.to_string())),
+            Err(error) => Err(Status::internal(error.to_string())),
         }
     }
 }

@@ -9,7 +9,7 @@ use crate::services::ServiceCollection;
 use async_trait::async_trait;
 use regex::Regex;
 use sea_orm::SqlErr;
-use tonic::{Code, Request, Response, Status};
+use tonic::{Request, Response, Status};
 
 #[async_trait]
 pub trait UserControllerTrait: Send + Sync {
@@ -39,7 +39,6 @@ impl UserController {
     }
 
     /// Returns true if the given email is a valid format.
-    #[allow(clippy::expect_used)]
     fn is_valid_email(&self, email: &str) -> bool {
         Regex::new(r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$")
             .expect("failed to compile regex")
@@ -47,7 +46,6 @@ impl UserController {
     }
 
     /// Returns true if the given username is a valid format, i.e. only contains letters and numbers and a length from 3 to 32.
-    #[allow(clippy::expect_used)]
     fn is_valid_username(&self, username: &str) -> bool {
         Regex::new(r"^[a-zA-Z0-9_]{3,32}$")
             .expect("failed to compile regex")
@@ -64,11 +62,11 @@ impl UserControllerTrait for UserController {
         let message = request.into_inner().clone();
 
         if !self.is_valid_username(message.clone().username.as_str()) {
-            return Err(Status::new(Code::InvalidArgument, "Invalid username"));
+            return Err(Status::invalid_argument("Invalid username"));
         }
 
         if !self.is_valid_email(message.clone().email.as_str()) {
-            return Err(Status::new(Code::InvalidArgument, "Invalid email"));
+            return Err(Status::invalid_argument("Invalid email"));
         }
 
         let hashed_password = self
@@ -93,9 +91,9 @@ impl UserControllerTrait for UserController {
                         _ if e.contains("email") => "A user with that email already exists",
                         _ => "User already exists",
                     };
-                    Err(Status::new(Code::AlreadyExists, error_msg))
+                    Err(Status::already_exists(error_msg))
                 }
-                _ => Err(Status::new(Code::Internal, "Could not create user")),
+                _ => Err(Status::internal("Could not create user")),
             },
         }
     }
@@ -126,33 +124,33 @@ impl UserControllerTrait for UserController {
             .user_context
             .get_by_id(uid)
             .await
-            .map_err(|err| Status::new(Code::Internal, err.to_string()))?
-            .ok_or_else(|| Status::new(Code::Internal, "No user found with given uid"))?;
+            .map_err(|err| Status::internal(err.to_string()))?
+            .ok_or_else(|| Status::internal("No user found with given uid"))?;
 
         // Record to be inserted in contexts
         let new_user = user::Model {
             id: uid,
-            username: match message.clone().username {
+            username: match message.username {
                 Some(username) => {
                     if self.is_valid_username(username.as_str()) {
                         username
                     } else {
-                        return Err(Status::new(Code::InvalidArgument, "Invalid username"));
+                        return Err(Status::invalid_argument("Invalid username"));
                     }
                 }
                 None => user.username,
             },
-            email: match message.clone().email {
+            email: match message.email {
                 Some(email) => {
                     if self.is_valid_email(email.as_str()) {
                         email
                     } else {
-                        return Err(Status::new(Code::InvalidArgument, "Invalid email"));
+                        return Err(Status::invalid_argument("Invalid email"));
                     }
                 }
                 None => user.email,
             },
-            password: match message.clone().password {
+            password: match message.password {
                 Some(password) => self
                     .services
                     .hashing_service
@@ -165,7 +163,7 @@ impl UserControllerTrait for UserController {
         // Update user in contexts
         match self.contexts.user_context.update(new_user).await {
             Ok(_) => Ok(Response::new(())),
-            Err(error) => Err(Status::new(Code::Internal, error.to_string())),
+            Err(error) => Err(Status::internal(error.to_string())),
         }
     }
 
@@ -185,14 +183,16 @@ impl UserControllerTrait for UserController {
             .ok_or(Status::internal("Could not get uid from request metadata"))?;
 
         // Delete user from contexts
-        match self.contexts.user_context.delete(uid).await {
-            Ok(_) => Ok(Response::new(())),
-            Err(error) => Err(Status::new(Code::Internal, error.to_string())),
-        }
+        self.contexts
+            .user_context
+            .delete(uid)
+            .await
+            .map(|_| Response::new(()))
+            .map_err(|e| Status::internal(e.to_string()))
     }
 
     /// Gets users from the contexts.
-    /// If no users exits with the given ids, an empty list is returned.
+    /// If no users exist with the given ids, an empty list is returned.
     async fn get_users(
         &self,
         request: Request<GetUsersRequest>,

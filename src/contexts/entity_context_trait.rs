@@ -1,12 +1,12 @@
 //! The base trait for all database entities. Exposes basic CRUD functionality for.
-//! Some specific entities might need additional functionality, but that should implemented in entity-specific traits.
+//! Some specific entities might need additional functionality, but that should be implemented in entity-specific traits.
 use sea_orm::prelude::async_trait::async_trait;
-use sea_orm::DbErr;
+use sea_orm::{DbErr, ModelTrait};
 
 #[async_trait]
 /// The base trait for all database entities. Exposes basic CRUD functionality for.
-/// Some specific entities might need additional functionality, but that should implemented in entity-specific traits.
-pub trait EntityContextTrait<T>: Send + Sync {
+/// Some specific entities might need additional functionality, but that should be implemented in entity-specific traits.
+pub trait EntityContextTrait<T: ModelTrait>: Send + Sync {
     /// Inserts an entity into the database
     /// # Errors
     /// Errors on failed connection, execution error or constraint violations.

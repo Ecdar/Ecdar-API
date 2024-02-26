@@ -3,6 +3,7 @@ use jsonwebtoken::{
     decode, encode, Algorithm, DecodingKey, EncodingKey, Header, TokenData, Validation,
 };
 
+use jsonwebtoken::errors::{Error, ErrorKind};
 use serde::{Deserialize, Serialize};
 use std::{env, fmt::Display, str::FromStr};
 use tonic::{
@@ -12,12 +13,23 @@ use tonic::{
 
 /// This method is used to validate the access token (not refresh).
 pub fn validation_interceptor(mut req: Request<()>) -> Result<Request<()>, Status> {
-    let token = match req.token_string().map_err(|err| {
+    /*
+    let token = match req.token_string().map_err(|err|
         Status::internal(format!(
             "could not stringify user id in request metadata, internal error {}",
             err
         ))
-    })? {
+     */
+    let token = match req
+        .token_string()
+        .map_err(|e| {
+            format!(
+                "could not stringify user id in request metadata, internal error {}",
+                e
+            )
+        })
+        .map_err(Status::internal)?
+    {
         Some(token) => Token::from_str(TokenType::AccessToken, token),
         None => return Err(Status::unauthenticated("Token not found")),
     };
@@ -104,7 +116,7 @@ impl Token {
     ///
     /// let token = Token::new(TokenType::AccessToken, "1").unwrap();
     /// ```
-    pub fn new(token_type: TokenType, uid: &str) -> Result<Token, TokenError> {
+    pub fn new<T: Into<String>>(token_type: TokenType, uid: T) -> Result<Token, TokenError> {
         let now = Utc::now();
         let expiration = now
             .checked_add_signed(token_type.duration())
@@ -112,7 +124,7 @@ impl Token {
             .timestamp();
 
         let claims = Claims {
-            sub: uid.to_owned(),
+            sub: uid.into(),
             exp: expiration as usize,
         };
 
@@ -140,7 +152,7 @@ impl Token {
     ///
     /// assert_eq!(refresh_token.token_type(), TokenType::RefreshToken);
     /// ```
-    pub fn refresh(uid: &str) -> Result<Token, TokenError> {
+    pub fn refresh<T: Into<String>>(uid: T) -> Result<Token, TokenError> {
         Token::new(TokenType::RefreshToken, uid)
     }
 
@@ -157,7 +169,7 @@ impl Token {
     ///
     /// assert_eq!(access_token.token_type(), TokenType::AccessToken);
     /// ```
-    pub fn access(uid: &str) -> Result<Token, TokenError> {
+    pub fn access<T: Into<String>>(uid: T) -> Result<Token, TokenError> {
         Token::new(TokenType::AccessToken, uid)
     }
 
@@ -225,21 +237,21 @@ pub enum TokenError {
     Unknown(String),
 }
 
-/// This is used to convert a [jsonwebtoken::errors::ErrorKind] to a [TokenError].
-impl From<jsonwebtoken::errors::ErrorKind> for TokenError {
-    fn from(error_kind: jsonwebtoken::errors::ErrorKind) -> Self {
+/// This is used to convert a [ErrorKind] to a [TokenError].
+impl From<ErrorKind> for TokenError {
+    fn from(error_kind: ErrorKind) -> Self {
         match error_kind {
-            jsonwebtoken::errors::ErrorKind::InvalidToken => TokenError::InvalidToken,
-            jsonwebtoken::errors::ErrorKind::InvalidSignature => TokenError::InvalidSignature,
-            jsonwebtoken::errors::ErrorKind::ExpiredSignature => TokenError::ExpiredSignature,
+            ErrorKind::InvalidToken => TokenError::InvalidToken,
+            ErrorKind::InvalidSignature => TokenError::InvalidSignature,
+            ErrorKind::ExpiredSignature => TokenError::ExpiredSignature,
             _ => TokenError::Unknown("Unknown token error".to_string()),
         }
     }
 }
 
-/// This is used to convert a [jsonwebtoken::errors::Error] to a [TokenError].
-impl From<jsonwebtoken::errors::Error> for TokenError {
-    fn from(error: jsonwebtoken::errors::Error) -> Self {
+/// This is used to convert a [Error] to a [TokenError].
+impl From<Error> for TokenError {
+    fn from(error: Error) -> Self {
         TokenError::from(error.kind().clone())
     }
 }
@@ -290,7 +302,6 @@ impl<T> RequestExt for Request<T> {
     }
 }
 
-#[cfg(test)]
 #[cfg(test)]
 mod tests {
     use crate::api::auth::{RequestExt, Token, TokenError, TokenType};

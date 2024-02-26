@@ -7,7 +7,7 @@ use crate::contexts::ContextCollection;
 use crate::entities::query;
 use crate::services::ServiceCollection;
 use async_trait::async_trait;
-use tonic::{Code, Request, Response, Status};
+use tonic::{Request, Response, Status};
 
 #[async_trait]
 pub trait QueryControllerTrait: Send + Sync {
@@ -82,17 +82,11 @@ impl QueryControllerTrait for QueryController {
                 query_request.project_id,
             )
             .await
-            .map_err(|err| Status::new(Code::Internal, err.to_string()))?
-            .ok_or_else(|| {
-                Status::new(
-                    Code::PermissionDenied,
-                    "User does not have access to project",
-                )
-            })?;
+            .map_err(|err| Status::internal(err.to_string()))?
+            .ok_or_else(|| Status::permission_denied("User does not have access to project"))?;
 
         if access.role != "Editor" {
-            return Err(Status::new(
-                Code::PermissionDenied,
+            return Err(Status::permission_denied(
                 "Role does not have permission to create query",
             ));
         }
@@ -105,10 +99,12 @@ impl QueryControllerTrait for QueryController {
             project_id: query_request.project_id,
         };
 
-        match self.contexts.query_context.create(query).await {
-            Ok(_) => Ok(Response::new(())),
-            Err(error) => Err(Status::new(Code::Internal, error.to_string())),
-        }
+        self.contexts
+            .query_context
+            .create(query)
+            .await
+            .map(|_| Response::new(()))
+            .map_err(|e| Status::internal(e.to_string()))
     }
 
     async fn update_query(
@@ -122,12 +118,9 @@ impl QueryControllerTrait for QueryController {
             .query_context
             .get_by_id(message.id)
             .await
-            .map_err(|err| Status::new(Code::Internal, err.to_string()))?;
+            .map_err(|err| Status::internal(err.to_string()))?;
 
-        let old_query = match old_query_res {
-            Some(oq) => oq,
-            None => return Err(Status::new(Code::NotFound, "Query not found".to_string())),
-        };
+        let old_query = old_query_res.ok_or(Status::not_found("Query not found"))?;
 
         let access = self
             .contexts
@@ -147,17 +140,11 @@ impl QueryControllerTrait for QueryController {
                 old_query.project_id,
             )
             .await
-            .map_err(|err| Status::new(Code::Internal, err.to_string()))?
-            .ok_or_else(|| {
-                Status::new(
-                    Code::PermissionDenied,
-                    "User does not have access to project",
-                )
-            })?;
+            .map_err(|err| Status::internal(err.to_string()))?
+            .ok_or_else(|| Status::permission_denied("User does not have access to project"))?;
 
         if access.role != "Editor" {
-            return Err(Status::new(
-                Code::PermissionDenied,
+            return Err(Status::permission_denied(
                 "Role does not have permission to update query",
             ));
         }
@@ -170,10 +157,12 @@ impl QueryControllerTrait for QueryController {
             outdated: old_query.outdated,
         };
 
-        match self.contexts.query_context.update(query).await {
-            Ok(_) => Ok(Response::new(())),
-            Err(error) => Err(Status::new(Code::Internal, error.to_string())),
-        }
+        self.contexts
+            .query_context
+            .update(query)
+            .await
+            .map(|_| Response::new(()))
+            .map_err(|e| Status::internal(e.to_string()))
     }
 
     async fn delete_query(
@@ -187,8 +176,8 @@ impl QueryControllerTrait for QueryController {
             .query_context
             .get_by_id(message.id)
             .await
-            .map_err(|err| Status::new(Code::Internal, err.to_string()))?
-            .ok_or_else(|| Status::new(Code::NotFound, "Query not found"))?;
+            .map_err(|err| Status::internal(err.to_string()))?
+            .ok_or_else(|| Status::not_found("Query not found"))?;
 
         let access = self
             .contexts
@@ -208,17 +197,11 @@ impl QueryControllerTrait for QueryController {
                 query.project_id,
             )
             .await
-            .map_err(|err| Status::new(Code::Internal, err.to_string()))?
-            .ok_or_else(|| {
-                Status::new(
-                    Code::PermissionDenied,
-                    "User does not have access to project",
-                )
-            })?;
+            .map_err(|err| Status::internal(err.to_string()))?
+            .ok_or_else(|| Status::permission_denied("User does not have access to project"))?;
 
         if access.role != "Editor" {
-            return Err(Status::new(
-                Code::PermissionDenied,
+            return Err(Status::permission_denied(
                 "Role does not have permission to update query",
             ));
         }
@@ -226,10 +209,8 @@ impl QueryControllerTrait for QueryController {
         match self.contexts.query_context.delete(message.id).await {
             Ok(_) => Ok(Response::new(())),
             Err(error) => match error {
-                sea_orm::DbErr::RecordNotFound(message) => {
-                    Err(Status::new(Code::NotFound, message))
-                }
-                _ => Err(Status::new(Code::Internal, error.to_string())),
+                sea_orm::DbErr::RecordNotFound(message) => Err(Status::not_found(message)),
+                _ => Err(Status::internal(error.to_string())),
             },
         }
     }
@@ -257,13 +238,8 @@ impl QueryControllerTrait for QueryController {
             .access_context
             .get_access_by_uid_and_project_id(uid, message.project_id)
             .await
-            .map_err(|err| Status::new(Code::Internal, err.to_string()))?
-            .ok_or_else(|| {
-                Status::new(
-                    Code::PermissionDenied,
-                    "User does not have access to project",
-                )
-            })?;
+            .map_err(|err| Status::internal(err.to_string()))?
+            .ok_or_else(|| Status::permission_denied("User does not have access to project"))?;
 
         // Get project from contexts
         let project = self
@@ -271,8 +247,8 @@ impl QueryControllerTrait for QueryController {
             .project_context
             .get_by_id(message.project_id)
             .await
-            .map_err(|err| Status::new(Code::Internal, err.to_string()))?
-            .ok_or_else(|| Status::new(Code::NotFound, "Model not found"))?;
+            .map_err(|err| Status::internal(err.to_string()))?
+            .ok_or_else(|| Status::not_found("Model not found"))?;
 
         // Get query from contexts
         let query = self
@@ -280,8 +256,8 @@ impl QueryControllerTrait for QueryController {
             .query_context
             .get_by_id(message.id)
             .await
-            .map_err(|err| Status::new(Code::Internal, err.to_string()))?
-            .ok_or_else(|| Status::new(Code::NotFound, "Query not found"))?;
+            .map_err(|err| Status::internal(err.to_string()))?
+            .ok_or_else(|| Status::not_found("Query not found"))?;
 
         // Construct query request to send to Reveaal
         let query_request = Request::new(QueryRequest {
@@ -329,7 +305,7 @@ impl QueryControllerTrait for QueryController {
                 project_id: query.project_id,
             })
             .await
-            .map_err(|err| Status::new(Code::Internal, err.to_string()))?;
+            .map_err(|err| Status::internal(err.to_string()))?;
 
         Ok(Response::new(SendQueryResponse {
             response: Some(query_result.into_inner()),

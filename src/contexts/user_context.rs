@@ -77,14 +77,14 @@ impl EntityContextTrait<user::Model> for UserContext {
     /// context.create(user);
     /// ```
     async fn create(&self, entity: user::Model) -> Result<user::Model, DbErr> {
-        let user = user::ActiveModel {
+        user::ActiveModel {
             id: Default::default(),
             email: Set(entity.email),
             username: Set(entity.username),
             password: Set(entity.password),
-        };
-        let user = user.insert(&self.db_context.get_connection()).await?;
-        Ok(user)
+        }
+        .insert(&self.db_context.get_connection())
+        .await
     }
 
     /// Returns a single user entity (uses primary key)
@@ -157,16 +157,14 @@ impl EntityContextTrait<user::Model> for UserContext {
     ///     password: user.password
     /// }
     async fn delete(&self, entity_id: i32) -> Result<user::Model, DbErr> {
-        let user = self.get_by_id(entity_id).await?;
-        match user {
-            None => Err(DbErr::RecordNotFound("No record was deleted".into())),
-            Some(user) => {
-                user::Entity::delete_by_id(entity_id)
-                    .exec(&self.db_context.get_connection())
-                    .await?;
-                Ok(user)
-            }
-        }
+        let user = self
+            .get_by_id(entity_id)
+            .await?
+            .ok_or(DbErr::RecordNotFound("No record was deleted".into()))?;
+        user::Entity::delete_by_id(entity_id)
+            .exec(&self.db_context.get_connection())
+            .await
+            .map(|_| user)
     }
 }
 
