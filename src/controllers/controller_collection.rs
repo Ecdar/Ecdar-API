@@ -1,5 +1,5 @@
 use crate::api::server::protobuf::ecdar_backend_server::EcdarBackend;
-use crate::controllers::controller_traits::*;
+use crate::controllers::*;
 use std::sync::Arc;
 
 #[derive(Clone)]

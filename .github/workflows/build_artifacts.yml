@@ -1,0 +1,36 @@
+name: Build Artifacts
+
+on:
+  workflow_dispatch:
+  push:
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        os: [ ubuntu-latest, windows-latest, macos-latest ]
+    name: Build ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: 'true'
+      - uses: arduino/setup-protoc@v2
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          cache-on-failure: true
+      - name: cargo build --release
+        uses: clechasseur/rs-cargo@v1
+        with:
+          command: build
+          args: --release
+      - uses: actions/upload-artifact@v3
+        with:
+          name: ecdar_api-${{ matrix.os }}
+          path: ${{ runner.os == 'Windows' && 'target/release/ecdar_api.exe' || 'target/release/ecdar_api' }}
+          if-no-files-found: error
+          retention-days: 7

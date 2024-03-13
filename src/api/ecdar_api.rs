@@ -1,4 +1,4 @@
-use crate::controllers::controller_collection::ControllerCollection;
+use crate::controllers::ControllerCollection;
 
 /// The collection of all controllers that Ecdar API offers.
 #[derive(Clone)]
@@ -17,8 +17,9 @@ impl ConcreteEcdarApi {
 /// The module uses the attribute macro `endpoints` to automatically implement the `endpoints` function as specified by the protobuffers.
 /// Therefore, if new endpoints or services are added and implemented by the api server, then the macro will automatically add it to the list.
 /// The macro can be found in the `ecdar_api_macros` crate.
-#[ecdar_api_macros::endpoints]
+#[ecdar_api::endpoints]
 mod routes {
+    // TODO: Sometime maybe update it such that some endpoints are combined (queries, users, access, etc) to one endpoint (update project perhaps), but it takes an object with the updates
     use super::super::server::protobuf::{
         ecdar_api_auth_server::EcdarApiAuth, ecdar_api_server::EcdarApi,
         ecdar_backend_server::EcdarBackend, CreateAccessRequest, CreateProjectRequest,

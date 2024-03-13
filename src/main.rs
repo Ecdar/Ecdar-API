@@ -1,8 +1,8 @@
 //! # Description
 //! This project serves as an API server between an ECDAR frontend and Reveaal
 //!
-//! The project is currently being developed at [Github](https://github.com/ECDAR-AAU-SW-P5/)
-//! Ecdar-API serves as the intermediary between the [Ecdar frontend](https://github.com/ECDAR-AAU-SW-P5/Ecdar-GUI-Web) and the [Ecdar backend](https://github.com/ECDAR-AAU-SW-P5/Reveaal) (Reveaal). Its core functionality revolves around storing and managing entities such as users and projects, allowing the backend to focus solely on computations.
+//! The project is currently being developed at [Github](https://github.com/Ecdar/)
+//! Ecdar-API serves as the intermediary between the [Ecdar frontend](https://github.com/Ecdar/Ecdar-GUI-Web) and the [Ecdar backend](https://github.com/Ecdar/Reveaal) (Reveaal). Its core functionality revolves around storing and managing entities such as users and projects, allowing the backend to focus solely on computations.
 //!
 //! # Notes
 //! Currently, the only supported databases are `PostgreSQL` and `SQLite`
@@ -11,15 +11,7 @@ mod contexts;
 mod controllers;
 mod entities;
 mod services;
-mod tests;
 
-use crate::contexts::context_collection::ContextCollection;
-use crate::contexts::context_impls::*;
-use crate::contexts::context_traits::DatabaseContextTrait;
-use crate::controllers::controller_collection::ControllerCollection;
-use crate::controllers::controller_impls::*;
-use crate::services::service_collection::ServiceCollection;
-use crate::services::service_impls::{HashingService, ReveaalService};
 use api::server::start_grpc_server;
 use dotenv::dotenv;
 use sea_orm::{ConnectionTrait, Database, DbBackend};
@@ -28,8 +20,14 @@ use std::error::Error;
 use std::sync::Arc;
 
 #[tokio::main]
-#[allow(clippy::expect_used)]
 async fn main() -> Result<(), Box<dyn Error>> {
+    use crate::contexts::{
+        AccessContext, ContextCollection, DatabaseContextTrait, InUseContext,
+        PostgresDatabaseContext, ProjectContext, QueryContext, SQLiteDatabaseContext,
+        SessionContext, UserContext,
+    };
+    use crate::controllers::*;
+    use crate::services::{DefaultHashing, ReveaalService, ServiceCollection};
     dotenv().ok();
 
     let reveaal_addr = env::var("REVEAAL_ADDRESS").expect("Expected REVEAAL_ADDRESS to be set.");
@@ -52,7 +50,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     };
 
     let services = ServiceCollection {
-        hashing_service: Arc::new(HashingService),
+        hashing_service: Arc::new(DefaultHashing),
         reveaal_service: Arc::new(ReveaalService::new(&reveaal_addr)),
     };
 

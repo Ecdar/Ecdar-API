@@ -3,6 +3,7 @@ use jsonwebtoken::{
     decode, encode, Algorithm, DecodingKey, EncodingKey, Header, TokenData, Validation,
 };
 
+use jsonwebtoken::errors::{Error, ErrorKind};
 use serde::{Deserialize, Serialize};
 use std::{env, fmt::Display, str::FromStr};
 use tonic::{
@@ -12,13 +13,24 @@ use tonic::{
 
 /// This method is used to validate the access token (not refresh).
 pub fn validation_interceptor(mut req: Request<()>) -> Result<Request<()>, Status> {
-    let token = match req.token_string().map_err(|err| {
+    /*
+    let token = match req.token_string().map_err(|err|
         Status::internal(format!(
             "could not stringify user id in request metadata, internal error {}",
             err
         ))
-    })? {
-        Some(token) => Token::from_str(TokenType::AccessToken, &token),
+     */
+    let token = match req
+        .token_string()
+        .map_err(|e| {
+            format!(
+                "could not stringify user id in request metadata, internal error {}",
+                e
+            )
+        })
+        .map_err(Status::internal)?
+    {
+        Some(token) => Token::from_str(TokenType::AccessToken, token),
         None => return Err(Status::unauthenticated("Token not found")),
     };
 
@@ -60,7 +72,6 @@ impl TokenType {
     ///
     /// # Panics
     /// This method will panic if the token secret environment variable is not set.
-    #[allow(clippy::expect_used)]
     fn secret(&self) -> String {
         match self {
             TokenType::AccessToken => env::var("ACCESS_TOKEN_HS512_SECRET")
@@ -105,7 +116,7 @@ impl Token {
     ///
     /// let token = Token::new(TokenType::AccessToken, "1").unwrap();
     /// ```
-    pub fn new(token_type: TokenType, uid: &str) -> Result<Token, TokenError> {
+    pub fn new<T: Into<String>>(token_type: TokenType, uid: T) -> Result<Token, TokenError> {
         let now = Utc::now();
         let expiration = now
             .checked_add_signed(token_type.duration())
@@ -113,7 +124,7 @@ impl Token {
             .timestamp();
 
         let claims = Claims {
-            sub: uid.to_owned(),
+            sub: uid.into(),
             exp: expiration as usize,
         };
 
@@ -141,7 +152,7 @@ impl Token {
     ///
     /// assert_eq!(refresh_token.token_type(), TokenType::RefreshToken);
     /// ```
-    pub fn refresh(uid: &str) -> Result<Token, TokenError> {
+    pub fn refresh<T: Into<String>>(uid: T) -> Result<Token, TokenError> {
         Token::new(TokenType::RefreshToken, uid)
     }
 
@@ -158,7 +169,7 @@ impl Token {
     ///
     /// assert_eq!(access_token.token_type(), TokenType::AccessToken);
     /// ```
-    pub fn access(uid: &str) -> Result<Token, TokenError> {
+    pub fn access<T: Into<String>>(uid: T) -> Result<Token, TokenError> {
         Token::new(TokenType::AccessToken, uid)
     }
 
@@ -174,10 +185,10 @@ impl Token {
     ///
     /// let token = Token::from_str(TokenType::AccessToken, "token")
     /// ```
-    pub fn from_str(token_type: TokenType, token: &str) -> Token {
+    pub fn from_str<T: Into<String>>(token_type: TokenType, token: T) -> Token {
         Token {
             token_type,
-            token: token.to_string(),
+            token: token.into(),
         }
     }
     /// Validate the token. Returns the token data if the token is valid.
@@ -205,34 +216,6 @@ impl Token {
             Err(err) => Err(err.into()),
         }
     }
-    /// # Examples
-    ///
-    /// ```
-    /// use ecdar_api::controllers::auth::{Token, TokenType};
-    ///
-    /// let token = Token::from_str(TokenType::AccessToken, "token");
-    ///
-    /// assert_eq!(token.as_str(), "token");
-    /// ```
-    #[allow(dead_code)]
-    pub fn as_str(&self) -> &str {
-        &self.token
-    }
-    /// Returns the token type.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use ecdar_api::controllers::auth::{Token, TokenType};
-    ///
-    /// let token = Token::new(TokenType::AccessToken, "1").unwrap();
-    ///
-    /// assert_eq!(token.token_type(), TokenType::AccessToken);
-    /// ```
-    #[allow(dead_code)]
-    pub fn token_type(&self) -> TokenType {
-        self.token_type.clone()
-    }
 }
 
 impl Display for Token {
@@ -254,21 +237,21 @@ pub enum TokenError {
     Unknown(String),
 }
 
-/// This is used to convert a [jsonwebtoken::errors::ErrorKind] to a [TokenError].
-impl From<jsonwebtoken::errors::ErrorKind> for TokenError {
-    fn from(error_kind: jsonwebtoken::errors::ErrorKind) -> Self {
+/// This is used to convert a [ErrorKind] to a [TokenError].
+impl From<ErrorKind> for TokenError {
+    fn from(error_kind: ErrorKind) -> Self {
         match error_kind {
-            jsonwebtoken::errors::ErrorKind::InvalidToken => TokenError::InvalidToken,
-            jsonwebtoken::errors::ErrorKind::InvalidSignature => TokenError::InvalidSignature,
-            jsonwebtoken::errors::ErrorKind::ExpiredSignature => TokenError::ExpiredSignature,
+            ErrorKind::InvalidToken => TokenError::InvalidToken,
+            ErrorKind::InvalidSignature => TokenError::InvalidSignature,
+            ErrorKind::ExpiredSignature => TokenError::ExpiredSignature,
             _ => TokenError::Unknown("Unknown token error".to_string()),
         }
     }
 }
 
-/// This is used to convert a [jsonwebtoken::errors::Error] to a [TokenError].
-impl From<jsonwebtoken::errors::Error> for TokenError {
-    fn from(error: jsonwebtoken::errors::Error) -> Self {
+/// This is used to convert a [Error] to a [TokenError].
+impl From<Error> for TokenError {
+    fn from(error: Error) -> Self {
         TokenError::from(error.kind().clone())
     }
 }
@@ -320,5 +303,133 @@ impl<T> RequestExt for Request<T> {
 }
 
 #[cfg(test)]
-#[path = "../tests/api/auth.rs"]
-mod tests;
+mod tests {
+    use crate::api::auth::{RequestExt, Token, TokenError, TokenType};
+    use std::{env, str::FromStr};
+    use tonic::{metadata::MetadataValue, Request};
+
+    #[tokio::test]
+    async fn request_token_trims_bearer() {
+        let token = "Bearer 1234567890";
+        let mut request = Request::new(());
+        request
+            .metadata_mut()
+            .insert("authorization", MetadataValue::from_str(token).unwrap());
+
+        let result = request.token_str().unwrap().unwrap();
+
+        assert_eq!(result, token.trim_start_matches("Bearer "));
+    }
+
+    #[tokio::test]
+    async fn request_token_no_token_returns_none() {
+        let request = Request::new(());
+        let result = request.token_str().unwrap();
+
+        assert!(result.is_none());
+    }
+
+    #[tokio::test]
+    async fn token_new_access_returns_token() {
+        env::set_var("ACCESS_TOKEN_HS512_SECRET", "access_secret");
+
+        let uid = "1";
+        let result = Token::new(TokenType::AccessToken, uid);
+
+        assert!(result.is_ok());
+    }
+
+    #[tokio::test]
+    async fn token_new_refresh_returns_token() {
+        env::set_var("REFRESH_TOKEN_HS512_SECRET", "refresh_secret");
+
+        let uid = "1";
+        let result = Token::new(TokenType::RefreshToken, uid);
+
+        assert!(result.is_ok());
+    }
+
+    #[tokio::test]
+    async fn validate_token_valid_access_returns_tokendata() {
+        env::set_var("ACCESS_TOKEN_HS512_SECRET", "access_secret");
+
+        let token = Token::new(TokenType::AccessToken, "1").unwrap();
+        let result = token.validate();
+
+        assert!(result.is_ok());
+    }
+
+    #[tokio::test]
+    async fn validate_token_valid_refresh_returns_tokendata() {
+        env::set_var("REFRESH_TOKEN_HS512_SECRET", "refresh_secret");
+
+        let token = Token::new(TokenType::RefreshToken, "1").unwrap();
+        let result = token.validate();
+
+        assert!(result.is_ok());
+    }
+
+    #[tokio::test]
+    async fn validate_token_invalid_returns_err() {
+        env::set_var("ACCESS_TOKEN_HS512_SECRET", "access_secret");
+        env::set_var("REFRESH_TOKEN_HS512_SECRET", "refresh_secret");
+
+        let result_access = Token::from_str(TokenType::AccessToken, "invalid_token").validate();
+        let result_refresh = Token::from_str(TokenType::RefreshToken, "invalid_token").validate();
+
+        assert_eq!(result_access.unwrap_err(), TokenError::InvalidToken);
+        assert_eq!(result_refresh.unwrap_err(), TokenError::InvalidToken);
+    }
+
+    #[tokio::test]
+    async fn token_type_access_returns_access() {
+        env::set_var("ACCESS_TOKEN_HS512_SECRET", "access_secret");
+
+        let token = Token::new(TokenType::AccessToken, "1").unwrap();
+        let result = token.token_type;
+
+        assert_eq!(result, TokenType::AccessToken);
+    }
+
+    #[tokio::test]
+    async fn token_type_refresh_returns_refresh() {
+        env::set_var("REFRESH_TOKEN_HS512_SECRET", "refresh_secret");
+
+        let token = Token::new(TokenType::RefreshToken, "1").unwrap();
+        let result = token.token_type;
+
+        assert_eq!(result, TokenType::RefreshToken);
+    }
+
+    #[tokio::test]
+    async fn token_to_string_returns_string() {
+        env::set_var("ACCESS_TOKEN_HS512_SECRET", "access_secret");
+
+        let token = Token::new(TokenType::AccessToken, "1").unwrap();
+        let result = token.to_string();
+
+        assert_eq!(result, token.token);
+    }
+
+    #[tokio::test]
+    async fn token_from_str_returns_token() {
+        env::set_var("ACCESS_TOKEN_HS512_SECRET", "access_secret");
+
+        let token = Token::new(TokenType::AccessToken, "1").unwrap();
+        let token_from_str = Token::from_str(TokenType::AccessToken, token.token);
+
+        let result = token_from_str.validate();
+
+        assert!(result.is_ok());
+    }
+
+    #[tokio::test]
+    async fn token_from_str_invalid_returns_err() {
+        env::set_var("ACCESS_TOKEN_HS512_SECRET", "access_secret");
+
+        let token = Token::from_str(TokenType::AccessToken, "invalid_token");
+        let result = token.validate();
+
+        assert!(result.is_err());
+    }
+}

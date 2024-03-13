@@ -6,13 +6,10 @@ on:
 
 jobs:
   fmt:
-    name: cargo fmt
+    name: cargo fmt & Clippy lint and check
     runs-on: ubuntu-latest
     steps:
-      - name: Install Protoc
-        uses: arduino/setup-protoc@v2
-        with:
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
+      - run: sudo apt-get install llvm protobuf-compiler
       - uses: actions/checkout@v3
         with:
           submodules: 'true'
@@ -27,23 +24,7 @@ jobs:
         with:
           command: fmt
           args: --all -- --check
-
-  clippy:
-    name: Clippy lint and check
-    runs-on: ubuntu-latest
-    steps:
-      - name: Install Protoc
-        uses: arduino/setup-protoc@v2
-      - uses: actions/checkout@v3
-        with:
-          submodules: 'true'
-      - uses: dtolnay/rust-toolchain@stable
-        with:
-          components: clippy
-      - uses: Swatinem/rust-cache@v2
-        with:
-          cache-on-failure: true
       - name: clippy --all-targets --all-features
         uses: clechasseur/rs-clippy-check@v3
         with:
-          args: --all-targets --all-features
+          args: --all-targets --all-features -- -D warnings
